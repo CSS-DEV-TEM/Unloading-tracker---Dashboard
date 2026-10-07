@@ -6,6 +6,9 @@ import { PackageOpen, Plus, Search } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/login/actions";
+import InvoiceSummary from "./invoice-summary";
+import ExportButton from "./export-button";
+import OverviewRefresh from "@/components/overview-refresh";
 
 type SearchParams = Promise<{
     q?: string | string[];
@@ -23,9 +26,26 @@ type Invoice = {
     roll_quantity: number | null;
     status: "Pending" | "Complete" | "Reject";
     remark: string | null;
+    completed_at: string | null;
+    pre_grn_stages: {
+        started_at: string | null;
+    }[];
 };
 
 const PAGE_SIZE = 20;
+
+const HEADINGS = [
+    "Invoice",
+    "Supplier",
+    "System",
+    "Local / Import",
+    "Document Date",
+    "Roll Qty",
+    "Start Date",
+    "Completion Date",
+    "Status",
+    "Remark",
+];
 
 const statusStyles = {
     Pending: "border-amber-200 bg-amber-50 text-amber-800",
@@ -42,6 +62,64 @@ function formatDate(value: string) {
     return `${day}/${month}/${year}`;
 }
 
+function earliestStart(stages: Invoice["pre_grn_stages"]) {
+    let earliest: string | null = null;
+    let earliestTime = Infinity;
+
+    for (const stage of stages) {
+        if (!stage.started_at) continue;
+
+        const timestamp = new Date(stage.started_at).getTime();
+
+        if (Number.isFinite(timestamp) && timestamp < earliestTime) {
+            earliest = stage.started_at;
+            earliestTime = timestamp;
+        }
+    }
+
+    return earliest;
+}
+
+function DateTimeCell({ value }: { value: string | null }) {
+    if (!value) {
+        return <span className="text-slate-400">—</span>;
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return <span className="text-slate-400">—</span>;
+    }
+
+    const dateLabel = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Asia/Colombo",
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    }).format(date);
+
+    const timeLabel = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Asia/Colombo",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hourCycle: "h23",
+    }).format(date);
+
+    return (
+        <time
+            dateTime={date.toISOString()}
+            title={`${dateLabel}, ${timeLabel} — Sri Lanka time`}
+            className="inline-flex flex-col gap-1 whitespace-nowrap"
+        >
+            <span className="text-slate-700">{dateLabel}</span>
+            <span className="text-xs text-slate-500">
+                {timeLabel} · SLST
+            </span>
+        </time>
+    );
+}
+
 function dashboardUrl(q: string, status: string, page: number) {
     const params = new URLSearchParams();
 
@@ -50,6 +128,7 @@ function dashboardUrl(q: string, status: string, page: number) {
     if (page > 1) params.set("page", String(page));
 
     const query = params.toString();
+
     return query ? `/dashboard?${query}` : "/dashboard";
 }
 
@@ -89,7 +168,8 @@ async function DashboardContent({
                 </h1>
 
                 <p className="mt-3 text-slate-600">
-                    Your account access could not be verified. Contact an administrator.
+                    Your account access could not be verified. Contact an
+                    administrator.
                 </p>
 
                 <form action={signOut} className="mt-6">
@@ -105,11 +185,14 @@ async function DashboardContent({
     const q = single(params.q).trim().slice(0, 100);
     const requestedStatus = single(params.status);
 
-    const status = ["Pending", "Complete", "Reject"].includes(requestedStatus)
+    const status = ["Pending", "Complete", "Reject"].includes(
+        requestedStatus,
+    )
         ? requestedStatus
         : "";
 
     const requestedPage = Number(single(params.page) || "1");
+
     const page =
         Number.isSafeInteger(requestedPage) &&
             requestedPage > 0 &&
@@ -117,22 +200,24 @@ async function DashboardContent({
             ? requestedPage
             : 1;
 
-    let query = supabase
-        .from("invoices")
-        .select(
-            `
-        id,
-        invoice_number,
-        supplier,
-        system_type,
-        shipment_type,
-        document_share_date,
-        roll_quantity,
-        status,
-        remark
-      `,
-            { count: "exact" },
-        );
+    let query = supabase.from("invoices").select(
+        `
+      id,
+      invoice_number,
+      supplier,
+      system_type,
+      shipment_type,
+      document_share_date,
+      roll_quantity,
+      status,
+      remark,
+      completed_at,
+      pre_grn_stages (
+        started_at
+      )
+    `,
+        { count: "exact" },
+    );
 
     if (status) {
         query = query.eq("status", status);
@@ -180,13 +265,24 @@ async function DashboardContent({
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-wrap items-center gap-4">
                         <div className="hidden text-right sm:block">
-                            <p className="text-sm font-medium">{profile.full_name}</p>
+                            <p className="text-sm font-medium">
+                                {profile.full_name}
+                            </p>
                             <p className="text-xs text-slate-500">
-                                {profile.role === "ADMIN" ? "Administrator" : "Team member"}
+                                {profile.role === "ADMIN"
+                                    ? "Administrator"
+                                    : "Team member"}
                             </p>
                         </div>
+
+                        <Link
+                            href="/dashboard/settings"
+                            className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        >
+                            Account Settings
+                        </Link>
 
                         <form action={signOut}>
                             <button className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium hover:bg-slate-50">
@@ -211,20 +307,33 @@ async function DashboardContent({
                         </p>
                     </div>
 
-                    <Link
-                        href="/dashboard/invoices/new"
-                        className="inline-flex items-center gap-2 rounded-lg bg-blue-700 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-800"
-                    >
-                        <Plus className="size-4" aria-hidden="true" />
-                        New Invoice
-                    </Link>
+                    <div className="flex flex-wrap items-start gap-3">
+                        {profile.role === "ADMIN" && <ExportButton />}
+
+                        <Link
+                            href="/dashboard/invoices/new"
+                            className="inline-flex items-center gap-2 rounded-lg bg-blue-700 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-800"
+                        >
+                            <Plus className="size-4" aria-hidden="true" />
+                            New Invoice
+                        </Link>
+                    </div>
                 </section>
+
+                <InvoiceSummary />
+
+                <OverviewRefresh />
 
                 <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
                     <div className="border-b border-slate-200 px-6 py-5">
                         <h2 className="font-semibold">Invoice records</h2>
                         <p className="mt-1 text-sm text-slate-500">
                             Search by invoice number or supplier.
+                        </p>
+                        <p className="mt-2 text-xs text-slate-500">
+                            Start Date shows the earliest AX/D365 start.
+                            Completion Date shows when the invoice was marked
+                            Complete. All times are in Sri Lanka time.
                         </p>
                     </div>
 
@@ -311,23 +420,15 @@ async function DashboardContent({
                                 tabIndex={0}
                                 className="overflow-x-auto focus-visible:outline-2 focus-visible:outline-blue-600"
                             >
-                                <table className="w-full min-w-[1000px] text-left text-sm">
+                                <table className="w-full min-w-[1300px] text-left text-sm">
                                     <caption className="sr-only">
-                                        Invoice records from the database
+                                        Invoice records with start and completion dates
+                                        in Sri Lanka time
                                     </caption>
 
                                     <thead className="border-y border-slate-200 bg-slate-50 text-xs text-slate-500">
                                         <tr>
-                                            {[
-                                                "Invoice",
-                                                "Supplier",
-                                                "System",
-                                                "Local / Import",
-                                                "Document Date",
-                                                "Roll Qty",
-                                                "Status",
-                                                "Remark",
-                                            ].map((heading) => (
+                                            {HEADINGS.map((heading) => (
                                                 <th
                                                     key={heading}
                                                     scope="col"
@@ -346,10 +447,32 @@ async function DashboardContent({
                                                     scope="row"
                                                     className="px-5 py-4 font-semibold text-blue-700"
                                                 >
-                                                    {invoice.invoice_number}
+                                                    <div className="flex flex-col items-start gap-2">
+                                                        <Link
+                                                            href={`/dashboard/invoices/${invoice.id}`}
+                                                            className="inline-flex flex-col gap-1 rounded focus-visible:outline-2 focus-visible:outline-blue-600"
+                                                        >
+                                                            <span className="hover:underline">
+                                                                {invoice.invoice_number}
+                                                            </span>
+
+                                                            <span className="text-xs font-normal text-slate-500">
+                                                                Open / Update →
+                                                            </span>
+                                                        </Link>
+
+                                                        <Link
+                                                            href={`/dashboard/invoices/${invoice.id}/details`}
+                                                            className="text-xs font-medium text-blue-700 hover:underline"
+                                                        >
+                                                            Edit details
+                                                        </Link>
+                                                    </div>
                                                 </th>
 
-                                                <td className="px-5 py-4">{invoice.supplier}</td>
+                                                <td className="px-5 py-4">
+                                                    {invoice.supplier}
+                                                </td>
 
                                                 <td className="whitespace-nowrap px-5 py-4">
                                                     {invoice.system_type}
@@ -365,6 +488,24 @@ async function DashboardContent({
 
                                                 <td className="px-5 py-4">
                                                     {invoice.roll_quantity ?? "—"}
+                                                </td>
+
+                                                <td className="px-5 py-4">
+                                                    <DateTimeCell
+                                                        value={earliestStart(
+                                                            invoice.pre_grn_stages ?? [],
+                                                        )}
+                                                    />
+                                                </td>
+
+                                                <td className="px-5 py-4">
+                                                    <DateTimeCell
+                                                        value={
+                                                            invoice.status === "Complete"
+                                                                ? invoice.completed_at
+                                                                : null
+                                                        }
+                                                    />
                                                 </td>
 
                                                 <td className="px-5 py-4">
@@ -395,7 +536,7 @@ async function DashboardContent({
                                         {invoices.length === 0 && (
                                             <tr>
                                                 <td
-                                                    colSpan={8}
+                                                    colSpan={HEADINGS.length}
                                                     className="px-6 py-14 text-center text-slate-500"
                                                 >
                                                     {q || status
