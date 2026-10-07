@@ -1,5 +1,5 @@
 "use client";
-
+import Link from "next/link";
 import { useState } from "react";
 import {
   ArrowUpRight,
@@ -126,16 +126,12 @@ export default function PublicDashboard() {
               <p className="text-xs text-slate-500">CSS Division</p>
             </div>
           </div>
-
-          <button
-            type="button"
-            disabled
-            title="Sign In will be enabled after authentication is connected."
-            className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-4 py-2.5 text-sm font-medium text-slate-500 disabled:cursor-not-allowed"
-          >
+          <Link
+            href="/login"
+            className="inline-flex items-center gap-2 rounded-lg bg-blue-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-800">
             Sign In
             <ArrowUpRight className="size-4" aria-hidden="true" />
-          </button>
+          </Link>
         </div>
       </header>
 
@@ -144,8 +140,8 @@ export default function PublicDashboard() {
           aria-label="Preview notice"
           className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900"
         >
-          <strong>Design preview:</strong> Sample records only. Sign In and live
-          data will be connected in the next development stages.
+          <strong>Design preview:</strong> Sample records only. Sign in to access
+          your workspace. Live public invoice data will be connected next.
         </section>
 
         <section>
