@@ -6,6 +6,10 @@ import { createClient } from "@/lib/supabase/server";
 
 type SearchParams = {
     invoice?: string | string[];
+    user?: string | string[];
+    from?: string | string[];
+    to?: string | string[];
+    action?: string | string[];
     page?: string | string[];
 };
 
@@ -21,9 +25,32 @@ type ActivityRow = {
     entity_type: string;
     changes: unknown;
     occurred_at: string;
+    invoices: {
+        invoice_number: string;
+    } | null;
+};
+
+type Filters = {
+    invoice: string;
+    user: string;
+    from: string;
+    to: string;
+    action: string;
 };
 
 const PAGE_SIZE = 25;
+
+const ACTION_LABELS: Record<string, string> = {
+    INVOICE_CREATED: "Invoice created",
+    INVOICE_UPDATED: "Invoice process updated",
+    INVOICE_DETAILS_UPDATED: "Invoice details updated",
+    INVOICE_EXPORT_REQUESTED: "Invoice Excel export requested",
+    USER_CREATED: "User created",
+    USER_ACTIVATED: "User activated",
+    USER_DEACTIVATED: "User deactivated",
+    USER_PROFILE_RECOVERED: "User profile recovered",
+    ADMIN_BOOTSTRAPPED: "Initial admin created",
+};
 
 function first(value: string | string[] | undefined) {
     return Array.isArray(value) ? value[0] ?? "" : value ?? "";
@@ -37,6 +64,29 @@ function isObject(
         value !== null &&
         !Array.isArray(value)
     );
+}
+
+function validDate(value: string) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return false;
+    }
+
+    const date = new Date(`${value}T00:00:00.000Z`);
+
+    return (
+        Number.isFinite(date.getTime()) &&
+        date.toISOString().slice(0, 10) === value
+    );
+}
+
+function sriLankaDayStart(value: string) {
+    return new Date(`${value}T00:00:00+05:30`).toISOString();
+}
+
+function afterSriLankaDay(value: string) {
+    const start = new Date(`${value}T00:00:00+05:30`).getTime();
+
+    return new Date(start + 24 * 60 * 60 * 1000).toISOString();
 }
 
 function formatTime(value: string) {
@@ -84,39 +134,37 @@ function formatValue(value: unknown): string {
 function fieldLabel(field: string) {
     const labels: Record<string, string> = {
         invoice: "Invoice created",
+        invoice_number: "Invoice number",
+        supplier: "Supplier",
+        roll_quantity: "Roll quantity",
+        document_share_date: "Document share date",
+        shipment_type: "Local / Import",
         status: "Final status",
         pending_reason: "Pending reason",
         remark: "Remark",
         completed_at: "Completion date / time",
+        user_name: "User name",
+        role: "Role",
+        is_active: "Account active",
+        scope: "Export scope",
+        invoice_count: "Invoice count",
+        recovery_context: "Recovery details",
         "asn.share_date": "ASN share date",
         "asn.is_shared": "ASN shared",
         "asn.assigned_user_name": "ASN user",
     };
 
-    if (labels[field]) {
-        return labels[field];
-    }
-
-    return field.replaceAll(".", " · ").replaceAll("_", " ");
+    return (
+        labels[field] ??
+        field.replaceAll(".", " · ").replaceAll("_", " ")
+    );
 }
 
-function actionLabel(action: string) {
-    const labels: Record<string, string> = {
-        INVOICE_CREATED: "Invoice created",
-        INVOICE_UPDATED: "Invoice updated",
-        ADMIN_BOOTSTRAPPED: "Initial admin created",
-        INVOICE_EXPORT_REQUESTED: "Invoice Excel export requested",
-        INVOICE_DETAILS_UPDATED: "Invoice details updated",
-    };
-
-    return labels[action] ?? action.replaceAll("_", " ");
-}
-
-function activityUrl(invoice: string, page: number) {
+function activityUrl(filters: Filters, page: number) {
     const params = new URLSearchParams();
 
-    if (invoice) {
-        params.set("invoice", invoice);
+    for (const [key, value] of Object.entries(filters)) {
+        if (value) params.set(key, value);
     }
 
     if (page > 1) {
@@ -133,7 +181,7 @@ function activityUrl(invoice: string, page: number) {
 function ChangeDetails({ changes }: { changes: unknown }) {
     if (!isObject(changes) || Object.keys(changes).length === 0) {
         return (
-            <p className="text-sm text-slate-400">
+            <p className="mt-4 text-sm text-slate-400">
                 No field details recorded.
             </p>
         );
@@ -221,7 +269,35 @@ async function ActivityContent({ searchParams }: PageProps) {
     }
 
     const params = await searchParams;
-    const invoiceSearch = first(params.invoice).trim().slice(0, 100);
+    const requestedAction = first(params.action);
+
+    const filters: Filters = {
+        invoice: first(params.invoice).trim().slice(0, 100),
+        user: first(params.user).trim().slice(0, 150),
+        from: first(params.from).trim(),
+        to: first(params.to).trim(),
+        action: Object.prototype.hasOwnProperty.call(
+            ACTION_LABELS,
+            requestedAction,
+        )
+            ? requestedAction
+            : "",
+    };
+
+    let filterError = "";
+
+    if (
+        (filters.from && !validDate(filters.from)) ||
+        (filters.to && !validDate(filters.to))
+    ) {
+        filterError = "Select valid From and To dates.";
+    } else if (
+        filters.from &&
+        filters.to &&
+        filters.from > filters.to
+    ) {
+        filterError = "The To date must be on or after the From date.";
+    }
 
     const requestedPage = Number(first(params.page) || "1");
 
@@ -232,39 +308,57 @@ async function ActivityContent({ searchParams }: PageProps) {
             ? requestedPage
             : 1;
 
-    let matchingInvoiceIds: string[] | null = null;
-
-    if (invoiceSearch) {
-        const { data: matchingInvoices, error } = await supabase
-            .from("invoices")
-            .select("id")
-            .eq("invoice_number", invoiceSearch);
-
-        if (error) {
-            throw new Error("Unable to search invoices.");
-        }
-
-        matchingInvoiceIds = (matchingInvoices ?? []).map(
-            (invoice) => invoice.id,
-        );
-    }
-
     let rows: ActivityRow[] = [];
     let total = 0;
+    let loadError = false;
 
-    const hasMatches =
-        matchingInvoiceIds === null || matchingInvoiceIds.length > 0;
+    if (!filterError) {
+        const fields =
+            "id, invoice_id, actor_name, action, entity_type, changes, occurred_at";
 
-    if (hasMatches) {
+        // Keep account/export activities when no invoice filter is applied.
+        // Use an inner join when filtering by invoice number.
+        const selection = filters.invoice
+            ? `${fields}, invoices!inner(invoice_number)`
+            : `${fields}, invoices(invoice_number)`;
+
         let query = supabase
             .from("activity_logs")
-            .select(
-                "id, invoice_id, actor_name, action, entity_type, changes, occurred_at",
-                { count: "exact" },
+            .select(selection, { count: "exact" });
+
+        if (filters.invoice) {
+            query = query.eq(
+                "invoices.invoice_number",
+                filters.invoice,
+            );
+        }
+
+        if (filters.user) {
+            const escapedName = filters.user.replace(
+                /[\\%_*]/g,
+                "\\$&",
             );
 
-        if (matchingInvoiceIds !== null) {
-            query = query.in("invoice_id", matchingInvoiceIds);
+            query = query.ilike("actor_name", `%${escapedName}%`);
+        }
+
+        if (filters.action) {
+            query = query.eq("action", filters.action);
+        }
+
+        if (filters.from) {
+            query = query.gte(
+                "occurred_at",
+                sriLankaDayStart(filters.from),
+            );
+        }
+
+        if (filters.to) {
+            // Exclusive start of the following day includes the full To day.
+            query = query.lt(
+                "occurred_at",
+                afterSriLankaDay(filters.to),
+            );
         }
 
         const from = (page - 1) * PAGE_SIZE;
@@ -274,44 +368,25 @@ async function ActivityContent({ searchParams }: PageProps) {
             .order("id", { ascending: false })
             .range(from, from + PAGE_SIZE - 1);
 
-        if (error) {
-            throw new Error("Unable to load user activity.");
-        }
+        loadError = Boolean(error);
 
-        rows = (data ?? []) as ActivityRow[];
-        total = count ?? 0;
+        if (!error) {
+            rows = (data ?? []) as unknown as ActivityRow[];
+            total = count ?? 0;
+        }
     }
 
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-    if (page > totalPages) {
-        redirect(activityUrl(invoiceSearch, totalPages));
+    if (!filterError && !loadError && page > totalPages) {
+        redirect(activityUrl(filters, totalPages));
     }
 
-    const invoiceIds = [
-        ...new Set(
-            rows
-                .map((row) => row.invoice_id)
-                .filter((id): id is string => id !== null),
-        ),
-    ];
+    const inputClass =
+        "w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
 
-    const invoiceNumbers = new Map<string, string>();
-
-    if (invoiceIds.length > 0) {
-        const { data: invoices, error } = await supabase
-            .from("invoices")
-            .select("id, invoice_number")
-            .in("id", invoiceIds);
-
-        if (error) {
-            throw new Error("Unable to load activity invoice details.");
-        }
-
-        for (const invoice of invoices ?? []) {
-            invoiceNumbers.set(invoice.id, invoice.invoice_number);
-        }
-    }
+    const labelClass =
+        "mb-2 block text-sm font-medium text-slate-700";
 
     return (
         <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-8">
@@ -326,142 +401,220 @@ async function ActivityContent({ searchParams }: PageProps) {
                     </h1>
 
                     <p className="mt-2 text-sm text-slate-500">
-                        Track invoice creation and process updates. All times
-                        are displayed in Sri Lanka time.
+                        Search recorded changes by invoice, user, activity type,
+                        or date. Dates and times use Sri Lanka time.
                     </p>
                 </header>
 
                 <form
+                    key={JSON.stringify(filters)}
                     action="/dashboard/activity"
                     method="get"
-                    className="mb-6 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 sm:flex-row sm:items-end"
+                    className="mb-6 rounded-2xl border border-slate-200 bg-white p-5"
                 >
-                    <div className="flex-1">
-                        <label
-                            htmlFor="invoice-search"
-                            className="mb-2 block text-sm font-medium text-slate-700"
-                        >
-                            Invoice number
-                        </label>
+                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                        <div>
+                            <label htmlFor="invoice-filter" className={labelClass}>
+                                Invoice number
+                            </label>
+                            <input
+                                id="invoice-filter"
+                                name="invoice"
+                                defaultValue={filters.invoice}
+                                placeholder="Full current invoice number"
+                                maxLength={100}
+                                className={inputClass}
+                            />
+                        </div>
 
-                        <input
-                            id="invoice-search"
-                            name="invoice"
-                            defaultValue={invoiceSearch}
-                            placeholder="Enter the full invoice number"
-                            maxLength={100}
-                            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                        />
+                        <div>
+                            <label htmlFor="user-filter" className={labelClass}>
+                                User name
+                            </label>
+                            <input
+                                id="user-filter"
+                                name="user"
+                                defaultValue={filters.user}
+                                placeholder="Name or part of a name"
+                                maxLength={150}
+                                className={inputClass}
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="action-filter" className={labelClass}>
+                                Activity type
+                            </label>
+                            <select
+                                id="action-filter"
+                                name="action"
+                                defaultValue={filters.action}
+                                className={inputClass}
+                            >
+                                <option value="">All activity types</option>
+
+                                {Object.entries(ACTION_LABELS).map(([value, label]) => (
+                                    <option key={value} value={value}>
+                                        {label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label htmlFor="from-filter" className={labelClass}>
+                                From date
+                            </label>
+                            <input
+                                id="from-filter"
+                                name="from"
+                                type="date"
+                                defaultValue={
+                                    validDate(filters.from) ? filters.from : ""
+                                }
+                                className={inputClass}
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="to-filter" className={labelClass}>
+                                To date
+                            </label>
+                            <input
+                                id="to-filter"
+                                name="to"
+                                type="date"
+                                defaultValue={validDate(filters.to) ? filters.to : ""}
+                                className={inputClass}
+                            />
+                        </div>
+
+                        <div className="flex items-end gap-3">
+                            <button
+                                type="submit"
+                                className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+                            >
+                                Apply filters
+                            </button>
+
+                            <Link
+                                href="/dashboard/activity"
+                                className="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                            >
+                                Reset
+                            </Link>
+                        </div>
                     </div>
 
-                    <button
-                        type="submit"
-                        className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
-                    >
-                        Search activity
-                    </button>
-
-                    <Link
-                        href="/dashboard/activity"
-                        className="rounded-xl border border-slate-300 px-5 py-2.5 text-center text-sm font-medium text-slate-600 hover:bg-slate-50"
-                    >
-                        Reset
-                    </Link>
+                    <p className="mt-4 text-xs text-slate-500">
+                        User name searches the person who performed the action,
+                        not the assigned AX/D365 or ASN user.
+                    </p>
                 </form>
 
-                <div className="mb-4 flex items-center justify-between text-sm text-slate-500">
-                    <p>{total} activity records</p>
-                    <p>Newest first</p>
-                </div>
-
-                {rows.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
-                        <h2 className="font-semibold text-slate-800">
-                            No activity found
-                        </h2>
-
-                        <p className="mt-2 text-sm text-slate-500">
-                            {invoiceSearch
-                                ? "Check the full invoice number, including uppercase and lowercase letters."
-                                : "Recorded activities will appear here."}
-                        </p>
-                    </div>
-                ) : (
-                    <div className="space-y-4">
-                        {rows.map((row) => (
-                            <article
-                                key={row.id}
-                                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-                            >
-                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                    <div>
-                                        <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
-                                            {actionLabel(row.action)}
-                                        </p>
-
-                                        <h2 className="mt-2 font-semibold text-slate-900">
-                                            {row.actor_name}
-                                        </h2>
-
-                                        <div className="mt-1 text-sm text-slate-500">
-                                            {row.invoice_id ? (
-                                                <Link
-                                                    href={`/dashboard/invoices/${row.invoice_id}`}
-                                                    className="font-medium text-blue-700 hover:underline"
-                                                >
-                                                    Invoice:{" "}
-                                                    {invoiceNumbers.get(row.invoice_id) ??
-                                                        row.invoice_id}
-                                                </Link>
-                                            ) : (
-                                                <span>
-                                                    {row.entity_type === "invoice_export"
-                                                        ? "Invoice export"
-                                                        : "Account activity"}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <time
-                                        dateTime={row.occurred_at}
-                                        className="text-xs text-slate-500"
-                                    >
-                                        {formatTime(row.occurred_at)} · SLST
-                                    </time>
-                                </div>
-
-                                <ChangeDetails changes={row.changes} />
-                            </article>
-                        ))}
-                    </div>
-                )}
-
-                <footer className="mt-6 flex items-center justify-between">
-                    <p className="text-sm text-slate-500">
-                        Page {page} of {totalPages}
+                {filterError || loadError ? (
+                    <p
+                        role="alert"
+                        className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+                    >
+                        {filterError ||
+                            "Unable to load activity. Refresh the page and try again."}
                     </p>
+                ) : (
+                    <>
+                        <div className="mb-4 flex items-center justify-between text-sm text-slate-500">
+                            <p>{total} matching activity records</p>
+                            <p>Newest first</p>
+                        </div>
 
-                    <div className="flex gap-3">
-                        {page > 1 && (
-                            <Link
-                                href={activityUrl(invoiceSearch, page - 1)}
-                                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm hover:bg-slate-100"
-                            >
-                                Previous
-                            </Link>
+                        {rows.length === 0 ? (
+                            <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
+                                <h2 className="font-semibold text-slate-800">
+                                    No matching activity
+                                </h2>
+                                <p className="mt-2 text-sm text-slate-500">
+                                    Adjust the filters or reset to view all recorded activity.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {rows.map((row) => (
+                                    <article
+                                        key={row.id}
+                                        className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                                    >
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                            <div>
+                                                <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+                                                    {ACTION_LABELS[row.action] ??
+                                                        row.action.replaceAll("_", " ")}
+                                                </p>
+
+                                                <h2 className="mt-2 font-semibold text-slate-900">
+                                                    {row.actor_name}
+                                                </h2>
+
+                                                <div className="mt-1 text-sm text-slate-500">
+                                                    {row.invoice_id ? (
+                                                        <Link
+                                                            href={`/dashboard/invoices/${row.invoice_id}`}
+                                                            className="font-medium text-blue-700 hover:underline"
+                                                        >
+                                                            Invoice:{" "}
+                                                            {row.invoices?.invoice_number ??
+                                                                row.invoice_id}
+                                                        </Link>
+                                                    ) : (
+                                                        <span>
+                                                            {row.entity_type === "invoice_export"
+                                                                ? "Invoice export"
+                                                                : "Account activity"}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <time
+                                                dateTime={row.occurred_at}
+                                                className="text-xs text-slate-500"
+                                            >
+                                                {formatTime(row.occurred_at)} · SLST
+                                            </time>
+                                        </div>
+
+                                        <ChangeDetails changes={row.changes} />
+                                    </article>
+                                ))}
+                            </div>
                         )}
 
-                        {page < totalPages && (
-                            <Link
-                                href={activityUrl(invoiceSearch, page + 1)}
-                                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm hover:bg-slate-100"
-                            >
-                                Next
-                            </Link>
-                        )}
-                    </div>
-                </footer>
+                        <footer className="mt-6 flex items-center justify-between">
+                            <p className="text-sm text-slate-500">
+                                Page {page} of {totalPages}
+                            </p>
+
+                            <div className="flex gap-3">
+                                {page > 1 && (
+                                    <Link
+                                        href={activityUrl(filters, page - 1)}
+                                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm hover:bg-slate-100"
+                                    >
+                                        Previous
+                                    </Link>
+                                )}
+
+                                {page < totalPages && (
+                                    <Link
+                                        href={activityUrl(filters, page + 1)}
+                                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm hover:bg-slate-100"
+                                    >
+                                        Next
+                                    </Link>
+                                )}
+                            </div>
+                        </footer>
+                    </>
+                )}
             </div>
         </main>
     );
