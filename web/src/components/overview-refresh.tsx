@@ -191,7 +191,7 @@ export default function OverviewRefresh() {
                         : "Live updates connected";
 
     return (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3">
+        <div className="flex min-h-7 flex-wrap items-center justify-end gap-3">
             <div
                 role="status"
                 className="flex items-center gap-2 text-xs text-muted-foreground"
@@ -199,8 +199,8 @@ export default function OverviewRefresh() {
                 <Radio
                     aria-hidden="true"
                     className={`size-4 ${status === "live"
-                            ? "text-blue-600 dark:text-blue-400"
-                            : "text-muted-foreground"
+                        ? "text-blue-600 dark:text-blue-400"
+                        : "text-muted-foreground"
                         }`}
                 />
 

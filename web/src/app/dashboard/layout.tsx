@@ -30,14 +30,15 @@ async function DashboardShell({
         throw new Error("Unable to load dashboard permissions.");
     }
 
-    const isAdmin =
-        profile?.is_active === true && profile.role === "ADMIN";
-
-    if (!isAdmin) {
+    if (!profile || profile.is_active !== true) {
         return <>{children}</>;
     }
 
-    return <AdminSidebar>{children}</AdminSidebar>;
+    return (
+        <AdminSidebar isAdmin={profile.role === "ADMIN"}>
+            {children}
+        </AdminSidebar>
+    );
 }
 
 export default function DashboardLayout({
@@ -48,8 +49,12 @@ export default function DashboardLayout({
     return (
         <Suspense
             fallback={
-                <div className="min-h-screen bg-background p-8 text-sm text-muted-foreground">
-                    Loading workspace...
+                <div
+                    role="status"
+                    className="flex min-h-screen items-center justify-center
+            bg-background px-6 text-sm text-muted-foreground"
+                >
+                    Loading workspace…
                 </div>
             }
         >

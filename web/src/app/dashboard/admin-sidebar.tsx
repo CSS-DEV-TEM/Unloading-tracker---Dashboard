@@ -1,109 +1,95 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
     Activity,
     ArrowUpRight,
     LayoutDashboard,
     Menu,
-    PackageOpen,
     PanelLeftClose,
     PanelLeftOpen,
     Settings2,
-    ShieldCheck,
     Users,
     X,
 } from "lucide-react";
 
+type Props = {
+    children: ReactNode;
+    isAdmin: boolean;
+};
+
 export default function AdminSidebar({
     children,
-}: {
-    children: ReactNode;
-}) {
+    isAdmin,
+}: Props) {
     const pathname = usePathname();
-
     const [collapsed, setCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
-    const mobileButtonRef = useRef<HTMLButtonElement>(null);
 
     const links = [
         {
             href: "/dashboard",
-            label: "Dashboard",
+            label: "Invoices",
             icon: LayoutDashboard,
             active:
                 pathname === "/dashboard" ||
                 pathname.startsWith("/dashboard/invoices/"),
         },
-        {
-            href: "/dashboard/users",
-            label: "User Management",
-            icon: Users,
-            active: pathname.startsWith("/dashboard/users"),
-        },
-        {
-            href: "/dashboard/activity",
-            label: "User Activity",
-            icon: Activity,
-            active: pathname.startsWith("/dashboard/activity"),
-        },
+        ...(isAdmin
+            ? [
+                {
+                    href: "/dashboard/users",
+                    label: "User management",
+                    icon: Users,
+                    active: pathname.startsWith("/dashboard/users"),
+                },
+                {
+                    href: "/dashboard/activity",
+                    label: "Activity log",
+                    icon: Activity,
+                    active: pathname.startsWith("/dashboard/activity"),
+                },
+            ]
+            : []),
         {
             href: "/dashboard/settings",
-            label: "Account Settings",
+            label: "Account settings",
             icon: Settings2,
             active: pathname.startsWith("/dashboard/settings"),
         },
     ];
 
-    function closeMobileMenu() {
-        setMobileOpen(false);
-        mobileButtonRef.current?.focus();
-    }
-
-    function renderNavigation(compact: boolean) {
+    function navigation(compact = false) {
         return (
-            <nav
-                aria-label="Administrator navigation"
-                className="space-y-1.5 px-3 py-5"
-            >
-                {!compact && (
-                    <p className="mb-4 px-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                        Workspace
-                    </p>
-                )}
-
+            <nav aria-label="Workspace navigation" className="space-y-1">
                 {links.map(({ href, label, icon: Icon, active }) => (
                     <Link
                         key={href}
                         href={href}
-                        onClick={() => {
-                            if (mobileOpen) closeMobileMenu();
-                        }}
                         aria-current={active ? "page" : undefined}
-                        aria-label={label}
+                        aria-label={compact ? label : undefined}
                         title={compact ? label : undefined}
-                        className={`group relative flex min-h-12 items-center rounded-xl text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 ${compact ? "justify-center px-3" : "gap-3 px-4"
-                            } ${active
-                                ? "bg-blue-600 text-white shadow-md shadow-blue-950/30"
-                                : "text-slate-300 hover:bg-white/5 hover:text-white"
-                            }`}
+                        onClick={() => setMobileOpen(false)}
+                        className={[
+                            "flex min-h-11 items-center rounded-lg text-sm font-medium",
+                            "transition-colors motion-reduce:transition-none",
+                            "focus-visible:outline-none focus-visible:ring-2",
+                            "focus-visible:ring-ring focus-visible:ring-inset",
+                            compact ? "justify-center px-2" : "gap-3 px-3",
+                            active
+                                ? "bg-blue-50 text-blue-800 dark:bg-blue-400/10 dark:text-blue-300"
+                                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                        ].join(" ")}
                     >
-                        <Icon
-                            className={`h-[18px] w-[18px] shrink-0 ${active
-                                ? "text-white"
-                                : "text-slate-400 group-hover:text-blue-300"
-                                }`}
-                            aria-hidden="true"
-                        />
-
+                        <Icon className="size-[18px] shrink-0" aria-hidden="true" />
                         {!compact && <span>{label}</span>}
-
                         {!compact && active && (
                             <span
                                 aria-hidden="true"
-                                className="ml-auto h-1.5 w-1.5 rounded-full bg-blue-200"
+                                className="ml-auto size-1.5 rounded-full bg-current"
                             />
                         )}
                     </Link>
@@ -114,87 +100,95 @@ export default function AdminSidebar({
 
     return (
         <div className="min-h-screen bg-background">
-            <aside
-                aria-label="Administrator sidebar"
-                className={`fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-slate-800 bg-[#0b1224] text-white transition-[width] duration-200 motion-reduce:transition-none lg:flex ${collapsed ? "w-20" : "w-64"
-                    }`}
+            <a
+                href="#workspace-content"
+                className="sr-only fixed left-4 top-4 z-[100] rounded-lg
+          bg-primary px-4 py-3 text-primary-foreground
+          focus:not-sr-only"
             >
-                <div
-                    className={`flex h-24 shrink-0 items-center border-b border-white/10 ${collapsed ? "justify-center px-3" : "gap-3 px-5"
-                        }`}
-                >
+                Skip to workspace content
+            </a>
+
+            <aside
+                aria-label="Workspace sidebar"
+                className={[
+                    "fixed inset-y-0 left-0 z-40 hidden flex-col",
+                    "border-r border-border bg-card lg:flex",
+                    collapsed ? "w-[76px]" : "w-56",
+                ].join(" ")}
+            >
+                <div className="flex h-[76px] shrink-0 items-center border-b border-border px-4">
                     <Link
                         href="/dashboard"
-                        aria-label="Unloading Tracker dashboard"
-                        title={collapsed ? "Unloading Tracker" : undefined}
-                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 shadow-lg shadow-blue-950/30"
+                        aria-label="EFL 3PL Unloading Tracker"
+                        title={collapsed ? "EFL 3PL Unloading Tracker" : undefined}
+                        className="flex min-w-0 items-center gap-3 rounded-md"
                     >
-                        <PackageOpen className="h-6 w-6" aria-hidden="true" />
+                        <Image
+                            src="/efl-logo.png"
+                            alt=""
+                            width={40}
+                            height={40}
+                            unoptimized
+                            className="size-10 shrink-0 rounded-md object-contain"
+                        />
+
+                        {!collapsed && (
+                            <span className="min-w-0">
+                                <span className="block text-sm font-semibold tracking-tight">
+                                    Unloading Tracker
+                                </span>
+                                <span className="mt-0.5 block text-xs text-muted-foreground">
+                                    EFL 3PL · CSS Division
+                                </span>
+                            </span>
+                        )}
                     </Link>
-
-                    {!collapsed && (
-                        <div className="min-w-0">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-blue-300">
-                                EFL · 3PL
-                            </p>
-                            <p className="mt-1 whitespace-nowrap text-sm font-semibold tracking-tight">
-                                Unloading Tracker
-                            </p>
-                        </div>
-                    )}
                 </div>
 
-                <div className="min-h-0 flex-1 overflow-y-auto">
-                    {renderNavigation(collapsed)}
-                </div>
-
-                <div className="shrink-0 border-t border-white/10 p-3">
+                <div className="min-h-0 flex-1 overflow-y-auto px-3 py-5">
                     {!collapsed && (
-                        <div className="mb-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                            <div className="flex items-center gap-2 text-xs font-medium text-slate-200">
-                                <ShieldCheck
-                                    className="h-4 w-4 text-blue-300"
-                                    aria-hidden="true"
-                                />
-                                Administrator
-                            </div>
-                            <p className="mt-1.5 text-[11px] text-slate-400">
-                                CSS Division · Operations
-                            </p>
-                        </div>
+                        <p className="mb-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            Workspace
+                        </p>
                     )}
 
+                    {navigation(collapsed)}
+                </div>
+
+                <div className="space-y-2 border-t border-border p-3">
                     <Link
                         href="/"
-                        title={collapsed ? "Public overview" : undefined}
-                        aria-label="Public overview"
-                        className={`mb-1 flex min-h-11 items-center rounded-xl text-sm text-slate-300 hover:bg-white/5 hover:text-white ${collapsed ? "justify-center" : "gap-3 px-4"
-                            }`}
+                        title={collapsed ? "Overview" : undefined}
+                        aria-label={collapsed ? "Overview" : undefined}
+                        className={[
+                            "flex min-h-11 items-center rounded-lg text-sm",
+                            "text-muted-foreground hover:bg-muted hover:text-foreground",
+                            collapsed ? "justify-center" : "gap-3 px-3",
+                        ].join(" ")}
                     >
-                        <ArrowUpRight
-                            className="h-[18px] w-[18px] shrink-0"
-                            aria-hidden="true"
-                        />
-                        {!collapsed && <span>Public overview</span>}
+                        <ArrowUpRight className="size-[18px]" aria-hidden="true" />
+                        {!collapsed && <span>Overview</span>}
                     </Link>
 
                     <button
                         type="button"
-                        onClick={() => setCollapsed((previous) => !previous)}
-                        aria-label={
-                            collapsed ? "Expand sidebar" : "Collapse sidebar"
-                        }
+                        onClick={() => setCollapsed((value) => !value)}
+                        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
                         aria-expanded={!collapsed}
                         title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-                        className={`flex min-h-11 w-full items-center rounded-xl text-sm text-slate-400 hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 ${collapsed ? "justify-center" : "gap-3 px-4"
-                            }`}
+                        className={[
+                            "flex min-h-11 w-full items-center rounded-lg text-sm",
+                            "text-muted-foreground hover:bg-muted hover:text-foreground",
+                            collapsed ? "justify-center" : "gap-3 px-3",
+                        ].join(" ")}
                     >
                         {collapsed ? (
-                            <PanelLeftOpen className="h-5 w-5" aria-hidden="true" />
+                            <PanelLeftOpen className="size-[18px]" aria-hidden="true" />
                         ) : (
                             <>
                                 <PanelLeftClose
-                                    className="h-5 w-5 shrink-0"
+                                    className="size-[18px]"
                                     aria-hidden="true"
                                 />
                                 <span>Collapse sidebar</span>
@@ -204,75 +198,70 @@ export default function AdminSidebar({
                 </div>
             </aside>
 
-            <header className="border-b border-slate-800 bg-[#0b1224] text-white lg:hidden">
-                <div className="flex items-center justify-between gap-4 px-4 py-4">
-                    <Link
-                        href="/dashboard"
-                        onClick={() => {
-                            if (mobileOpen) closeMobileMenu();
-                        }}
-                        className="flex items-center gap-3"
-                    >
-                        <div className="rounded-xl bg-blue-600 p-2.5">
-                            <PackageOpen className="h-5 w-5" aria-hidden="true" />
-                        </div>
-
-                        <div>
-                            <p className="text-[10px] font-semibold uppercase tracking-widest text-blue-300">
-                                EFL · 3PL
-                            </p>
-                            <p className="mt-0.5 text-sm font-semibold">
+            <div className={collapsed ? "lg:pl-[76px]" : "lg:pl-56"}>
+                <div className="border-b border-border bg-card lg:hidden">
+                    <div className="flex min-h-16 items-center justify-between gap-3 px-4">
+                        <Link
+                            href="/dashboard"
+                            className="flex items-center gap-3 rounded-md"
+                        >
+                            <Image
+                                src="/efl-logo.png"
+                                alt="EFL"
+                                width={32}
+                                height={32}
+                                unoptimized
+                                className="size-8 rounded object-contain"
+                            />
+                            <span className="text-sm font-semibold">
                                 Unloading Tracker
-                            </p>
-                        </div>
-                    </Link>
+                            </span>
+                        </Link>
 
-                    <button
-                        ref={mobileButtonRef}
-                        type="button"
-                        onClick={() => setMobileOpen((previous) => !previous)}
-                        onKeyDown={(event) => {
-                            if (event.key === "Escape") closeMobileMenu();
-                        }}
-                        aria-expanded={mobileOpen}
-                        aria-controls="mobile-admin-navigation"
-                        aria-label={mobileOpen ? "Close menu" : "Open menu"}
-                        className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 text-slate-200 hover:bg-white/5"
+                        <button
+                            type="button"
+                            aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
+                            aria-expanded={mobileOpen}
+                            aria-controls="mobile-workspace-navigation"
+                            onClick={() => setMobileOpen((value) => !value)}
+                            className="inline-flex size-11 items-center justify-center
+                rounded-lg border border-border hover:bg-muted"
+                        >
+                            {mobileOpen ? (
+                                <X className="size-5" aria-hidden="true" />
+                            ) : (
+                                <Menu className="size-5" aria-hidden="true" />
+                            )}
+                        </button>
+                    </div>
+
+                    <div
+                        id="mobile-workspace-navigation"
+                        hidden={!mobileOpen}
+                        className="border-t border-border p-3"
                     >
-                        {mobileOpen ? (
-                            <X className="h-5 w-5" aria-hidden="true" />
-                        ) : (
-                            <Menu className="h-5 w-5" aria-hidden="true" />
-                        )}
-                    </button>
+                        {navigation()}
+
+                        <Link
+                            href="/"
+                            onClick={() => setMobileOpen(false)}
+                            className="mt-2 flex min-h-11 items-center gap-3
+                rounded-lg px-3 text-sm text-muted-foreground
+                hover:bg-muted hover:text-foreground"
+                        >
+                            <ArrowUpRight className="size-[18px]" aria-hidden="true" />
+                            Overview
+                        </Link>
+                    </div>
                 </div>
 
                 <div
-                    id="mobile-admin-navigation"
-                    hidden={!mobileOpen}
-                    onKeyDown={(event) => {
-                        if (event.key === "Escape") closeMobileMenu();
-                    }}
-                    className="border-t border-white/10"
+                    id="workspace-content"
+                    tabIndex={-1}
+                    className="min-w-0 outline-none"
                 >
-                    {renderNavigation(false)}
-
-                    <Link
-                        href="/"
-                        onClick={closeMobileMenu}
-                        className="mx-3 mb-4 flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-300 hover:bg-white/5"
-                    >
-                        <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-                        Public overview
-                    </Link>
+                    {children}
                 </div>
-            </header>
-
-            <div
-                className={`min-w-0 transition-[padding-left] duration-200 motion-reduce:transition-none ${collapsed ? "lg:pl-20" : "lg:pl-64"
-                    }`}
-            >
-                {children}
             </div>
         </div>
     );

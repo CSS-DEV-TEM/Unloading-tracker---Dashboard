@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import ClearActivityButton from "./clear-activity-button";
 
 type SearchParams = {
     invoice?: string | string[];
@@ -51,6 +52,7 @@ const ACTION_LABELS: Record<string, string> = {
     USER_DEACTIVATED: "User deactivated",
     USER_PROFILE_RECOVERED: "User profile recovered",
     ADMIN_BOOTSTRAPPED: "Initial admin created",
+    ACTIVITY_LOGS_CLEARED: "Activity history cleared",
 };
 
 function first(value: string | string[] | undefined) {
@@ -407,6 +409,8 @@ async function ActivityContent({ searchParams }: PageProps) {
                         or date. Dates and times use Sri Lanka time.
                     </p>
                 </header>
+
+                <ClearActivityButton />
 
                 <form
                     key={JSON.stringify(filters)}
