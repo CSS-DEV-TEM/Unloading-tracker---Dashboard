@@ -7,6 +7,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import ProcessForm from "./process-form";
 import type { ProcessFormData, ProcessStage } from "./types";
+import { Pencil } from "lucide-react";
 
 type PageProps = {
     params: Promise<{ id: string }>;
@@ -188,30 +189,69 @@ async function InvoiceContent({ params }: PageProps) {
 
                 <section
                     aria-label="Invoice summary"
-                    className="rounded-xl border border-border bg-card p-6"
+                    className="rounded-xl border border-border bg-card p-4 sm:p-6"
                 >
-                    <dl className="grid grid-cols-2 gap-5 text-sm sm:grid-cols-4">
-                        <div>
-                            <dt className="text-muted-foreground">System</dt>
-                            <dd className="mt-1 font-semibold">{invoice.system_type}</dd>
-                        </div>
-                        <div>
-                            <dt className="text-muted-foreground">Shipment</dt>
-                            <dd className="mt-1 font-semibold">{invoice.shipment_type}</dd>
-                        </div>
-                        <div>
-                            <dt className="text-muted-foreground">Roll quantity</dt>
-                            <dd className="mt-1 font-semibold">
-                                {invoice.roll_quantity ?? "—"}
-                            </dd>
-                        </div>
-                        <div>
-                            <dt className="text-muted-foreground">Document date</dt>
-                            <dd className="mt-1 font-semibold">
-                                {invoice.document_share_date.split("-").reverse().join("/")}
-                            </dd>
-                        </div>
-                    </dl>
+                    <div className="flex items-start gap-3 sm:gap-5">
+                        <dl className="grid min-w-0 flex-1 grid-cols-1 gap-5 text-sm min-[400px]:grid-cols-2 md:grid-cols-4">
+                            <div>
+                                <dt className="text-muted-foreground">
+                                    System
+                                </dt>
+                                <dd className="mt-1 font-semibold">
+                                    {invoice.system_type}
+                                </dd>
+                            </div>
+
+                            <div>
+                                <dt className="text-muted-foreground">
+                                    Shipment
+                                </dt>
+                                <dd className="mt-1 font-semibold">
+                                    {invoice.shipment_type}
+                                </dd>
+                            </div>
+
+                            <div>
+                                <dt className="text-muted-foreground">
+                                    Roll quantity
+                                </dt>
+                                <dd className="mt-1 font-semibold tabular-nums">
+                                    {invoice.roll_quantity ?? "—"}
+                                </dd>
+                            </div>
+
+                            <div>
+                                <dt className="text-muted-foreground">
+                                    Document date
+                                </dt>
+                                <dd className="mt-1 font-semibold tabular-nums">
+                                    {invoice.document_share_date
+                                        .split("-")
+                                        .reverse()
+                                        .join("/")}
+                                </dd>
+                            </div>
+                        </dl>
+
+                        <Link
+                            href={`/dashboard/invoices/${invoice.id}/details`}
+                            aria-label={`Edit invoice details for ${invoice.invoice_number}`}
+                            title="Edit invoice details"
+                            className="inline-flex size-11 shrink-0 items-center
+                                        justify-center rounded-lg border border-input
+                                        bg-card text-muted-foreground transition-colors
+                                        hover:border-blue-400 hover:bg-blue-50
+                                        hover:text-blue-700
+                                        dark:hover:border-blue-700 dark:hover:bg-blue-950/40
+                                        dark:hover:text-blue-300
+                                        focus-visible:outline-none focus-visible:ring-2
+                                        focus-visible:ring-ring focus-visible:ring-offset-2
+                                        focus-visible:ring-offset-background
+                                        motion-reduce:transition-none"
+                        >
+                            <Pencil className="size-4" aria-hidden="true" />
+                        </Link>
+                    </div>
                 </section>
 
                 <ProcessForm

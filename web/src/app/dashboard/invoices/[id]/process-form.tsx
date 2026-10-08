@@ -5,6 +5,7 @@ import { useActionState, useState } from "react";
 
 import { updateInvoiceProcess } from "./actions";
 import type { ProcessFormData, ProcessStage } from "./types";
+import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
 
 const inputClass =
     "mt-2 h-11 w-full rounded-lg border border-input bg-card px-3 text-sm text-foreground outline-none focus:border-blue-600 focus:ring-2 focus:ring-ring/25";
@@ -29,6 +30,14 @@ export default function ProcessForm({
         },
     );
 
+    const hasUnsavedChanges =
+        JSON.stringify(form) !== JSON.stringify(initial);
+
+    const { reloadWithoutWarning } = useUnsavedChanges(
+        hasUnsavedChanges,
+        pending,
+    );
+
     function updateStage(
         system: ProcessStage["system_name"],
         changes: Partial<ProcessStage>,
@@ -42,11 +51,18 @@ export default function ProcessForm({
     }
 
     function reloadLatest() {
-        const confirmed = window.confirm(
-            "Reload the latest record? Unsaved changes in this form will be discarded.",
-        );
+        if (pending) return;
 
-        if (confirmed) window.location.reload();
+        if (
+            hasUnsavedChanges &&
+            !window.confirm(
+                "Reload the latest record? Your unsaved changes will be discarded.",
+            )
+        ) {
+            return;
+        }
+
+        reloadWithoutWarning();
     }
 
     return (
@@ -251,8 +267,8 @@ export default function ProcessForm({
 
                 <section
                     className={`rounded-xl border p-6 ${form.remark.trim()
-                            ? "border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/40"
-                            : "border-border bg-card"
+                        ? "border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/40"
+                        : "border-border bg-card"
                         }`}
                 >
                     <h2 className="font-semibold">Remark</h2>
@@ -318,6 +334,18 @@ export default function ProcessForm({
                     )}
                 </div>
             )}
+
+            <p
+                role="status"
+                aria-live="polite"
+                className="min-h-5 text-right text-xs text-muted-foreground"
+            >
+                {pending
+                    ? "Saving changes…"
+                    : hasUnsavedChanges
+                        ? "You have unsaved changes."
+                        : ""}
+            </p>
 
             <div className="flex flex-wrap items-center justify-end gap-3">
                 <Link
