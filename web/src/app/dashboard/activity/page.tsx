@@ -1,3 +1,4 @@
+import ThemeToggle from "@/components/theme-toggle";
 import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
@@ -188,12 +189,12 @@ function ChangeDetails({ changes }: { changes: unknown }) {
     }
 
     return (
-        <details className="mt-4 rounded-xl border border-slate-200">
-            <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-blue-700">
+        <details className="mt-4 rounded-xl border border-border">
+            <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-blue-700 dark:text-blue-400">
                 View recorded changes
             </summary>
 
-            <div className="space-y-4 border-t border-slate-200 p-4">
+            <div className="space-y-4 border-t border-border p-4">
                 {Object.entries(changes).map(([field, change]) => {
                     const hasOldAndNew =
                         isObject(change) &&
@@ -202,34 +203,34 @@ function ChangeDetails({ changes }: { changes: unknown }) {
 
                     return (
                         <div key={field}>
-                            <p className="mb-2 text-sm font-semibold text-slate-800">
+                            <p className="mb-2 text-sm font-semibold text-foreground">
                                 {fieldLabel(field)}
                             </p>
 
                             {hasOldAndNew ? (
                                 <div className="grid gap-3 md:grid-cols-2">
-                                    <div className="min-w-0 rounded-lg bg-slate-100 p-3">
-                                        <p className="mb-2 text-xs font-semibold uppercase text-slate-500">
+                                    <div className="min-w-0 rounded-lg bg-muted p-3">
+                                        <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
                                             Previous value
                                         </p>
 
-                                        <pre className="whitespace-pre-wrap break-words font-sans text-sm text-slate-700">
+                                        <pre className="whitespace-pre-wrap break-words font-sans text-sm text-foreground">
                                             {formatValue(change.old)}
                                         </pre>
                                     </div>
 
-                                    <div className="min-w-0 rounded-lg bg-blue-50 p-3">
-                                        <p className="mb-2 text-xs font-semibold uppercase text-blue-600">
+                                    <div className="min-w-0 rounded-lg bg-blue-50 dark:bg-blue-950/40 p-3">
+                                        <p className="mb-2 text-xs font-semibold uppercase text-blue-600 dark:text-blue-400">
                                             New value
                                         </p>
 
-                                        <pre className="whitespace-pre-wrap break-words font-sans text-sm text-slate-800">
+                                        <pre className="whitespace-pre-wrap break-words font-sans text-sm text-foreground">
                                             {formatValue(change.new)}
                                         </pre>
                                     </div>
                                 </div>
                             ) : (
-                                <pre className="whitespace-pre-wrap break-words rounded-lg bg-slate-100 p-3 font-sans text-sm">
+                                <pre className="whitespace-pre-wrap break-words rounded-lg bg-muted p-3 font-sans text-sm">
                                     {formatValue(change)}
                                 </pre>
                             )}
@@ -383,24 +384,25 @@ async function ActivityContent({ searchParams }: PageProps) {
     }
 
     const inputClass =
-        "w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+        "w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-ring/25";
 
     const labelClass =
-        "mb-2 block text-sm font-medium text-slate-700";
+        "mb-2 block text-sm font-medium text-foreground";
 
     return (
-        <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-8">
+        <main className="min-h-screen bg-background px-4 py-8 sm:px-8">
             <div className="mx-auto max-w-6xl">
+                <div className="mb-5 flex justify-end"><ThemeToggle /></div>
                 <header className="mb-7">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-blue-600">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-blue-600 dark:text-blue-400">
                         Administrator
                     </p>
 
-                    <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+                    <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground">
                         User Activity
                     </h1>
 
-                    <p className="mt-2 text-sm text-slate-500">
+                    <p className="mt-2 text-sm text-muted-foreground">
                         Search recorded changes by invoice, user, activity type,
                         or date. Dates and times use Sri Lanka time.
                     </p>
@@ -410,7 +412,7 @@ async function ActivityContent({ searchParams }: PageProps) {
                     key={JSON.stringify(filters)}
                     action="/dashboard/activity"
                     method="get"
-                    className="mb-6 rounded-2xl border border-slate-200 bg-white p-5"
+                    className="mb-6 rounded-2xl border border-border bg-card p-5"
                 >
                     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                         <div>
@@ -499,14 +501,14 @@ async function ActivityContent({ searchParams }: PageProps) {
 
                             <Link
                                 href="/dashboard/activity"
-                                className="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                                className="rounded-xl border border-input px-5 py-2.5 text-sm font-medium text-muted-foreground hover:bg-background"
                             >
                                 Reset
                             </Link>
                         </div>
                     </div>
 
-                    <p className="mt-4 text-xs text-slate-500">
+                    <p className="mt-4 text-xs text-muted-foreground">
                         User name searches the person who performed the action,
                         not the assigned AX/D365 or ASN user.
                     </p>
@@ -515,24 +517,24 @@ async function ActivityContent({ searchParams }: PageProps) {
                 {filterError || loadError ? (
                     <p
                         role="alert"
-                        className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+                        className="rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 p-4 text-sm text-red-700 dark:text-red-400"
                     >
                         {filterError ||
                             "Unable to load activity. Refresh the page and try again."}
                     </p>
                 ) : (
                     <>
-                        <div className="mb-4 flex items-center justify-between text-sm text-slate-500">
+                        <div className="mb-4 flex items-center justify-between text-sm text-muted-foreground">
                             <p>{total} matching activity records</p>
                             <p>Newest first</p>
                         </div>
 
                         {rows.length === 0 ? (
-                            <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
-                                <h2 className="font-semibold text-slate-800">
+                            <div className="rounded-2xl border border-dashed border-input bg-card px-6 py-14 text-center">
+                                <h2 className="font-semibold text-foreground">
                                     No matching activity
                                 </h2>
-                                <p className="mt-2 text-sm text-slate-500">
+                                <p className="mt-2 text-sm text-muted-foreground">
                                     Adjust the filters or reset to view all recorded activity.
                                 </p>
                             </div>
@@ -541,24 +543,24 @@ async function ActivityContent({ searchParams }: PageProps) {
                                 {rows.map((row) => (
                                     <article
                                         key={row.id}
-                                        className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                                        className="rounded-2xl border border-border bg-card p-5 shadow-sm"
                                     >
                                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                             <div>
-                                                <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+                                                <p className="text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400">
                                                     {ACTION_LABELS[row.action] ??
                                                         row.action.replaceAll("_", " ")}
                                                 </p>
 
-                                                <h2 className="mt-2 font-semibold text-slate-900">
+                                                <h2 className="mt-2 font-semibold text-foreground">
                                                     {row.actor_name}
                                                 </h2>
 
-                                                <div className="mt-1 text-sm text-slate-500">
+                                                <div className="mt-1 text-sm text-muted-foreground">
                                                     {row.invoice_id ? (
                                                         <Link
                                                             href={`/dashboard/invoices/${row.invoice_id}`}
-                                                            className="font-medium text-blue-700 hover:underline"
+                                                            className="font-medium text-blue-700 dark:text-blue-400 hover:underline"
                                                         >
                                                             Invoice:{" "}
                                                             {row.invoices?.invoice_number ??
@@ -576,7 +578,7 @@ async function ActivityContent({ searchParams }: PageProps) {
 
                                             <time
                                                 dateTime={row.occurred_at}
-                                                className="text-xs text-slate-500"
+                                                className="text-xs text-muted-foreground"
                                             >
                                                 {formatTime(row.occurred_at)} · SLST
                                             </time>
@@ -589,7 +591,7 @@ async function ActivityContent({ searchParams }: PageProps) {
                         )}
 
                         <footer className="mt-6 flex items-center justify-between">
-                            <p className="text-sm text-slate-500">
+                            <p className="text-sm text-muted-foreground">
                                 Page {page} of {totalPages}
                             </p>
 
@@ -597,7 +599,7 @@ async function ActivityContent({ searchParams }: PageProps) {
                                 {page > 1 && (
                                     <Link
                                         href={activityUrl(filters, page - 1)}
-                                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm hover:bg-slate-100"
+                                        className="rounded-lg border border-input bg-card px-4 py-2 text-sm hover:bg-muted"
                                     >
                                         Previous
                                     </Link>
@@ -606,7 +608,7 @@ async function ActivityContent({ searchParams }: PageProps) {
                                 {page < totalPages && (
                                     <Link
                                         href={activityUrl(filters, page + 1)}
-                                        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm hover:bg-slate-100"
+                                        className="rounded-lg border border-input bg-card px-4 py-2 text-sm hover:bg-muted"
                                     >
                                         Next
                                     </Link>
@@ -624,7 +626,7 @@ export default function ActivityPage(props: PageProps) {
     return (
         <Suspense
             fallback={
-                <div className="p-8 text-sm text-slate-500">
+                <div className="p-8 text-sm text-muted-foreground">
                     Loading user activity...
                 </div>
             }

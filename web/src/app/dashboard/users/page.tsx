@@ -1,3 +1,4 @@
+import ThemeToggle from "@/components/theme-toggle";
 import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
@@ -78,18 +79,19 @@ async function UsersContent({ searchParams }: Props) {
     }
 
     return (
-        <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-8">
+        <main className="min-h-screen bg-background px-4 py-8 sm:px-8">
             <div className="mx-auto max-w-6xl">
+                <div className="mb-5 flex justify-end"><ThemeToggle /></div>
                 <header className="mb-7">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-blue-600">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-blue-600 dark:text-blue-400">
                         Administrator
                     </p>
 
-                    <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+                    <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground">
                         User Management
                     </h1>
 
-                    <p className="mt-2 text-sm text-slate-500">
+                    <p className="mt-2 text-sm text-muted-foreground">
                         Manage dashboard access while preserving invoice and
                         activity history.
                     </p>
@@ -97,20 +99,20 @@ async function UsersContent({ searchParams }: Props) {
 
                 <CreateUserForm />
 
-                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                    <div className="border-b border-slate-200 px-5 py-4">
-                        <h2 className="font-semibold text-slate-800">
+                <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+                    <div className="border-b border-border px-5 py-4">
+                        <h2 className="font-semibold text-foreground">
                             Dashboard users
                         </h2>
 
-                        <p className="mt-1 text-sm text-slate-500">
+                        <p className="mt-1 text-sm text-muted-foreground">
                             {total} accounts
                         </p>
                     </div>
 
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                            <thead className="bg-background text-xs uppercase text-muted-foreground">
                                 <tr>
                                     <th scope="col" className="px-5 py-4">
                                         User
@@ -130,14 +132,14 @@ async function UsersContent({ searchParams }: Props) {
                                 </tr>
                             </thead>
 
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-border">
                                 {(users ?? []).map((account) => (
                                     <tr key={account.id}>
-                                        <td className="px-5 py-4 font-medium text-slate-900">
+                                        <td className="px-5 py-4 font-medium text-foreground">
                                             {account.full_name}
                                         </td>
 
-                                        <td className="px-5 py-4 text-slate-600">
+                                        <td className="px-5 py-4 text-muted-foreground">
                                             {account.role === "ADMIN"
                                                 ? "Administrator"
                                                 : "User"}
@@ -146,15 +148,15 @@ async function UsersContent({ searchParams }: Props) {
                                         <td className="px-5 py-4">
                                             <span
                                                 className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${account.is_active
-                                                    ? "bg-blue-50 text-blue-700"
-                                                    : "bg-slate-100 text-slate-500"
+                                                    ? "bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400"
+                                                    : "bg-muted text-muted-foreground"
                                                     }`}
                                             >
                                                 {account.is_active ? "Active" : "Inactive"}
                                             </span>
                                         </td>
 
-                                        <td className="whitespace-nowrap px-5 py-4 text-slate-500">
+                                        <td className="whitespace-nowrap px-5 py-4 text-muted-foreground">
                                             {new Intl.DateTimeFormat("en-GB", {
                                                 timeZone: "Asia/Colombo",
                                                 day: "2-digit",
@@ -178,7 +180,7 @@ async function UsersContent({ searchParams }: Props) {
                                     <tr>
                                         <td
                                             colSpan={5}
-                                            className="px-5 py-12 text-center text-slate-500"
+                                            className="px-5 py-12 text-center text-muted-foreground"
                                         >
                                             No user profiles found.
                                         </td>
@@ -190,7 +192,7 @@ async function UsersContent({ searchParams }: Props) {
                 </div>
 
                 <footer className="mt-6 flex items-center justify-between">
-                    <p className="text-sm text-slate-500">
+                    <p className="text-sm text-muted-foreground">
                         Page {page} of {totalPages}
                     </p>
 
@@ -198,7 +200,7 @@ async function UsersContent({ searchParams }: Props) {
                         {page > 1 && (
                             <Link
                                 href={`/dashboard/users?page=${page - 1}`}
-                                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm"
+                                className="rounded-lg border border-input bg-card px-4 py-2 text-sm"
                             >
                                 Previous
                             </Link>
@@ -207,7 +209,7 @@ async function UsersContent({ searchParams }: Props) {
                         {page < totalPages && (
                             <Link
                                 href={`/dashboard/users?page=${page + 1}`}
-                                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm"
+                                className="rounded-lg border border-input bg-card px-4 py-2 text-sm"
                             >
                                 Next
                             </Link>
@@ -223,7 +225,7 @@ export default function UsersPage(props: Props) {
     return (
         <Suspense
             fallback={
-                <div className="p-8 text-sm text-slate-500">
+                <div className="p-8 text-sm text-muted-foreground">
                     Loading user accounts...
                 </div>
             }

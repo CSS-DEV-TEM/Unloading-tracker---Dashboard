@@ -5,7 +5,7 @@ import { useActionState } from "react";
 import { createInvoice } from "./actions";
 
 const inputStyle =
-    "mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100";
+    "mt-2 h-11 w-full rounded-lg border border-input bg-card px-3 text-sm text-foreground outline-none focus:border-blue-600 focus:ring-2 focus:ring-ring/25";
 
 export default function InvoiceForm({ today }: { today: string }) {
     const [state, formAction, pending] = useActionState(createInvoice, {
@@ -142,7 +142,7 @@ export default function InvoiceForm({ today }: { today: string }) {
                 </div>
             </fieldset>
 
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
                 New invoices start as Pending. Processing details can be updated
                 after creation.
             </p>
@@ -150,16 +150,16 @@ export default function InvoiceForm({ today }: { today: string }) {
             {state.error && (
                 <p
                     role="alert"
-                    className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+                    className="rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-700 dark:text-red-400"
                 >
                     {state.error}
                 </p>
             )}
 
-            <div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 pt-5">
+            <div className="flex flex-wrap items-center justify-end gap-3 border-t border-border pt-5">
                 <Link
                     href="/dashboard"
-                    className="rounded-lg px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
+                    className="rounded-lg px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted"
                 >
                     Back to dashboard
                 </Link>

@@ -48,7 +48,7 @@ export default function DashboardLayout({
     return (
         <Suspense
             fallback={
-                <div className="min-h-screen bg-slate-50 p-8 text-sm text-slate-500">
+                <div className="min-h-screen bg-background p-8 text-sm text-muted-foreground">
                     Loading workspace...
                 </div>
             }

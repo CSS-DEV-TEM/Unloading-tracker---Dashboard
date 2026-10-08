@@ -2,8 +2,17 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
-import { PackageOpen } from "lucide-react";
+import { ArrowLeft, Loader2, PackageOpen } from "lucide-react";
+
+import ThemeToggle from "@/components/theme-toggle";
 import { signIn } from "./actions";
+
+const inputClass =
+    "block h-12 w-full rounded-xl border border-input bg-background " +
+    "px-4 text-base text-foreground caret-current shadow-sm outline-none " +
+    "placeholder:text-muted-foreground focus-visible:border-ring " +
+    "focus-visible:ring-2 focus-visible:ring-ring/30 " +
+    "read-only:opacity-70";
 
 export default function LoginPage() {
     const [state, formAction, pending] = useActionState(signIn, {
@@ -11,37 +20,52 @@ export default function LoginPage() {
     });
 
     return (
-        <main className="flex min-h-screen items-center justify-center bg-slate-50 px-5 py-12">
+        <main className="flex min-h-dvh items-center justify-center bg-background px-4 py-8 text-foreground sm:px-6 sm:py-12">
             <div className="w-full max-w-md">
-                <Link
-                    href="/"
-                    className="mb-6 inline-block text-sm text-blue-700 hover:underline"
-                >
-                    ← Back to invoice overview
-                </Link>
+                <div className="mb-6 flex items-center justify-between gap-4">
+                    <Link
+                        href="/"
+                        className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                        <ArrowLeft className="size-4 shrink-0" aria-hidden="true" />
+                        <span>Back to invoice overview</span>
+                    </Link>
 
-                <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+                    <ThemeToggle />
+                </div>
+
+                <section
+                    aria-labelledby="login-heading"
+                    className="rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-xl shadow-black/5 sm:p-8"
+                >
                     <div className="mb-6 flex size-12 items-center justify-center rounded-xl bg-blue-700 text-white">
                         <PackageOpen className="size-6" aria-hidden="true" />
                     </div>
 
-                    <p className="text-xs font-semibold tracking-widest text-blue-700">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-blue-700 dark:text-blue-300">
                         EFL · 3PL
                     </p>
 
-                    <h1 className="mt-3 text-2xl font-semibold text-slate-900">
+                    <h1
+                        id="login-heading"
+                        className="mt-3 text-2xl font-semibold leading-tight tracking-tight text-card-foreground"
+                    >
                         Sign in to your workspace
                     </h1>
 
-                    <p className="mt-2 text-sm leading-6 text-slate-500">
+                    <p className="mt-3 text-sm leading-6 text-muted-foreground">
                         Use the account provided by your administrator.
                     </p>
 
-                    <form action={formAction} className="mt-7 space-y-5">
+                    <form
+                        action={formAction}
+                        aria-busy={pending}
+                        className="mt-8 space-y-5"
+                    >
                         <div>
                             <label
                                 htmlFor="email"
-                                className="mb-2 block text-sm font-medium text-slate-700"
+                                className="mb-2 block text-sm font-medium text-card-foreground"
                             >
                                 Email address
                             </label>
@@ -51,17 +75,20 @@ export default function LoginPage() {
                                 name="email"
                                 type="email"
                                 autoComplete="username"
+                                autoCapitalize="none"
+                                spellCheck={false}
+                                placeholder="you@company.com"
                                 required
                                 maxLength={254}
                                 readOnly={pending}
-                                className="h-11 w-full rounded-lg border border-slate-300 px-3 text-slate-900 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                                className={inputClass}
                             />
                         </div>
 
                         <div>
                             <label
                                 htmlFor="password"
-                                className="mb-2 block text-sm font-medium text-slate-700"
+                                className="mb-2 block text-sm font-medium text-card-foreground"
                             >
                                 Password
                             </label>
@@ -71,17 +98,18 @@ export default function LoginPage() {
                                 name="password"
                                 type="password"
                                 autoComplete="current-password"
+                                placeholder="Enter your password"
                                 required
                                 maxLength={1024}
                                 readOnly={pending}
-                                className="h-11 w-full rounded-lg border border-slate-300 px-3 text-slate-900 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                                className={inputClass}
                             />
                         </div>
 
                         {state.error && (
                             <p
                                 role="alert"
-                                className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+                                className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm leading-6 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
                             >
                                 {state.error}
                             </p>
@@ -90,16 +118,29 @@ export default function LoginPage() {
                         <button
                             type="submit"
                             disabled={pending}
-                            className="h-11 w-full rounded-lg bg-blue-700 text-sm font-semibold text-white hover:bg-blue-800 disabled:cursor-wait disabled:opacity-60"
+                            className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card disabled:cursor-wait disabled:opacity-60"
                         >
+                            {pending && (
+                                <Loader2
+                                    className="size-4 animate-spin motion-reduce:animate-none"
+                                    aria-hidden="true"
+                                />
+                            )}
+
                             {pending ? "Signing in..." : "Sign In"}
                         </button>
                     </form>
 
-                    <p className="mt-6 text-center text-xs leading-5 text-slate-500">
-                        Need access? Contact your dashboard administrator.
-                    </p>
+                    <div className="mt-7 border-t border-border pt-5">
+                        <p className="text-center text-xs leading-6 text-muted-foreground">
+                            Need access? Contact your dashboard administrator.
+                        </p>
+                    </div>
                 </section>
+
+                <p className="mt-6 text-center text-xs text-muted-foreground">
+                    Unloading Tracker · CSS Division
+                </p>
             </div>
         </main>
     );

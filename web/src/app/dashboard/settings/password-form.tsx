@@ -14,21 +14,21 @@ export default function PasswordForm() {
     );
 
     const inputClass =
-        "w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+        "w-full rounded-xl border border-input bg-card px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-ring/25";
 
     return (
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
             <div className="mb-6 flex items-center gap-3">
-                <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
+                <div className="rounded-xl bg-blue-50 dark:bg-blue-950/40 p-3 text-blue-600 dark:text-blue-400">
                     <LockKeyhole className="h-5 w-5" aria-hidden="true" />
                 </div>
 
                 <div>
-                    <h2 className="font-semibold text-slate-900">
+                    <h2 className="font-semibold text-foreground">
                         Change password
                     </h2>
 
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="mt-1 text-sm text-muted-foreground">
                         Confirm your current password to set a new one.
                     </p>
                 </div>
@@ -39,7 +39,7 @@ export default function PasswordForm() {
                     <div>
                         <label
                             htmlFor="current-password"
-                            className="mb-2 block text-sm font-medium text-slate-700"
+                            className="mb-2 block text-sm font-medium text-foreground"
                         >
                             Current password
                         </label>
@@ -58,7 +58,7 @@ export default function PasswordForm() {
                     <div>
                         <label
                             htmlFor="new-password"
-                            className="mb-2 block text-sm font-medium text-slate-700"
+                            className="mb-2 block text-sm font-medium text-foreground"
                         >
                             New password
                         </label>
@@ -77,7 +77,7 @@ export default function PasswordForm() {
 
                         <p
                             id="new-password-help"
-                            className="mt-2 text-xs text-slate-500"
+                            className="mt-2 text-xs text-muted-foreground"
                         >
                             Use 12–128 characters and a password you do not use
                             for other accounts.
@@ -87,7 +87,7 @@ export default function PasswordForm() {
                     <div>
                         <label
                             htmlFor="confirm-password"
-                            className="mb-2 block text-sm font-medium text-slate-700"
+                            className="mb-2 block text-sm font-medium text-foreground"
                         >
                             Confirm new password
                         </label>
@@ -116,7 +116,7 @@ export default function PasswordForm() {
                 {state.error && (
                     <p
                         role="alert"
-                        className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+                        className="mt-5 rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 p-4 text-sm text-red-700 dark:text-red-400"
                     >
                         {state.error}
                     </p>
@@ -125,7 +125,7 @@ export default function PasswordForm() {
                 {state.success && (
                     <p
                         role="status"
-                        className="mt-5 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700"
+                        className="mt-5 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/40 p-4 text-sm text-blue-700 dark:text-blue-400"
                     >
                         {state.success}
                     </p>

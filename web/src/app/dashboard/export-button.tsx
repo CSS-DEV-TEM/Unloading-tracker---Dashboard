@@ -65,7 +65,7 @@ export default function ExportButton() {
                 type="button"
                 onClick={downloadExcel}
                 disabled={pending}
-                className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-white px-5 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-50 disabled:cursor-wait disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-lg border border-blue-200 dark:border-blue-900 bg-card px-5 py-3 text-sm font-semibold text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 disabled:cursor-wait disabled:opacity-60"
             >
                 {pending ? (
                     <LoaderCircle
@@ -80,7 +80,7 @@ export default function ExportButton() {
             </button>
 
             {error && (
-                <p role="alert" className="mt-2 max-w-sm text-xs text-red-600">
+                <p role="alert" className="mt-2 max-w-sm text-xs text-red-600 dark:text-red-400">
                     {error}
                 </p>
             )}

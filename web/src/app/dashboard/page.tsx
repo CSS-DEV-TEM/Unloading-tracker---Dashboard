@@ -1,3 +1,4 @@
+import ThemeToggle from "@/components/theme-toggle";
 import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
@@ -48,9 +49,9 @@ const HEADINGS = [
 ];
 
 const statusStyles = {
-    Pending: "border-amber-200 bg-amber-50 text-amber-800",
-    Complete: "border-emerald-200 bg-emerald-50 text-emerald-800",
-    Reject: "border-rose-200 bg-rose-50 text-rose-800",
+    Pending: "border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300",
+    Complete: "border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300",
+    Reject: "border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300",
 };
 
 function single(value: string | string[] | undefined) {
@@ -112,8 +113,8 @@ function DateTimeCell({ value }: { value: string | null }) {
             title={`${dateLabel}, ${timeLabel} — Sri Lanka time`}
             className="inline-flex flex-col gap-1 whitespace-nowrap"
         >
-            <span className="text-slate-700">{dateLabel}</span>
-            <span className="text-xs text-slate-500">
+            <span className="text-foreground dark:text-slate-200">{dateLabel}</span>
+            <span className="text-xs text-muted-foreground">
                 {timeLabel} · SLST
             </span>
         </time>
@@ -167,7 +168,7 @@ async function DashboardContent({
                     Dashboard access unavailable
                 </h1>
 
-                <p className="mt-3 text-slate-600">
+                <p className="mt-3 text-muted-foreground dark:text-slate-300">
                     Your account access could not be verified. Contact an
                     administrator.
                 </p>
@@ -249,8 +250,8 @@ async function DashboardContent({
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 text-slate-900">
-            <header className="border-b border-slate-200 bg-white">
+        <div className="min-h-screen bg-background text-foreground">
+            <header className="border-b border-border bg-card">
                 <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-5 py-5 sm:px-8">
                     <div className="flex items-center gap-3">
                         <div className="flex size-11 items-center justify-center rounded-xl bg-blue-700 text-white">
@@ -259,7 +260,7 @@ async function DashboardContent({
 
                         <div>
                             <p className="text-sm font-bold">EFL · 3PL</p>
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-muted-foreground">
                                 Unloading Tracker Dashboard
                             </p>
                         </div>
@@ -270,22 +271,24 @@ async function DashboardContent({
                             <p className="text-sm font-medium">
                                 {profile.full_name}
                             </p>
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-muted-foreground">
                                 {profile.role === "ADMIN"
                                     ? "Administrator"
                                     : "Team member"}
                             </p>
                         </div>
 
+                        <ThemeToggle />
+
                         <Link
                             href="/dashboard/settings"
-                            className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                            className="inline-flex items-center justify-center rounded-xl border border-input bg-card px-4 py-2 text-sm font-medium text-foreground dark:text-slate-200 hover:bg-muted"
                         >
                             Account Settings
                         </Link>
 
                         <form action={signOut}>
-                            <button className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium hover:bg-slate-50">
+                            <button className="rounded-lg border border-input px-4 py-2.5 text-sm font-medium hover:bg-muted">
                                 Sign Out
                             </button>
                         </form>
@@ -296,13 +299,13 @@ async function DashboardContent({
             <main className="mx-auto max-w-7xl space-y-7 px-5 py-8 sm:px-8">
                 <section className="flex flex-wrap items-end justify-between gap-5">
                     <div>
-                        <p className="text-xs font-semibold tracking-widest text-blue-700">
+                        <p className="text-xs font-semibold tracking-widest text-blue-700 dark:text-blue-400">
                             OPERATIONS WORKSPACE
                         </p>
                         <h1 className="mt-3 text-3xl font-semibold tracking-tight">
                             Invoice dashboard
                         </h1>
-                        <p className="mt-2 text-sm text-slate-500">
+                        <p className="mt-2 text-sm text-muted-foreground">
                             View invoices created by everyone on your team.
                         </p>
                     </div>
@@ -324,13 +327,13 @@ async function DashboardContent({
 
                 <OverviewRefresh />
 
-                <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-                    <div className="border-b border-slate-200 px-6 py-5">
+                <section className="overflow-hidden rounded-xl border border-border bg-card">
+                    <div className="border-b border-border px-6 py-5">
                         <h2 className="font-semibold">Invoice records</h2>
-                        <p className="mt-1 text-sm text-slate-500">
+                        <p className="mt-1 text-sm text-muted-foreground">
                             Search by invoice number or supplier.
                         </p>
-                        <p className="mt-2 text-xs text-slate-500">
+                        <p className="mt-2 text-xs text-muted-foreground">
                             Start Date shows the earliest AX/D365 start.
                             Completion Date shows when the invoice was marked
                             Complete. All times are in Sri Lanka time.
@@ -345,7 +348,7 @@ async function DashboardContent({
                         <div className="flex-1">
                             <label
                                 htmlFor="search"
-                                className="mb-2 block text-xs font-medium text-slate-600"
+                                className="mb-2 block text-xs font-medium text-muted-foreground dark:text-slate-300"
                             >
                                 Invoice / Supplier
                             </label>
@@ -363,7 +366,7 @@ async function DashboardContent({
                                     defaultValue={q}
                                     maxLength={100}
                                     placeholder="Search invoices..."
-                                    className="h-10 w-full rounded-lg border border-slate-300 pl-10 pr-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                                    className="h-10 w-full rounded-lg border border-input pl-10 pr-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-ring/25"
                                 />
                             </div>
                         </div>
@@ -371,7 +374,7 @@ async function DashboardContent({
                         <div className="sm:w-44">
                             <label
                                 htmlFor="status"
-                                className="mb-2 block text-xs font-medium text-slate-600"
+                                className="mb-2 block text-xs font-medium text-muted-foreground dark:text-slate-300"
                             >
                                 Status
                             </label>
@@ -381,7 +384,7 @@ async function DashboardContent({
                                 id="status"
                                 name="status"
                                 defaultValue={status}
-                                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm"
+                                className="h-10 w-full rounded-lg border border-input bg-card px-3 text-sm"
                             >
                                 <option value="">All statuses</option>
                                 <option value="Pending">Pending</option>
@@ -399,7 +402,7 @@ async function DashboardContent({
 
                         <Link
                             href="/dashboard"
-                            className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-300 px-4 text-sm hover:bg-slate-50"
+                            className="inline-flex h-10 items-center justify-center rounded-lg border border-input px-4 text-sm hover:bg-muted"
                         >
                             Reset
                         </Link>
@@ -408,7 +411,7 @@ async function DashboardContent({
                     {invoiceError ? (
                         <div
                             role="alert"
-                            className="mx-6 mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+                            className="mx-6 mb-6 rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 p-4 text-sm text-red-700 dark:text-red-400"
                         >
                             Unable to load invoices. Refresh the page and try again.
                         </div>
@@ -426,7 +429,7 @@ async function DashboardContent({
                                         in Sri Lanka time
                                     </caption>
 
-                                    <thead className="border-y border-slate-200 bg-slate-50 text-xs text-slate-500">
+                                    <thead className="border-y border-border bg-background text-xs text-muted-foreground">
                                         <tr>
                                             {HEADINGS.map((heading) => (
                                                 <th
@@ -440,12 +443,12 @@ async function DashboardContent({
                                         </tr>
                                     </thead>
 
-                                    <tbody className="divide-y divide-slate-100">
+                                    <tbody className="divide-y divide-border">
                                         {invoices.map((invoice) => (
-                                            <tr key={invoice.id} className="hover:bg-slate-50">
+                                            <tr key={invoice.id} className="hover:bg-muted">
                                                 <th
                                                     scope="row"
-                                                    className="px-5 py-4 font-semibold text-blue-700"
+                                                    className="px-5 py-4 font-semibold text-blue-700 dark:text-blue-400"
                                                 >
                                                     <div className="flex flex-col items-start gap-2">
                                                         <Link
@@ -456,14 +459,14 @@ async function DashboardContent({
                                                                 {invoice.invoice_number}
                                                             </span>
 
-                                                            <span className="text-xs font-normal text-slate-500">
+                                                            <span className="text-xs font-normal text-muted-foreground">
                                                                 Open / Update →
                                                             </span>
                                                         </Link>
 
                                                         <Link
                                                             href={`/dashboard/invoices/${invoice.id}/details`}
-                                                            className="text-xs font-medium text-blue-700 hover:underline"
+                                                            className="text-xs font-medium text-blue-700 dark:text-blue-400 hover:underline"
                                                         >
                                                             Edit details
                                                         </Link>
@@ -518,7 +521,7 @@ async function DashboardContent({
 
                                                 <td className="px-5 py-4">
                                                     {invoice.remark?.trim() ? (
-                                                        <details className="min-w-40 max-w-64 rounded-lg border border-blue-200 bg-blue-50 p-2 text-blue-900">
+                                                        <details className="min-w-40 max-w-64 rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/40 p-2 text-blue-900 dark:text-blue-200">
                                                             <summary className="cursor-pointer text-xs font-semibold">
                                                                 View remark
                                                             </summary>
@@ -537,7 +540,7 @@ async function DashboardContent({
                                             <tr>
                                                 <td
                                                     colSpan={HEADINGS.length}
-                                                    className="px-6 py-14 text-center text-slate-500"
+                                                    className="px-6 py-14 text-center text-muted-foreground"
                                                 >
                                                     {q || status
                                                         ? "No invoices match these filters."
@@ -549,8 +552,8 @@ async function DashboardContent({
                                 </table>
                             </div>
 
-                            <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-200 px-6 py-4">
-                                <p className="text-xs text-slate-500">
+                            <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border px-6 py-4">
+                                <p className="text-xs text-muted-foreground">
                                     Showing {total === 0 ? 0 : from + 1}–
                                     {Math.min(from + invoices.length, total)} of {total} invoices
                                 </p>
@@ -562,20 +565,20 @@ async function DashboardContent({
                                     {page > 1 && (
                                         <Link
                                             href={dashboardUrl(q, status, page - 1)}
-                                            className="rounded-lg border border-slate-300 px-3 py-2 hover:bg-slate-50"
+                                            className="rounded-lg border border-input px-3 py-2 hover:bg-muted"
                                         >
                                             Previous
                                         </Link>
                                     )}
 
-                                    <span className="text-xs text-slate-500">
+                                    <span className="text-xs text-muted-foreground">
                                         Page {page} of {totalPages}
                                     </span>
 
                                     {page < totalPages && (
                                         <Link
                                             href={dashboardUrl(q, status, page + 1)}
-                                            className="rounded-lg border border-slate-300 px-3 py-2 hover:bg-slate-50"
+                                            className="rounded-lg border border-input px-3 py-2 hover:bg-muted"
                                         >
                                             Next
                                         </Link>
@@ -586,9 +589,9 @@ async function DashboardContent({
                     )}
                 </section>
 
-                <footer className="flex flex-wrap justify-between gap-3 text-xs text-slate-500">
+                <footer className="flex flex-wrap justify-between gap-3 text-xs text-muted-foreground">
                     <p>EFL · 3PL — CSS Division</p>
-                    <Link href="/" className="text-blue-700 hover:underline">
+                    <Link href="/" className="text-blue-700 dark:text-blue-400 hover:underline">
                         View public overview →
                     </Link>
                 </footer>
@@ -605,7 +608,7 @@ export default function DashboardPage({
     return (
         <Suspense
             fallback={
-                <p className="min-h-screen bg-slate-50 p-10" role="status">
+                <p className="min-h-screen bg-background p-10" role="status">
                     Loading invoices...
                 </p>
             }
