@@ -1,6 +1,6 @@
-import ThemeToggle from "@/components/theme-toggle";
+
 import { Suspense } from "react";
-import Link from "next/link";
+
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -48,21 +48,19 @@ async function NewInvoiceContent() {
     const today = `${part("year")}-${part("month")}-${part("day")}`;
 
     return (
-        <main className="min-h-screen bg-background px-5 py-10 text-foreground">
+        <main className="min-h-screen bg-background px-4 py-6 text-foreground sm:px-6">
             <div className="mx-auto max-w-3xl">
-                <div className="mb-5 flex justify-end"><ThemeToggle /></div>
-                <Link
-                    href="/dashboard"
-                    className="text-sm text-blue-700 dark:text-blue-400 hover:underline"
-                >
-                    ← Back to dashboard
-                </Link>
+                <div className="mb-6 flex items-center justify-between gap-4">
+                    <div className="mb-6 flex justify-end">
 
-                <p className="mt-8 text-xs font-semibold tracking-widest text-blue-700 dark:text-blue-400">
+                    </div>
+                </div>
+
+                <p className="text-xs font-semibold tracking-widest text-blue-700 dark:text-blue-400">
                     EFL · 3PL
                 </p>
 
-                <h1 className="mt-2 text-3xl font-semibold">
+                <h1 className="mt-2 text-2xl font-semibold tracking-tight">
                     New invoice
                 </h1>
 
@@ -73,7 +71,7 @@ async function NewInvoiceContent() {
 
                 <section
                     aria-label="New invoice form"
-                    className="mt-6 rounded-xl border border-border bg-card p-6 sm:p-8"
+                    className="mt-5 rounded-xl border border-border bg-card p-4 sm:p-6"
                 >
                     <InvoiceForm today={today} />
                 </section>

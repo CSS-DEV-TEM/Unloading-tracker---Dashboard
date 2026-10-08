@@ -1,5 +1,5 @@
-import ThemeToggle from "@/components/theme-toggle";
-import Link from "next/link";
+
+
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { notFound, redirect } from "next/navigation";
@@ -67,24 +67,18 @@ async function DetailsContent({ params }: Props) {
     }
 
     return (
-        <main className="min-h-screen bg-background px-4 py-8 sm:px-8">
+        <main className="min-h-screen bg-background px-4 py-6 text-foreground sm:px-6">
             <div className="mx-auto max-w-3xl">
-                <div className="mb-5 flex justify-end"><ThemeToggle /></div>
-                <Link
-                    href={`/dashboard/invoices/${id}`}
-                    className="text-sm font-medium text-blue-700 dark:text-blue-400 hover:underline"
-                >
-                    ← Back to invoice
-                </Link>
+                <div className="mb-6 flex items-center justify-between gap-4">
+                    <div className="mb-6 flex justify-end">
 
-                <header className="my-6">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-blue-600 dark:text-blue-400">
-                        Invoice details
+                    </div>
+                </div>
+
+                <header className="mb-5">
+                    <p className="mt-2 break-words text-2xl font-semibold tracking-tight text-foreground">
+                        Edit Invoice details
                     </p>
-
-                    <h1 className="mt-2 text-3xl font-semibold text-foreground">
-                        Edit {invoice.invoice_number}
-                    </h1>
 
                     <p className="mt-2 text-sm text-muted-foreground">
                         Update the invoice information. Changes are recorded

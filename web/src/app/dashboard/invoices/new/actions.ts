@@ -99,5 +99,5 @@ export async function createInvoice(
     }
 
     revalidatePath("/dashboard");
-    redirect("/dashboard");
+    redirect("/dashboard?notice=invoice-created");
 }

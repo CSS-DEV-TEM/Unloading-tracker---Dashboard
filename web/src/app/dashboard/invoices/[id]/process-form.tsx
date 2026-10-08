@@ -11,8 +11,7 @@ const inputClass =
     "mt-2 h-11 w-full rounded-lg border border-input bg-card px-3 text-sm text-foreground outline-none focus:border-blue-600 focus:ring-2 focus:ring-ring/25";
 
 const textareaClass =
-    "mt-2 min-h-28 w-full rounded-lg border border-input bg-card p-3 text-sm text-foreground outline-none focus:border-blue-600 focus:ring-2 focus:ring-ring/25";
-
+    "mt-2 min-h-24 w-full resize-y rounded-lg border border-input bg-card p-3 text-sm text-foreground outline-none focus:border-blue-600 focus:ring-2 focus:ring-ring/25";
 export default function ProcessForm({
     initial,
     userNames,
@@ -289,7 +288,7 @@ export default function ProcessForm({
                 </section>
 
                 <section className="rounded-xl border border-border bg-card p-6">
-                    <label htmlFor="status" className="font-semibold">
+                    <label htmlFor="status" className="block text-sm font-semibold">
                         Final status
                     </label>
 
@@ -335,33 +334,44 @@ export default function ProcessForm({
                 </div>
             )}
 
-            <p
-                role="status"
-                aria-live="polite"
-                className="min-h-5 text-right text-xs text-muted-foreground"
+            <div
+                className="sticky bottom-0 z-20 flex flex-wrap items-center
+        justify-between gap-3 rounded-xl border border-border
+        bg-card p-3 shadow-lg sm:px-4"
             >
-                {pending
-                    ? "Saving changes…"
-                    : hasUnsavedChanges
-                        ? "You have unsaved changes."
-                        : ""}
-            </p>
-
-            <div className="flex flex-wrap items-center justify-end gap-3">
-                <Link
-                    href="/dashboard"
-                    className="rounded-lg border border-input bg-card px-4 py-3 text-sm font-medium"
+                <p
+                    role="status"
+                    aria-live="polite"
+                    className="text-xs text-muted-foreground"
                 >
-                    Back to dashboard
-                </Link>
+                    {pending
+                        ? "Saving changes…"
+                        : hasUnsavedChanges
+                            ? "You have unsaved changes."
+                            : "No unsaved changes."}
+                </p>
 
-                <button
-                    type="submit"
-                    disabled={pending || state.conflict}
-                    className="rounded-lg bg-blue-700 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                    {pending ? "Saving changes..." : "Save Changes"}
-                </button>
+                <div className="flex flex-wrap items-center gap-3">
+                    <Link
+                        href="/dashboard"
+                        className="inline-flex min-h-11 items-center justify-center
+                rounded-lg border border-input bg-card px-4 py-2.5
+                text-sm font-medium hover:bg-muted"
+                    >
+                        Back to dashboard
+                    </Link>
+
+                    <button
+                        type="submit"
+                        disabled={pending || state.conflict}
+                        className="inline-flex min-h-11 items-center justify-center
+                rounded-lg bg-blue-700 px-5 py-2.5 text-sm
+                font-semibold text-white hover:bg-blue-800
+                disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        {pending ? "Saving changes…" : "Save changes"}
+                    </button>
+                </div>
             </div>
         </form>
     );

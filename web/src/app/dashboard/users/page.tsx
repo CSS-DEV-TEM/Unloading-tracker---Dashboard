@@ -1,4 +1,4 @@
-import ThemeToggle from "@/components/theme-toggle";
+
 import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
@@ -81,7 +81,7 @@ async function UsersContent({ searchParams }: Props) {
     return (
         <main className="min-h-screen bg-background px-4 py-8 sm:px-8">
             <div className="mx-auto max-w-6xl">
-                <div className="mb-5 flex justify-end"><ThemeToggle /></div>
+                <div className="mb-5 flex justify-end"></div>
                 <header className="mb-7">
                     <p className="text-xs font-semibold uppercase tracking-widest text-blue-600 dark:text-blue-400">
                         Administrator

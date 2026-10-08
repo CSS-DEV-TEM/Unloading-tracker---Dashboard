@@ -2,6 +2,7 @@ import { Suspense, type ReactNode } from "react";
 import { connection } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import AdminSidebar from "./admin-sidebar";
+import InvoiceSuccessNotice from "@/components/invoice-success-notice";
 
 async function DashboardShell({
     children,
@@ -22,7 +23,7 @@ async function DashboardShell({
 
     const { data: profile, error } = await supabase
         .from("profiles")
-        .select("role, is_active")
+        .select("role, is_active, full_name")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -35,7 +36,10 @@ async function DashboardShell({
     }
 
     return (
-        <AdminSidebar isAdmin={profile.role === "ADMIN"}>
+        <AdminSidebar
+            isAdmin={profile.role === "ADMIN"}
+            fullName={profile.full_name ?? ""}
+        >
             {children}
         </AdminSidebar>
     );
@@ -58,7 +62,13 @@ export default function DashboardLayout({
                 </div>
             }
         >
-            <DashboardShell>{children}</DashboardShell>
+            <DashboardShell>
+                <Suspense fallback={null}>
+                    <InvoiceSuccessNotice />
+                </Suspense>
+
+                {children}
+            </DashboardShell>
         </Suspense>
     );
 }
