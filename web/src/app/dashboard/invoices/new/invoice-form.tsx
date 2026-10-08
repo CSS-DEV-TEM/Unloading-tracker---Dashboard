@@ -159,17 +159,22 @@ export default function InvoiceForm({ today }: { today: string }) {
             <div className="flex flex-wrap items-center justify-end gap-3 border-t border-border pt-5">
                 <Link
                     href="/dashboard"
-                    className="rounded-lg px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted"
+                    className="inline-flex min-h-11 items-center justify-center
+            rounded-lg border border-input bg-card px-4 py-2.5
+            text-sm font-medium text-foreground hover:bg-muted"
                 >
-                    Back to dashboard
+                    Cancel
                 </Link>
 
                 <button
                     type="submit"
                     disabled={pending}
-                    className="rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-800 disabled:cursor-wait disabled:opacity-60"
+                    className="inline-flex min-h-11 items-center justify-center
+            rounded-lg bg-blue-700 px-5 py-2.5 text-sm
+            font-semibold text-white hover:bg-blue-800
+            disabled:cursor-wait disabled:opacity-60"
                 >
-                    {pending ? "Saving..." : "Create Invoice"}
+                    {pending ? "Creating invoice…" : "Create Invoice"}
                 </button>
             </div>
         </form>

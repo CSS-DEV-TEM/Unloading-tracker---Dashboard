@@ -42,12 +42,11 @@ export default function DetailsForm({ invoice }: Props) {
     }
 
     const inputClass =
-        "w-full rounded-xl border border-input bg-card px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-ring/25";
-
+        "h-11 w-full rounded-lg border border-input bg-card px-3 text-sm text-foreground outline-none focus:border-blue-600 focus:ring-2 focus:ring-ring/25";
     return (
         <form
             action={formAction}
-            className="rounded-2xl border border-border bg-card p-6 shadow-sm"
+            className="rounded-xl border border-border bg-card p-4 sm:p-6"
         >
             <input type="hidden" name="invoiceId" value={invoice.id} />
             <input type="hidden" name="version" value={invoice.version} />
@@ -200,10 +199,10 @@ export default function DetailsForm({ invoice }: Props) {
                     </div>
                 )}
 
-                <div className="flex flex-wrap justify-end gap-3 border-t border-border pt-5">
+                <div className="flex flex-wrap items-center justify-end gap-3 border-t border-border pt-5">
                     <Link
                         href={`/dashboard/invoices/${invoice.id}`}
-                        className="rounded-xl border border-input px-5 py-3 text-sm font-medium text-muted-foreground"
+                        className="inline-flex min-h-11 items-center justify-center rounded-lg border border-input bg-card px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                         Cancel
                     </Link>
@@ -211,9 +210,9 @@ export default function DetailsForm({ invoice }: Props) {
                     <button
                         type="submit"
                         disabled={pending || state.conflict}
-                        className="rounded-xl bg-blue-700 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="inline-flex min-h-11 items-center justify-center rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                        {pending ? "Saving..." : "Save invoice details"}
+                        {pending ? "Saving…" : "Save changes"}
                     </button>
                 </div>
             </fieldset>

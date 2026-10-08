@@ -1,4 +1,4 @@
-import ThemeToggle from "@/components/theme-toggle";
+
 import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
@@ -251,38 +251,7 @@ async function DashboardContent({
 
     return (
         <div className="min-h-screen bg-background text-foreground">
-            <header className="border-b border-border bg-card">
-                <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
-                    <div className="text-sm">
-                        <span className="text-muted-foreground">Workspace</span>
-                        <span aria-hidden="true" className="mx-2 text-muted-foreground">
-                            /
-                        </span>
-                        <span className="font-medium">Invoices</span>
-                    </div>
 
-                    <div className="flex flex-wrap items-center gap-4">
-                        <div className="hidden text-right sm:block">
-                            <p className="text-sm font-medium">
-                                {profile.full_name}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                                {profile.role === "ADMIN"
-                                    ? "Administrator"
-                                    : "Team member"}
-                            </p>
-                        </div>
-
-                        <ThemeToggle />
-
-                        <form action={signOut}>
-                            <button className="rounded-lg border border-input px-4 py-2.5 text-sm font-medium hover:bg-muted">
-                                Sign Out
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </header>
 
             <main className="mx-auto w-full max-w-[1600px] space-y-4 px-4 py-5 sm:px-6">
                 <section className="flex flex-wrap items-end justify-between gap-5">

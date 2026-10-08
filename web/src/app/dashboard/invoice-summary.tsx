@@ -95,24 +95,32 @@ async function SummaryContent() {
             value: pending + completed + rejected,
             href: "/dashboard",
             icon: FileText,
+            iconClass:
+                "bg-blue-50 text-blue-700 dark:bg-blue-400/10 dark:text-blue-300",
         },
         {
             label: "Pending",
             value: pending,
             href: "/dashboard?status=Pending",
             icon: Clock3,
+            iconClass:
+                "bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-300",
         },
         {
             label: "Completed",
             value: completed,
             href: "/dashboard?status=Complete",
             icon: CheckCircle2,
+            iconClass:
+                "bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300",
         },
         {
             label: "Rejected",
             value: rejected,
             href: "/dashboard?status=Reject",
             icon: XCircle,
+            iconClass:
+                "bg-rose-50 text-rose-700 dark:bg-rose-400/10 dark:text-rose-300",
         },
     ];
 
@@ -128,7 +136,7 @@ async function SummaryContent() {
             </div>
 
             <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-                {cards.map(({ label, value, href, icon: Icon }) => (
+                {cards.map(({ label, value, href, icon: Icon, iconClass }) => (
                     <Link
                         key={label}
                         href={href}
@@ -150,9 +158,7 @@ async function SummaryContent() {
                         </div>
 
                         <span
-                            className="flex size-9 shrink-0 items-center justify-center
-                rounded-lg bg-blue-50 text-blue-700
-                dark:bg-blue-400/10 dark:text-blue-300"
+                            className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${iconClass}`}
                         >
                             <Icon className="size-[18px]" aria-hidden="true" />
                         </span>

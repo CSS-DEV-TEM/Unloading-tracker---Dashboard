@@ -1,5 +1,5 @@
 "use client";
-
+import WorkspaceTopbar from "@/components/workspace-topbar";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -19,11 +19,13 @@ import {
 type Props = {
     children: ReactNode;
     isAdmin: boolean;
+    fullName: string;
 };
 
 export default function AdminSidebar({
     children,
     isAdmin,
+    fullName,
 }: Props) {
     const pathname = usePathname();
     const [collapsed, setCollapsed] = useState(false);
@@ -117,7 +119,7 @@ export default function AdminSidebar({
                     collapsed ? "w-[76px]" : "w-56",
                 ].join(" ")}
             >
-                <div className="flex h-[76px] shrink-0 items-center border-b border-border px-4">
+                <div className="flex h-16 shrink-0 items-center border-b border-border px-4">
                     <Link
                         href="/dashboard"
                         aria-label="EFL 3PL Unloading Tracker"
@@ -199,66 +201,53 @@ export default function AdminSidebar({
             </aside>
 
             <div className={collapsed ? "lg:pl-[76px]" : "lg:pl-56"}>
-                <div className="border-b border-border bg-card lg:hidden">
-                    <div className="flex min-h-16 items-center justify-between gap-3 px-4">
-                        <Link
-                            href="/dashboard"
-                            className="flex items-center gap-3 rounded-md"
-                        >
-                            <Image
-                                src="/efl-logo.png"
-                                alt="EFL"
-                                width={32}
-                                height={32}
-                                unoptimized
-                                className="size-8 rounded object-contain"
-                            />
-                            <span className="text-sm font-semibold">
-                                Unloading Tracker
-                            </span>
-                        </Link>
+                <header
+                    className="sticky top-0 z-40 border-b border-border bg-card"
+                    onKeyDown={(event) => {
+                        if (event.key === "Escape" && mobileOpen) {
+                            setMobileOpen(false);
 
-                        <button
-                            type="button"
-                            aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
-                            aria-expanded={mobileOpen}
-                            aria-controls="mobile-workspace-navigation"
-                            onClick={() => setMobileOpen((value) => !value)}
-                            className="inline-flex size-11 items-center justify-center
-                rounded-lg border border-border hover:bg-muted"
-                        >
-                            {mobileOpen ? (
-                                <X className="size-5" aria-hidden="true" />
-                            ) : (
-                                <Menu className="size-5" aria-hidden="true" />
-                            )}
-                        </button>
-                    </div>
+                            const toggle =
+                                event.currentTarget.querySelector<HTMLButtonElement>(
+                                    'button[aria-controls="mobile-workspace-navigation"]',
+                                );
+
+                            toggle?.focus();
+                        }
+                    }}
+                >
+                    <WorkspaceTopbar
+                        fullName={fullName}
+                        isAdmin={isAdmin}
+                        mobileOpen={mobileOpen}
+                        onToggleMobile={() => setMobileOpen((value) => !value)}
+                    />
 
                     <div
                         id="mobile-workspace-navigation"
                         hidden={!mobileOpen}
-                        className="border-t border-border p-3"
+                        className="max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-border p-3 lg:hidden"
                     >
                         {navigation()}
 
                         <Link
                             href="/"
                             onClick={() => setMobileOpen(false)}
-                            className="mt-2 flex min-h-11 items-center gap-3
-                rounded-lg px-3 text-sm text-muted-foreground
-                hover:bg-muted hover:text-foreground"
+                            className="mt-2 flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
-                            <ArrowUpRight className="size-[18px]" aria-hidden="true" />
+                            <ArrowUpRight
+                                className="size-[18px]"
+                                aria-hidden="true"
+                            />
                             Overview
                         </Link>
                     </div>
-                </div>
+                </header>
 
                 <div
                     id="workspace-content"
                     tabIndex={-1}
-                    className="min-w-0 outline-none"
+                    className="min-w-0 scroll-mt-20 outline-none"
                 >
                     {children}
                 </div>

@@ -1,4 +1,4 @@
-import ThemeToggle from "@/components/theme-toggle";
+
 import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import ProcessForm from "./process-form";
 import type { ProcessFormData, ProcessStage } from "./types";
 import { Pencil } from "lucide-react";
+
 
 type PageProps = {
     params: Promise<{ id: string }>;
@@ -169,89 +170,100 @@ async function InvoiceContent({ params }: PageProps) {
     return (
         <main className="min-h-screen bg-background px-5 py-8 text-foreground">
             <div className="mx-auto max-w-4xl space-y-6">
-                <div className="mb-5 flex justify-end"><ThemeToggle /></div>
-                <Link
-                    href="/dashboard"
-                    className="inline-block text-sm text-blue-700 dark:text-blue-400 hover:underline"
-                >
-                    ← Back to dashboard
-                </Link>
+                <div className="flex items-center justify-between gap-4">
+                    <Link
+                        href="/dashboard"
+                        className="inline-flex min-h-11 items-center rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                        ← Back to dashboard
+                    </Link>
 
-                <header>
-                    <p className="text-xs font-semibold tracking-widest text-blue-700 dark:text-blue-400">
-                        INVOICE WORKSPACE
-                    </p>
-                    <h1 className="mt-3 text-3xl font-semibold">
-                        {invoice.invoice_number}
-                    </h1>
-                    <p className="mt-2 text-muted-foreground">{invoice.supplier}</p>
-                </header>
+
+                </div>
 
                 <section
                     aria-label="Invoice summary"
-                    className="rounded-xl border border-border bg-card p-4 sm:p-6"
+                    className="overflow-hidden rounded-xl border border-border bg-card"
                 >
-                    <div className="flex items-start gap-3 sm:gap-5">
-                        <dl className="grid min-w-0 flex-1 grid-cols-1 gap-5 text-sm min-[400px]:grid-cols-2 md:grid-cols-4">
-                            <div>
-                                <dt className="text-muted-foreground">
-                                    System
-                                </dt>
-                                <dd className="mt-1 font-semibold">
-                                    {invoice.system_type}
-                                </dd>
+                    <div className="flex items-start gap-4 px-5 py-5 sm:px-6">
+                        <div className="grid min-w-0 flex-1 gap-4 sm:grid-cols-2 sm:gap-6">
+                            <div className="min-w-0">
+                                <p className="text-xs font-medium text-muted-foreground">
+                                    Invoice number
+                                </p>
+
+                                <h1 className="mt-1.5 break-words text-xl font-semibold tracking-tight text-foreground">
+                                    {invoice.invoice_number}
+                                </h1>
                             </div>
 
-                            <div>
-                                <dt className="text-muted-foreground">
-                                    Shipment
+                            <dl className="min-w-0 sm:border-l sm:border-border sm:pl-6">
+                                <dt className="text-xs font-medium text-muted-foreground">
+                                    Supplier
                                 </dt>
-                                <dd className="mt-1 font-semibold">
-                                    {invoice.shipment_type}
-                                </dd>
-                            </div>
 
-                            <div>
-                                <dt className="text-muted-foreground">
-                                    Roll quantity
-                                </dt>
-                                <dd className="mt-1 font-semibold tabular-nums">
-                                    {invoice.roll_quantity ?? "—"}
+                                <dd className="mt-1.5 break-words text-base font-medium text-foreground">
+                                    {invoice.supplier}
                                 </dd>
-                            </div>
-
-                            <div>
-                                <dt className="text-muted-foreground">
-                                    Document date
-                                </dt>
-                                <dd className="mt-1 font-semibold tabular-nums">
-                                    {invoice.document_share_date
-                                        .split("-")
-                                        .reverse()
-                                        .join("/")}
-                                </dd>
-                            </div>
-                        </dl>
+                            </dl>
+                        </div>
 
                         <Link
                             href={`/dashboard/invoices/${invoice.id}/details`}
-                            aria-label={`Edit invoice details for ${invoice.invoice_number}`}
+                            aria-label="Edit invoice details"
                             title="Edit invoice details"
-                            className="inline-flex size-11 shrink-0 items-center
-                                        justify-center rounded-lg border border-input
-                                        bg-card text-muted-foreground transition-colors
-                                        hover:border-blue-400 hover:bg-blue-50
-                                        hover:text-blue-700
-                                        dark:hover:border-blue-700 dark:hover:bg-blue-950/40
-                                        dark:hover:text-blue-300
-                                        focus-visible:outline-none focus-visible:ring-2
-                                        focus-visible:ring-ring focus-visible:ring-offset-2
-                                        focus-visible:ring-offset-background
-                                        motion-reduce:transition-none"
+                            className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
-                            <Pencil className="size-4" aria-hidden="true" />
+                            <Pencil aria-hidden="true" className="size-4" />
                         </Link>
                     </div>
+
+                    <dl className="grid grid-cols-2 gap-x-6 gap-y-4 border-t border-border bg-muted/20 px-5 py-4 text-sm sm:grid-cols-4 sm:px-6">
+                        <div className="min-w-0">
+                            <dt className="text-xs text-muted-foreground">
+                                System
+                            </dt>
+                            <dd className="mt-1.5 break-words font-medium text-foreground">
+                                {invoice.system_type}
+                            </dd>
+                        </div>
+
+                        <div className="min-w-0">
+                            <dt className="text-xs text-muted-foreground">
+                                Shipment
+                            </dt>
+                            <dd className="mt-1.5 break-words font-medium text-foreground">
+                                {invoice.shipment_type === "IMPORT"
+                                    ? "Import"
+                                    : invoice.shipment_type === "LOCAL"
+                                        ? "Local"
+                                        : invoice.shipment_type}
+                            </dd>
+                        </div>
+
+                        <div className="min-w-0">
+                            <dt className="text-xs text-muted-foreground">
+                                Roll quantity
+                            </dt>
+                            <dd className="mt-1.5 font-medium tabular-nums text-foreground">
+                                {invoice.roll_quantity == null
+                                    ? "—"
+                                    : invoice.roll_quantity.toLocaleString("en-GB")}
+                            </dd>
+                        </div>
+
+                        <div className="min-w-0">
+                            <dt className="text-xs text-muted-foreground">
+                                Document date
+                            </dt>
+                            <dd className="mt-1.5 font-medium tabular-nums text-foreground">
+                                {invoice.document_share_date
+                                    .split("-")
+                                    .reverse()
+                                    .join("/")}
+                            </dd>
+                        </div>
+                    </dl>
                 </section>
 
                 <ProcessForm

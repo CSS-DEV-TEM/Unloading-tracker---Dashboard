@@ -1,4 +1,4 @@
-import ThemeToggle from "@/components/theme-toggle";
+
 import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
@@ -36,7 +36,7 @@ async function SettingsContent() {
     return (
         <main className="min-h-screen bg-background px-4 py-8 sm:px-8">
             <div className="mx-auto max-w-2xl">
-                <div className="mb-5 flex justify-end"><ThemeToggle /></div>
+                <div className="mb-5 flex justify-end"></div>
                 <Link
                     href="/dashboard"
                     className="text-sm font-medium text-blue-700 dark:text-blue-400 hover:underline"

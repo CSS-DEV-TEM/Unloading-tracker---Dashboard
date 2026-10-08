@@ -198,5 +198,5 @@ export async function updateInvoiceProcess(
 
     revalidatePath("/dashboard");
     revalidatePath(`/dashboard/invoices/${invoiceId}`);
-    redirect("/dashboard");
+    redirect("/dashboard?notice=process-updated");
 }

@@ -122,5 +122,5 @@ export async function saveInvoiceDetails(
     revalidatePath(`/dashboard/invoices/${id}`);
     revalidatePath(`/dashboard/invoices/${id}/details`);
 
-    redirect(`/dashboard/invoices/${id}`);
+    redirect(`/dashboard/invoices/${id}?notice=invoice-updated`);
 }
