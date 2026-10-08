@@ -1,3 +1,4 @@
+import ThemeToggle from "@/components/theme-toggle";
 import { Suspense } from "react";
 import Link from "next/link";
 import { connection } from "next/server";
@@ -47,16 +48,17 @@ async function NewInvoiceContent() {
     const today = `${part("year")}-${part("month")}-${part("day")}`;
 
     return (
-        <main className="min-h-screen bg-slate-50 px-5 py-10 text-slate-900">
+        <main className="min-h-screen bg-background px-5 py-10 text-foreground">
             <div className="mx-auto max-w-3xl">
+                <div className="mb-5 flex justify-end"><ThemeToggle /></div>
                 <Link
                     href="/dashboard"
-                    className="text-sm text-blue-700 hover:underline"
+                    className="text-sm text-blue-700 dark:text-blue-400 hover:underline"
                 >
                     ← Back to dashboard
                 </Link>
 
-                <p className="mt-8 text-xs font-semibold tracking-widest text-blue-700">
+                <p className="mt-8 text-xs font-semibold tracking-widest text-blue-700 dark:text-blue-400">
                     EFL · 3PL
                 </p>
 
@@ -64,14 +66,14 @@ async function NewInvoiceContent() {
                     New invoice
                 </h1>
 
-                <p className="mt-2 text-sm text-slate-500">
+                <p className="mt-2 text-sm text-muted-foreground">
                     Enter the invoice details to begin tracking.
                     Fields marked * are required.
                 </p>
 
                 <section
                     aria-label="New invoice form"
-                    className="mt-6 rounded-xl border border-slate-200 bg-white p-6 sm:p-8"
+                    className="mt-6 rounded-xl border border-border bg-card p-6 sm:p-8"
                 >
                     <InvoiceForm today={today} />
                 </section>

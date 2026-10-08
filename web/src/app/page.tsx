@@ -1,3 +1,4 @@
+import ThemeToggle from "@/components/theme-toggle";
 import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
@@ -30,9 +31,9 @@ type Overview = {
 };
 
 const statusStyles = {
-  Pending: "border-amber-200 bg-amber-50 text-amber-800",
-  Complete: "border-emerald-200 bg-emerald-50 text-emerald-800",
-  Reject: "border-rose-200 bg-rose-50 text-rose-800",
+  Pending: "border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300",
+  Complete: "border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300",
+  Reject: "border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300",
 };
 
 function single(value: string | string[] | undefined) {
@@ -135,8 +136,8 @@ async function PublicOverview({ searchParams }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="border-b border-slate-200 bg-white">
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-5 py-5 sm:px-8">
           <Link href="/" className="flex items-center gap-3">
             <div className="rounded-xl bg-blue-700 p-3 text-white">
@@ -145,18 +146,21 @@ async function PublicOverview({ searchParams }: Props) {
 
             <div>
               <p className="text-sm font-bold">EFL · 3PL</p>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 Unloading Tracker Dashboard
               </p>
             </div>
           </Link>
 
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
           <Link
             href="/login"
             className="rounded-xl bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-800"
           >
             Sign in
           </Link>
+          </div>
         </div>
       </header>
 
@@ -183,10 +187,10 @@ async function PublicOverview({ searchParams }: Props) {
 
         <OverviewRefresh />
 
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-          <div className="border-b border-slate-200 px-6 py-5">
+        <section className="overflow-hidden rounded-2xl border border-border bg-card">
+          <div className="border-b border-border px-6 py-5">
             <h2 className="font-semibold">Invoice overview</h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-muted-foreground">
               Dates and times are displayed in Sri Lanka time.
             </p>
           </div>
@@ -199,7 +203,7 @@ async function PublicOverview({ searchParams }: Props) {
             <div className="flex-1">
               <label
                 htmlFor="public-search"
-                className="mb-2 block text-xs font-medium text-slate-600"
+                className="mb-2 block text-xs font-medium text-muted-foreground dark:text-slate-300"
               >
                 Invoice / Supplier
               </label>
@@ -218,7 +222,7 @@ async function PublicOverview({ searchParams }: Props) {
                   defaultValue={q}
                   maxLength={100}
                   placeholder="Search invoices..."
-                  className="h-10 w-full rounded-lg border border-slate-300 pl-10 pr-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  className="h-10 w-full rounded-lg border border-input pl-10 pr-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-ring/25"
                 />
               </div>
             </div>
@@ -226,7 +230,7 @@ async function PublicOverview({ searchParams }: Props) {
             <div className="sm:w-44">
               <label
                 htmlFor="public-status"
-                className="mb-2 block text-xs font-medium text-slate-600"
+                className="mb-2 block text-xs font-medium text-muted-foreground dark:text-slate-300"
               >
                 Status
               </label>
@@ -236,7 +240,7 @@ async function PublicOverview({ searchParams }: Props) {
                 id="public-status"
                 name="status"
                 defaultValue={status}
-                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm"
+                className="h-10 w-full rounded-lg border border-input bg-card px-3 text-sm"
               >
                 <option value="">All statuses</option>
                 <option value="Pending">Pending</option>
@@ -254,7 +258,7 @@ async function PublicOverview({ searchParams }: Props) {
 
             <Link
               href="/"
-              className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-300 px-4 text-sm hover:bg-slate-50"
+              className="inline-flex h-10 items-center justify-center rounded-lg border border-input px-4 text-sm hover:bg-muted"
             >
               Reset
             </Link>
@@ -263,7 +267,7 @@ async function PublicOverview({ searchParams }: Props) {
           {failed ? (
             <p
               role="alert"
-              className="mx-6 mb-6 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600"
+              className="mx-6 mb-6 rounded-xl border border-border bg-background p-4 text-sm text-muted-foreground dark:text-slate-300"
             >
               Invoice overview is temporarily unavailable.
               Please refresh the page to try again.
@@ -281,7 +285,7 @@ async function PublicOverview({ searchParams }: Props) {
                     Read-only invoice status overview
                   </caption>
 
-                  <thead className="border-y border-slate-200 bg-slate-50 text-xs text-slate-500">
+                  <thead className="border-y border-border bg-background text-xs text-muted-foreground">
                     <tr>
                       {[
                         "Invoice",
@@ -301,15 +305,15 @@ async function PublicOverview({ searchParams }: Props) {
                     </tr>
                   </thead>
 
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-border">
                     {items.map((invoice, index) => (
                       <tr
                         key={`${page}-${index}`}
-                        className="hover:bg-slate-50"
+                        className="hover:bg-muted"
                       >
                         <th
                           scope="row"
-                          className="px-5 py-4 font-semibold text-slate-900"
+                          className="px-5 py-4 font-semibold text-foreground"
                         >
                           {invoice.invoice_number}
                         </th>
@@ -326,11 +330,11 @@ async function PublicOverview({ searchParams }: Props) {
                           </span>
                         </td>
 
-                        <td className="px-5 py-4 text-slate-600">
+                        <td className="px-5 py-4 text-muted-foreground dark:text-slate-300">
                           <DateTime value={invoice.started_at} />
                         </td>
 
-                        <td className="px-5 py-4 text-slate-600">
+                        <td className="px-5 py-4 text-muted-foreground dark:text-slate-300">
                           <DateTime value={invoice.completed_at} />
                         </td>
                       </tr>
@@ -340,7 +344,7 @@ async function PublicOverview({ searchParams }: Props) {
                       <tr>
                         <td
                           colSpan={5}
-                          className="px-6 py-14 text-center text-slate-500"
+                          className="px-6 py-14 text-center text-muted-foreground"
                         >
                           {q || status
                             ? "No invoices match your search."
@@ -352,8 +356,8 @@ async function PublicOverview({ searchParams }: Props) {
                 </table>
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-200 px-6 py-4">
-                <p className="text-xs text-slate-500">
+              <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border px-6 py-4">
+                <p className="text-xs text-muted-foreground">
                   {total} invoices · Page {page} of {totalPages}
                 </p>
 
@@ -364,7 +368,7 @@ async function PublicOverview({ searchParams }: Props) {
                   {page > 1 && (
                     <Link
                       href={overviewUrl(q, status, page - 1)}
-                      className="rounded-lg border border-slate-300 px-3 py-2 hover:bg-slate-50"
+                      className="rounded-lg border border-input px-3 py-2 hover:bg-muted"
                     >
                       Previous
                     </Link>
@@ -373,7 +377,7 @@ async function PublicOverview({ searchParams }: Props) {
                   {page < totalPages && (
                     <Link
                       href={overviewUrl(q, status, page + 1)}
-                      className="rounded-lg border border-slate-300 px-3 py-2 hover:bg-slate-50"
+                      className="rounded-lg border border-input px-3 py-2 hover:bg-muted"
                     >
                       Next
                     </Link>
@@ -384,7 +388,7 @@ async function PublicOverview({ searchParams }: Props) {
           )}
         </section>
 
-        <footer className="flex flex-wrap justify-between gap-3 text-xs text-slate-500">
+        <footer className="flex flex-wrap justify-between gap-3 text-xs text-muted-foreground">
           <p>EFL · 3PL — CSS Division</p>
           <p>Sign in to manage invoices.</p>
         </footer>
@@ -399,7 +403,7 @@ export default function HomePage(props: Props) {
       fallback={
         <p
           role="status"
-          className="min-h-screen bg-slate-50 p-10 text-sm text-slate-500"
+          className="min-h-screen bg-background p-10 text-sm text-muted-foreground"
         >
           Loading invoice overview...
         </p>

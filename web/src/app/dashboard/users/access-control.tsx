@@ -62,8 +62,8 @@ export default function AccessControl({
                 type="submit"
                 disabled={pending}
                 className={`rounded-lg border px-3 py-2 text-xs font-semibold transition disabled:cursor-wait disabled:opacity-50 ${isActive
-                        ? "border-slate-300 text-slate-600 hover:bg-slate-100"
-                        : "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                        ? "border-input text-muted-foreground hover:bg-muted"
+                        : "border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-950/40"
                     }`}
             >
                 {pending
@@ -74,13 +74,13 @@ export default function AccessControl({
             </button>
 
             {state.error && (
-                <p role="alert" className="max-w-xs text-xs text-red-600">
+                <p role="alert" className="max-w-xs text-xs text-red-600 dark:text-red-400">
                     {state.error}
                 </p>
             )}
 
             {state.success && (
-                <p role="status" className="text-xs text-blue-700">
+                <p role="status" className="text-xs text-blue-700 dark:text-blue-400">
                     {state.success}
                 </p>
             )}

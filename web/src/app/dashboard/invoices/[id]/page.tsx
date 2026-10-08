@@ -1,3 +1,4 @@
+import ThemeToggle from "@/components/theme-toggle";
 import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
@@ -165,46 +166,47 @@ async function InvoiceContent({ params }: PageProps) {
     );
 
     return (
-        <main className="min-h-screen bg-slate-50 px-5 py-8 text-slate-900">
+        <main className="min-h-screen bg-background px-5 py-8 text-foreground">
             <div className="mx-auto max-w-4xl space-y-6">
+                <div className="mb-5 flex justify-end"><ThemeToggle /></div>
                 <Link
                     href="/dashboard"
-                    className="inline-block text-sm text-blue-700 hover:underline"
+                    className="inline-block text-sm text-blue-700 dark:text-blue-400 hover:underline"
                 >
                     ← Back to dashboard
                 </Link>
 
                 <header>
-                    <p className="text-xs font-semibold tracking-widest text-blue-700">
+                    <p className="text-xs font-semibold tracking-widest text-blue-700 dark:text-blue-400">
                         INVOICE WORKSPACE
                     </p>
                     <h1 className="mt-3 text-3xl font-semibold">
                         {invoice.invoice_number}
                     </h1>
-                    <p className="mt-2 text-slate-600">{invoice.supplier}</p>
+                    <p className="mt-2 text-muted-foreground">{invoice.supplier}</p>
                 </header>
 
                 <section
                     aria-label="Invoice summary"
-                    className="rounded-xl border border-slate-200 bg-white p-6"
+                    className="rounded-xl border border-border bg-card p-6"
                 >
                     <dl className="grid grid-cols-2 gap-5 text-sm sm:grid-cols-4">
                         <div>
-                            <dt className="text-slate-500">System</dt>
+                            <dt className="text-muted-foreground">System</dt>
                             <dd className="mt-1 font-semibold">{invoice.system_type}</dd>
                         </div>
                         <div>
-                            <dt className="text-slate-500">Shipment</dt>
+                            <dt className="text-muted-foreground">Shipment</dt>
                             <dd className="mt-1 font-semibold">{invoice.shipment_type}</dd>
                         </div>
                         <div>
-                            <dt className="text-slate-500">Roll quantity</dt>
+                            <dt className="text-muted-foreground">Roll quantity</dt>
                             <dd className="mt-1 font-semibold">
                                 {invoice.roll_quantity ?? "—"}
                             </dd>
                         </div>
                         <div>
-                            <dt className="text-slate-500">Document date</dt>
+                            <dt className="text-muted-foreground">Document date</dt>
                             <dd className="mt-1 font-semibold">
                                 {invoice.document_share_date.split("-").reverse().join("/")}
                             </dd>
@@ -226,7 +228,7 @@ export default function InvoicePage({ params }: PageProps) {
     return (
         <Suspense
             fallback={
-                <p className="p-10 text-sm text-slate-600" role="status">
+                <p className="p-10 text-sm text-muted-foreground" role="status">
                     Loading invoice...
                 </p>
             }

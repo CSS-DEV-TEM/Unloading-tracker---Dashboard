@@ -42,12 +42,12 @@ export default function DetailsForm({ invoice }: Props) {
     }
 
     const inputClass =
-        "w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+        "w-full rounded-xl border border-input bg-card px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-ring/25";
 
     return (
         <form
             action={formAction}
-            className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+            className="rounded-2xl border border-border bg-card p-6 shadow-sm"
         >
             <input type="hidden" name="invoiceId" value={invoice.id} />
             <input type="hidden" name="version" value={invoice.version} />
@@ -162,12 +162,12 @@ export default function DetailsForm({ invoice }: Props) {
                         </select>
                     </div>
 
-                    <div className="rounded-xl bg-slate-50 p-4">
-                        <p className="text-xs text-slate-500">Current system</p>
+                    <div className="rounded-xl bg-background p-4">
+                        <p className="text-xs text-muted-foreground">Current system</p>
                         <p className="mt-2 font-semibold">
                             {invoice.system_type}
                         </p>
-                        <p className="mt-1 text-xs text-slate-500">
+                        <p className="mt-1 text-xs text-muted-foreground">
                             System selection cannot be changed in this form.
                         </p>
                     </div>
@@ -176,7 +176,7 @@ export default function DetailsForm({ invoice }: Props) {
                 {state.error && (
                     <div
                         role="alert"
-                        className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+                        className="rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 p-4 text-sm text-red-700 dark:text-red-400"
                     >
                         <p>{state.error}</p>
 
@@ -200,10 +200,10 @@ export default function DetailsForm({ invoice }: Props) {
                     </div>
                 )}
 
-                <div className="flex flex-wrap justify-end gap-3 border-t border-slate-100 pt-5">
+                <div className="flex flex-wrap justify-end gap-3 border-t border-border pt-5">
                     <Link
                         href={`/dashboard/invoices/${invoice.id}`}
-                        className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-medium text-slate-600"
+                        className="rounded-xl border border-input px-5 py-3 text-sm font-medium text-muted-foreground"
                     >
                         Cancel
                     </Link>

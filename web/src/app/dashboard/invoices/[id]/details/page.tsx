@@ -1,3 +1,4 @@
+import ThemeToggle from "@/components/theme-toggle";
 import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
@@ -66,25 +67,26 @@ async function DetailsContent({ params }: Props) {
     }
 
     return (
-        <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-8">
+        <main className="min-h-screen bg-background px-4 py-8 sm:px-8">
             <div className="mx-auto max-w-3xl">
+                <div className="mb-5 flex justify-end"><ThemeToggle /></div>
                 <Link
                     href={`/dashboard/invoices/${id}`}
-                    className="text-sm font-medium text-blue-700 hover:underline"
+                    className="text-sm font-medium text-blue-700 dark:text-blue-400 hover:underline"
                 >
                     ← Back to invoice
                 </Link>
 
                 <header className="my-6">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-blue-600">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-blue-600 dark:text-blue-400">
                         Invoice details
                     </p>
 
-                    <h1 className="mt-2 text-3xl font-semibold text-slate-900">
+                    <h1 className="mt-2 text-3xl font-semibold text-foreground">
                         Edit {invoice.invoice_number}
                     </h1>
 
-                    <p className="mt-2 text-sm text-slate-500">
+                    <p className="mt-2 text-sm text-muted-foreground">
                         Update the invoice information. Changes are recorded
                         in the activity history.
                     </p>
@@ -103,7 +105,7 @@ export default function EditInvoiceDetailsPage(props: Props) {
     return (
         <Suspense
             fallback={
-                <p className="p-8 text-sm text-slate-500">
+                <p className="p-8 text-sm text-muted-foreground">
                     Loading invoice details...
                 </p>
             }

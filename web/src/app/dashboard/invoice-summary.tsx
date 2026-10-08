@@ -20,7 +20,7 @@ function SummarySkeleton() {
             {[1, 2, 3, 4].map((item) => (
                 <div
                     key={item}
-                    className="h-40 animate-pulse rounded-2xl border border-slate-200 bg-white motion-reduce:animate-none"
+                    className="h-40 animate-pulse rounded-2xl border border-border bg-card motion-reduce:animate-none"
                 />
             ))}
         </div>
@@ -48,7 +48,7 @@ async function SummaryContent() {
 
     if (profileError) {
         return (
-            <p role="status" className="mb-6 text-sm text-slate-500">
+            <p role="status" className="mb-6 text-sm text-muted-foreground">
                 Invoice summary is currently unavailable.
             </p>
         );
@@ -82,7 +82,7 @@ async function SummaryContent() {
         return (
             <div
                 role="status"
-                className="mb-8 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500"
+                className="mb-8 rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground"
             >
                 Unable to load the invoice summary. Refresh the page to try
                 again.
@@ -133,11 +133,11 @@ async function SummaryContent() {
     return (
         <section aria-label="Invoice summary" className="mb-8">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-sm font-semibold text-slate-700">
+                <h2 className="text-sm font-semibold text-foreground">
                     Overall invoice status
                 </h2>
 
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                     All invoices · Independent of list filters
                 </p>
             </div>
@@ -152,14 +152,14 @@ async function SummaryContent() {
                             href={card.href}
                             className={`group rounded-2xl border p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 motion-reduce:transform-none motion-reduce:transition-none ${card.primary
                                     ? "border-blue-600 bg-blue-600 text-white"
-                                    : "border-slate-200 bg-white text-slate-900"
+                                    : "border-border bg-card text-foreground"
                                 }`}
                         >
                             <div className="flex items-center justify-between">
                                 <div
                                     className={`rounded-xl p-2.5 ${card.primary
                                             ? "bg-white/15 text-white"
-                                            : "bg-blue-50 text-blue-600"
+                                            : "bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400"
                                         }`}
                                 >
                                     <Icon className="h-5 w-5" aria-hidden="true" />
@@ -168,14 +168,14 @@ async function SummaryContent() {
                                 <ArrowUpRight
                                     className={`h-4 w-4 ${card.primary
                                             ? "text-blue-100"
-                                            : "text-slate-400 group-hover:text-blue-600"
+                                            : "text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
                                         }`}
                                     aria-hidden="true"
                                 />
                             </div>
 
                             <p
-                                className={`mt-4 text-sm font-medium ${card.primary ? "text-blue-100" : "text-slate-500"
+                                className={`mt-4 text-sm font-medium ${card.primary ? "text-blue-100" : "text-muted-foreground"
                                     }`}
                             >
                                 {card.label}
@@ -186,7 +186,7 @@ async function SummaryContent() {
                             </p>
 
                             <p
-                                className={`mt-2 text-xs ${card.primary ? "text-blue-100" : "text-slate-500"
+                                className={`mt-2 text-xs ${card.primary ? "text-blue-100" : "text-muted-foreground"
                                     }`}
                             >
                                 {card.description}

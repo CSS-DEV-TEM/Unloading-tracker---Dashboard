@@ -7,10 +7,10 @@ import { updateInvoiceProcess } from "./actions";
 import type { ProcessFormData, ProcessStage } from "./types";
 
 const inputClass =
-    "mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100";
+    "mt-2 h-11 w-full rounded-lg border border-input bg-card px-3 text-sm text-foreground outline-none focus:border-blue-600 focus:ring-2 focus:ring-ring/25";
 
 const textareaClass =
-    "mt-2 min-h-28 w-full rounded-lg border border-slate-300 bg-white p-3 text-sm text-slate-900 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100";
+    "mt-2 min-h-28 w-full rounded-lg border border-input bg-card p-3 text-sm text-foreground outline-none focus:border-blue-600 focus:ring-2 focus:ring-ring/25";
 
 export default function ProcessForm({
     initial,
@@ -65,7 +65,7 @@ export default function ProcessForm({
                 ))}
             </datalist>
 
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
                 All processing times use Sri Lanka time (UTC+05:30).
             </p>
 
@@ -79,14 +79,14 @@ export default function ProcessForm({
                         <section
                             key={system}
                             aria-labelledby={`${system}-heading`}
-                            className="rounded-xl border border-slate-200 bg-white p-6"
+                            className="rounded-xl border border-border bg-card p-6"
                         >
                             <div className="flex flex-wrap items-center justify-between gap-4">
                                 <div>
                                     <h2 id={`${system}-heading`} className="font-semibold">
                                         {system} Pre GRN
                                     </h2>
-                                    <p className="mt-1 text-sm text-slate-500">
+                                    <p className="mt-1 text-sm text-muted-foreground">
                                         Record processing dates and the responsible user.
                                     </p>
                                 </div>
@@ -175,7 +175,7 @@ export default function ProcessForm({
                     );
                 })}
 
-                <section className="rounded-xl border border-slate-200 bg-white p-6">
+                <section className="rounded-xl border border-border bg-card p-6">
                     <h2 className="font-semibold">Pending reason</h2>
                     <label htmlFor="pending-reason" className="sr-only">
                         Reason for pending work
@@ -193,7 +193,7 @@ export default function ProcessForm({
                     />
                 </section>
 
-                <section className="rounded-xl border border-slate-200 bg-white p-6">
+                <section className="rounded-xl border border-border bg-card p-6">
                     <div className="flex flex-wrap items-center justify-between gap-4">
                         <h2 className="font-semibold">ASN details</h2>
 
@@ -251,8 +251,8 @@ export default function ProcessForm({
 
                 <section
                     className={`rounded-xl border p-6 ${form.remark.trim()
-                            ? "border-blue-200 bg-blue-50"
-                            : "border-slate-200 bg-white"
+                            ? "border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/40"
+                            : "border-border bg-card"
                         }`}
                 >
                     <h2 className="font-semibold">Remark</h2>
@@ -272,7 +272,7 @@ export default function ProcessForm({
                     />
                 </section>
 
-                <section className="rounded-xl border border-slate-200 bg-white p-6">
+                <section className="rounded-xl border border-border bg-card p-6">
                     <label htmlFor="status" className="font-semibold">
                         Final status
                     </label>
@@ -294,7 +294,7 @@ export default function ProcessForm({
                         <option value="Reject">Reject</option>
                     </select>
 
-                    <p className="mt-3 text-sm text-slate-500">
+                    <p className="mt-3 text-sm text-muted-foreground">
                         Choose Complete when the overall task is finished.
                     </p>
                 </section>
@@ -303,7 +303,7 @@ export default function ProcessForm({
             {state.error && (
                 <div
                     role="alert"
-                    className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+                    className="rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 p-4 text-sm text-red-800 dark:text-red-300"
                 >
                     <p>{state.error}</p>
 
@@ -311,7 +311,7 @@ export default function ProcessForm({
                         <button
                             type="button"
                             onClick={reloadLatest}
-                            className="mt-3 rounded-lg border border-red-300 bg-white px-3 py-2 font-semibold"
+                            className="mt-3 rounded-lg border border-red-300 dark:border-red-900 bg-card px-3 py-2 font-semibold"
                         >
                             Reload latest record
                         </button>
@@ -322,7 +322,7 @@ export default function ProcessForm({
             <div className="flex flex-wrap items-center justify-end gap-3">
                 <Link
                     href="/dashboard"
-                    className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-medium"
+                    className="rounded-lg border border-input bg-card px-4 py-3 text-sm font-medium"
                 >
                     Back to dashboard
                 </Link>
