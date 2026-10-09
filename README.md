@@ -123,7 +123,7 @@ Obtain the repository URL, approved environment values and an initial administra
 Replace the example URL below with the team's actual repository URL:
 
 ```bash
-git clone <repository-url> unloading-dashboard-work
+git clone https://github.com/CSS-DEV-TEM/Unloading-tracker---Dashboard.git unloading-dashboard-work
 cd unloading-dashboard-work/web
 npm ci
 ```
