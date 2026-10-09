@@ -10,6 +10,7 @@ import { signOut } from "@/app/login/actions";
 import InvoiceSummary from "./invoice-summary";
 import ExportButton from "./export-button";
 import OverviewRefresh from "@/components/overview-refresh";
+import Form from "next/form";
 
 type SearchParams = Promise<{
     q?: string | string[];
@@ -299,9 +300,9 @@ async function DashboardContent({
                         </details>
                     </div>
 
-                    <form
+                    <Form
                         action="/dashboard"
-                        method="get"
+                        scroll={false}
                         className="flex flex-col gap-4 px-6 py-5 sm:flex-row sm:items-end"
                     >
                         <div className="flex-1">
@@ -365,7 +366,7 @@ async function DashboardContent({
                         >
                             Reset
                         </Link>
-                    </form>
+                    </Form>
 
                     {invoiceError ? (
                         <div

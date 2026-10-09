@@ -1,10 +1,13 @@
-
 import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
+import { Clock3, Search } from "lucide-react";
+
 import { createClient } from "@/lib/supabase/server";
 import ClearActivityButton from "./clear-activity-button";
+import ActivityTable, { type ActivityRow } from "./activity-table";
+import Form from "next/form";
 
 type SearchParams = {
     invoice?: string | string[];
@@ -17,19 +20,6 @@ type SearchParams = {
 
 type PageProps = {
     searchParams: Promise<SearchParams>;
-};
-
-type ActivityRow = {
-    id: string;
-    invoice_id: string | null;
-    actor_name: string;
-    action: string;
-    entity_type: string;
-    changes: unknown;
-    occurred_at: string;
-    invoices: {
-        invoice_number: string;
-    } | null;
 };
 
 type Filters = {
@@ -55,24 +45,27 @@ const ACTION_LABELS: Record<string, string> = {
     ACTIVITY_LOGS_CLEARED: "Activity history cleared",
 };
 
+const inputClass =
+    "block h-10 w-full min-w-0 rounded-lg border border-input " +
+    "bg-background px-3 text-sm text-foreground outline-none " +
+    "placeholder:text-muted-foreground focus-visible:border-ring " +
+    "focus-visible:ring-2 focus-visible:ring-ring/25";
+
+const labelClass =
+    "mb-1.5 block text-xs font-medium text-muted-foreground";
+
+const secondaryButton =
+    "inline-flex min-h-11 items-center justify-center rounded-lg " +
+    "border border-input bg-card px-4 text-sm font-medium " +
+    "text-foreground hover:bg-muted focus-visible:outline-none " +
+    "focus-visible:ring-2 focus-visible:ring-ring";
+
 function first(value: string | string[] | undefined) {
     return Array.isArray(value) ? value[0] ?? "" : value ?? "";
 }
 
-function isObject(
-    value: unknown,
-): value is Record<string, unknown> {
-    return (
-        typeof value === "object" &&
-        value !== null &&
-        !Array.isArray(value)
-    );
-}
-
 function validDate(value: string) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-        return false;
-    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
 
     const date = new Date(`${value}T00:00:00.000Z`);
 
@@ -92,77 +85,6 @@ function afterSriLankaDay(value: string) {
     return new Date(start + 24 * 60 * 60 * 1000).toISOString();
 }
 
-function formatTime(value: string) {
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) {
-        return value;
-    }
-
-    return new Intl.DateTimeFormat("en-GB", {
-        timeZone: "Asia/Colombo",
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hourCycle: "h23",
-    }).format(date);
-}
-
-function formatValue(value: unknown): string {
-    if (value === null || value === undefined || value === "") {
-        return "—";
-    }
-
-    if (typeof value === "boolean") {
-        return value ? "Yes" : "No";
-    }
-
-    if (typeof value === "object") {
-        return JSON.stringify(value, null, 2) ?? "—";
-    }
-
-    if (
-        typeof value === "string" &&
-        /^\d{4}-\d{2}-\d{2}T/.test(value)
-    ) {
-        return formatTime(value);
-    }
-
-    return String(value);
-}
-
-function fieldLabel(field: string) {
-    const labels: Record<string, string> = {
-        invoice: "Invoice created",
-        invoice_number: "Invoice number",
-        supplier: "Supplier",
-        roll_quantity: "Roll quantity",
-        document_share_date: "Document share date",
-        shipment_type: "Local / Import",
-        status: "Final status",
-        pending_reason: "Pending reason",
-        remark: "Remark",
-        completed_at: "Completion date / time",
-        user_name: "User name",
-        role: "Role",
-        is_active: "Account active",
-        scope: "Export scope",
-        invoice_count: "Invoice count",
-        recovery_context: "Recovery details",
-        "asn.share_date": "ASN share date",
-        "asn.is_shared": "ASN shared",
-        "asn.assigned_user_name": "ASN user",
-    };
-
-    return (
-        labels[field] ??
-        field.replaceAll(".", " · ").replaceAll("_", " ")
-    );
-}
-
 function activityUrl(filters: Filters, page: number) {
     const params = new URLSearchParams();
 
@@ -170,78 +92,13 @@ function activityUrl(filters: Filters, page: number) {
         if (value) params.set(key, value);
     }
 
-    if (page > 1) {
-        params.set("page", String(page));
-    }
+    if (page > 1) params.set("page", String(page));
 
     const query = params.toString();
 
     return query
         ? `/dashboard/activity?${query}`
         : "/dashboard/activity";
-}
-
-function ChangeDetails({ changes }: { changes: unknown }) {
-    if (!isObject(changes) || Object.keys(changes).length === 0) {
-        return (
-            <p className="mt-4 text-sm text-slate-400">
-                No field details recorded.
-            </p>
-        );
-    }
-
-    return (
-        <details className="mt-4 rounded-xl border border-border">
-            <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-blue-700 dark:text-blue-400">
-                View recorded changes
-            </summary>
-
-            <div className="space-y-4 border-t border-border p-4">
-                {Object.entries(changes).map(([field, change]) => {
-                    const hasOldAndNew =
-                        isObject(change) &&
-                        "old" in change &&
-                        "new" in change;
-
-                    return (
-                        <div key={field}>
-                            <p className="mb-2 text-sm font-semibold text-foreground">
-                                {fieldLabel(field)}
-                            </p>
-
-                            {hasOldAndNew ? (
-                                <div className="grid gap-3 md:grid-cols-2">
-                                    <div className="min-w-0 rounded-lg bg-muted p-3">
-                                        <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
-                                            Previous value
-                                        </p>
-
-                                        <pre className="whitespace-pre-wrap break-words font-sans text-sm text-foreground">
-                                            {formatValue(change.old)}
-                                        </pre>
-                                    </div>
-
-                                    <div className="min-w-0 rounded-lg bg-blue-50 dark:bg-blue-950/40 p-3">
-                                        <p className="mb-2 text-xs font-semibold uppercase text-blue-600 dark:text-blue-400">
-                                            New value
-                                        </p>
-
-                                        <pre className="whitespace-pre-wrap break-words font-sans text-sm text-foreground">
-                                            {formatValue(change.new)}
-                                        </pre>
-                                    </div>
-                                </div>
-                            ) : (
-                                <pre className="whitespace-pre-wrap break-words rounded-lg bg-muted p-3 font-sans text-sm">
-                                    {formatValue(change)}
-                                </pre>
-                            )}
-                        </div>
-                    );
-                })}
-            </div>
-        </details>
-    );
 }
 
 async function ActivityContent({ searchParams }: PageProps) {
@@ -253,9 +110,7 @@ async function ActivityContent({ searchParams }: PageProps) {
         data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) {
-        redirect("/login");
-    }
+    if (!user) redirect("/login");
 
     const { data: profile, error: profileError } = await supabase
         .from("profiles")
@@ -299,7 +154,8 @@ async function ActivityContent({ searchParams }: PageProps) {
         filters.to &&
         filters.from > filters.to
     ) {
-        filterError = "The To date must be on or after the From date.";
+        filterError =
+            "The To date must be on or after the From date.";
     }
 
     const requestedPage = Number(first(params.page) || "1");
@@ -319,8 +175,6 @@ async function ActivityContent({ searchParams }: PageProps) {
         const fields =
             "id, invoice_id, actor_name, action, entity_type, changes, occurred_at";
 
-        // Keep account/export activities when no invoice filter is applied.
-        // Use an inner join when filtering by invoice number.
         const selection = filters.invoice
             ? `${fields}, invoices!inner(invoice_number)`
             : `${fields}, invoices(invoice_number)`;
@@ -357,7 +211,6 @@ async function ActivityContent({ searchParams }: PageProps) {
         }
 
         if (filters.to) {
-            // Exclusive start of the following day includes the full To day.
             query = query.lt(
                 "occurred_at",
                 afterSriLankaDay(filters.to),
@@ -385,241 +238,299 @@ async function ActivityContent({ searchParams }: PageProps) {
         redirect(activityUrl(filters, totalPages));
     }
 
-    const inputClass =
-        "w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-ring/25";
-
-    const labelClass =
-        "mb-2 block text-sm font-medium text-foreground";
+    const activeFilters = Object.values(filters).filter(Boolean).length;
+    const firstRecord = total > 0 ? (page - 1) * PAGE_SIZE + 1 : 0;
+    const lastRecord = Math.min(page * PAGE_SIZE, total);
 
     return (
-        <main className="min-h-screen bg-background px-4 py-8 sm:px-8">
-            <div className="mx-auto max-w-6xl">
-                <div className="mb-5 flex justify-end"></div>
-                <header className="mb-7">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-blue-600 dark:text-blue-400">
-                        Administrator
-                    </p>
+        <main className="min-w-0 px-4 py-5 sm:px-6 lg:px-8">
+            <div className="mx-auto w-full max-w-7xl space-y-5">
+                <header className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="min-w-0">
+                        <h1 className="text-xl font-semibold tracking-tight text-foreground">
+                            Activity log
+                        </h1>
 
-                    <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground">
-                        User Activity
-                    </h1>
-
-                    <p className="mt-2 text-sm text-muted-foreground">
-                        Search recorded changes by invoice, user, activity type,
-                        or date. Dates and times use Sri Lanka time.
-                    </p>
-                </header>
-
-                <ClearActivityButton />
-
-                <form
-                    key={JSON.stringify(filters)}
-                    action="/dashboard/activity"
-                    method="get"
-                    className="mb-6 rounded-2xl border border-border bg-card p-5"
-                >
-                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                        <div>
-                            <label htmlFor="invoice-filter" className={labelClass}>
-                                Invoice number
-                            </label>
-                            <input
-                                id="invoice-filter"
-                                name="invoice"
-                                defaultValue={filters.invoice}
-                                placeholder="Full current invoice number"
-                                maxLength={100}
-                                className={inputClass}
-                            />
-                        </div>
-
-                        <div>
-                            <label htmlFor="user-filter" className={labelClass}>
-                                User name
-                            </label>
-                            <input
-                                id="user-filter"
-                                name="user"
-                                defaultValue={filters.user}
-                                placeholder="Name or part of a name"
-                                maxLength={150}
-                                className={inputClass}
-                            />
-                        </div>
-
-                        <div>
-                            <label htmlFor="action-filter" className={labelClass}>
-                                Activity type
-                            </label>
-                            <select
-                                id="action-filter"
-                                name="action"
-                                defaultValue={filters.action}
-                                className={inputClass}
-                            >
-                                <option value="">All activity types</option>
-
-                                {Object.entries(ACTION_LABELS).map(([value, label]) => (
-                                    <option key={value} value={value}>
-                                        {label}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label htmlFor="from-filter" className={labelClass}>
-                                From date
-                            </label>
-                            <input
-                                id="from-filter"
-                                name="from"
-                                type="date"
-                                defaultValue={
-                                    validDate(filters.from) ? filters.from : ""
-                                }
-                                className={inputClass}
-                            />
-                        </div>
-
-                        <div>
-                            <label htmlFor="to-filter" className={labelClass}>
-                                To date
-                            </label>
-                            <input
-                                id="to-filter"
-                                name="to"
-                                type="date"
-                                defaultValue={validDate(filters.to) ? filters.to : ""}
-                                className={inputClass}
-                            />
-                        </div>
-
-                        <div className="flex items-end gap-3">
-                            <button
-                                type="submit"
-                                className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
-                            >
-                                Apply filters
-                            </button>
-
-                            <Link
-                                href="/dashboard/activity"
-                                className="rounded-xl border border-input px-5 py-2.5 text-sm font-medium text-muted-foreground hover:bg-background"
-                            >
-                                Reset
-                            </Link>
-                        </div>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                            Track workspace changes and review recorded details.
+                        </p>
                     </div>
 
-                    <p className="mt-4 text-xs text-muted-foreground">
-                        User name searches the person who performed the action,
-                        not the assigned AX/D365 or ASN user.
-                    </p>
-                </form>
+                    <details className="group w-full sm:w-auto sm:max-w-md">
+                        <summary className="ml-auto flex min-h-10 w-fit cursor-pointer list-none items-center gap-2 rounded-lg border border-input bg-card px-3 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+                            Log management
 
+                            <span
+                                aria-hidden="true"
+                                className="text-base leading-none group-open:hidden"
+                            >
+                                +
+                            </span>
+
+                            <span
+                                aria-hidden="true"
+                                className="hidden text-base leading-none group-open:inline"
+                            >
+                                −
+                            </span>
+                        </summary>
+
+                        <div className="mt-2 rounded-xl border border-border bg-card p-4 [&_section]:mb-0">
+                            <p className="mb-3 text-xs leading-5 text-muted-foreground">
+                                Manage stored activity history. Clearing logs requires
+                                confirmation.
+                            </p>
+
+                            <ClearActivityButton />
+                        </div>
+                    </details>
+                </header>
+
+                <section
+                    aria-label="Activity filters"
+                    className="overflow-hidden rounded-xl border border-border bg-card"
+                >
+                    <Form
+                        key={JSON.stringify(filters)}
+                        action="/dashboard/activity"
+                        scroll={false}
+                    >
+                        <div
+                            className="grid gap-3 p-4"
+                            style={{
+                                gridTemplateColumns:
+                                    "repeat(auto-fit, minmax(min(100%, 180px), 1fr))",
+                            }}
+                        >
+                            <div className="min-w-0">
+                                <label
+                                    htmlFor="invoice-filter"
+                                    className={labelClass}
+                                >
+                                    Invoice number
+                                </label>
+
+                                <input
+                                    id="invoice-filter"
+                                    name="invoice"
+                                    defaultValue={filters.invoice}
+                                    placeholder="Exact invoice number"
+                                    maxLength={100}
+                                    className={inputClass}
+                                />
+                            </div>
+
+                            <div className="min-w-0">
+                                <label
+                                    htmlFor="user-filter"
+                                    className={labelClass}
+                                >
+                                    Performed by
+                                </label>
+
+                                <input
+                                    id="user-filter"
+                                    name="user"
+                                    defaultValue={filters.user}
+                                    placeholder="Search user name"
+                                    maxLength={150}
+                                    className={inputClass}
+                                />
+                            </div>
+
+                            <div className="min-w-0">
+                                <label
+                                    htmlFor="action-filter"
+                                    className={labelClass}
+                                >
+                                    Activity type
+                                </label>
+
+                                <select
+                                    id="action-filter"
+                                    name="action"
+                                    defaultValue={filters.action}
+                                    className={inputClass}
+                                >
+                                    <option value="">All activities</option>
+
+                                    {Object.entries(ACTION_LABELS).map(
+                                        ([value, label]) => (
+                                            <option key={value} value={value}>
+                                                {label}
+                                            </option>
+                                        ),
+                                    )}
+                                </select>
+                            </div>
+
+                            <div className="min-w-0">
+                                <label
+                                    htmlFor="from-filter"
+                                    className={labelClass}
+                                >
+                                    From date
+                                </label>
+
+                                <input
+                                    id="from-filter"
+                                    name="from"
+                                    type="date"
+                                    defaultValue={
+                                        validDate(filters.from) ? filters.from : ""
+                                    }
+                                    className={inputClass}
+                                />
+                            </div>
+
+                            <div className="min-w-0">
+                                <label
+                                    htmlFor="to-filter"
+                                    className={labelClass}
+                                >
+                                    To date
+                                </label>
+
+                                <input
+                                    id="to-filter"
+                                    name="to"
+                                    type="date"
+                                    defaultValue={
+                                        validDate(filters.to) ? filters.to : ""
+                                    }
+                                    className={inputClass}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3">
+                            <div className="flex flex-wrap items-center gap-3">
+                                <p className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                                    <Clock3
+                                        className="size-3.5"
+                                        aria-hidden="true"
+                                    />
+                                    Sri Lanka time
+                                </p>
+
+                                {activeFilters > 0 && (
+                                    <span className="rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 dark:bg-blue-400/10 dark:text-blue-300">
+                                        {activeFilters} active{" "}
+                                        {activeFilters === 1 ? "filter" : "filters"}
+                                    </span>
+                                )}
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <Link
+                                    href="/dashboard/activity"
+                                    className="inline-flex min-h-10 items-center justify-center rounded-lg px-3 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                >
+                                    Reset
+                                </Link>
+
+                                <button
+                                    type="submit"
+                                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-semibold text-white hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                >
+                                    <Search
+                                        className="size-4"
+                                        aria-hidden="true"
+                                    />
+                                    Apply filters
+                                </button>
+                            </div>
+                        </div>
+                    </Form>
+                </section>
                 {filterError || loadError ? (
-                    <p
+                    <div
                         role="alert"
-                        className="rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 p-4 text-sm text-red-700 dark:text-red-400"
+                        className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300"
                     >
                         {filterError ||
                             "Unable to load activity. Refresh the page and try again."}
-                    </p>
+                    </div>
                 ) : (
-                    <>
-                        <div className="mb-4 flex items-center justify-between text-sm text-muted-foreground">
-                            <p>{total} matching activity records</p>
-                            <p>Newest first</p>
+                    <section
+                        aria-labelledby="records-heading"
+                        className="overflow-hidden rounded-xl border border-border bg-card"
+                    >
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-5 py-4">
+                            <div className="flex items-center gap-2">
+                                <h2
+                                    id="records-heading"
+                                    className="text-sm font-semibold text-foreground"
+                                >
+                                    Activity records
+                                </h2>
+
+                                <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
+                                    {total.toLocaleString("en-US")}
+                                </span>
+                            </div>
+
+                            <p className="text-xs text-muted-foreground">
+                                Newest first
+                            </p>
                         </div>
 
-                        {rows.length === 0 ? (
-                            <div className="rounded-2xl border border-dashed border-input bg-card px-6 py-14 text-center">
-                                <h2 className="font-semibold text-foreground">
-                                    No matching activity
-                                </h2>
-                                <p className="mt-2 text-sm text-muted-foreground">
-                                    Adjust the filters or reset to view all recorded activity.
-                                </p>
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
-                                {rows.map((row) => (
-                                    <article
-                                        key={row.id}
-                                        className="rounded-2xl border border-border bg-card p-5 shadow-sm"
-                                    >
-                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                            <div>
-                                                <p className="text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400">
-                                                    {ACTION_LABELS[row.action] ??
-                                                        row.action.replaceAll("_", " ")}
-                                                </p>
+                        <ActivityTable
+                            key={activityUrl(filters, page)}
+                            rows={rows}
+                        />
 
-                                                <h2 className="mt-2 font-semibold text-foreground">
-                                                    {row.actor_name}
-                                                </h2>
-
-                                                <div className="mt-1 text-sm text-muted-foreground">
-                                                    {row.invoice_id ? (
-                                                        <Link
-                                                            href={`/dashboard/invoices/${row.invoice_id}`}
-                                                            className="font-medium text-blue-700 dark:text-blue-400 hover:underline"
-                                                        >
-                                                            Invoice:{" "}
-                                                            {row.invoices?.invoice_number ??
-                                                                row.invoice_id}
-                                                        </Link>
-                                                    ) : (
-                                                        <span>
-                                                            {row.entity_type === "invoice_export"
-                                                                ? "Invoice export"
-                                                                : "Account activity"}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            <time
-                                                dateTime={row.occurred_at}
-                                                className="text-xs text-muted-foreground"
-                                            >
-                                                {formatTime(row.occurred_at)} · SLST
-                                            </time>
-                                        </div>
-
-                                        <ChangeDetails changes={row.changes} />
-                                    </article>
-                                ))}
-                            </div>
-                        )}
-
-                        <footer className="mt-6 flex items-center justify-between">
-                            <p className="text-sm text-muted-foreground">
-                                Page {page} of {totalPages}
+                        <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-4">
+                            <p className="text-xs tabular-nums text-muted-foreground">
+                                {total === 0
+                                    ? "0 records"
+                                    : `${firstRecord.toLocaleString("en-US")}–${lastRecord.toLocaleString("en-US")} of ${total.toLocaleString("en-US")} records`}
                             </p>
 
-                            <div className="flex gap-3">
-                                {page > 1 && (
+                            <nav
+                                aria-label="Activity pagination"
+                                className="flex flex-wrap items-center gap-2"
+                            >
+                                <span className="mr-2 text-xs tabular-nums text-muted-foreground">
+                                    Page {page} of {totalPages}
+                                </span>
+
+                                {page > 1 ? (
                                     <Link
                                         href={activityUrl(filters, page - 1)}
-                                        className="rounded-lg border border-input bg-card px-4 py-2 text-sm hover:bg-muted"
+                                        className={secondaryButton}
                                     >
                                         Previous
                                     </Link>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        disabled
+                                        className={`${secondaryButton} opacity-40`}
+                                    >
+                                        Previous
+                                    </button>
                                 )}
 
-                                {page < totalPages && (
+                                {page < totalPages ? (
                                     <Link
                                         href={activityUrl(filters, page + 1)}
-                                        className="rounded-lg border border-input bg-card px-4 py-2 text-sm hover:bg-muted"
+                                        className={secondaryButton}
                                     >
                                         Next
                                     </Link>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        disabled
+                                        className={`${secondaryButton} opacity-40`}
+                                    >
+                                        Next
+                                    </button>
                                 )}
-                            </div>
+                            </nav>
                         </footer>
-                    </>
+                    </section>
                 )}
             </div>
         </main>
@@ -630,8 +541,11 @@ export default function ActivityPage(props: PageProps) {
     return (
         <Suspense
             fallback={
-                <div className="p-8 text-sm text-muted-foreground">
-                    Loading user activity...
+                <div
+                    role="status"
+                    className="px-4 py-6 text-sm text-muted-foreground sm:px-6 lg:px-8"
+                >
+                    Loading activity log…
                 </div>
             }
         >

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "./summary-filter-link";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import {

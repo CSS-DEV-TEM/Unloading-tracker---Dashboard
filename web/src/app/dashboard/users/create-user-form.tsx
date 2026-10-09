@@ -17,24 +17,41 @@ export default function CreateUserForm() {
         "w-full rounded-xl border border-input bg-card px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-ring/25";
 
     return (
-        <section className="mb-6 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-            <div className="mb-5 flex items-center gap-3">
-                <div className="rounded-xl bg-blue-50 dark:bg-blue-950/40 p-3 text-blue-600 dark:text-blue-400">
-                    <UserPlus className="h-5 w-5" aria-hidden="true" />
-                </div>
+        <details className="group rounded-xl border border-border bg-card">
+            <summary className="flex min-h-16 cursor-pointer list-none items-center gap-3 rounded-xl px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-400/10 dark:text-blue-300">
+                    <UserPlus className="size-4" aria-hidden="true" />
+                </span>
 
-                <div>
-                    <h2 className="font-semibold text-foreground">
+                <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-foreground">
                         Create user
-                    </h2>
+                    </span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                        Add an account with standard user access.
+                    </span>
+                </span>
 
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        New accounts receive standard user access.
-                    </p>
-                </div>
-            </div>
+                <span
+                    aria-hidden="true"
+                    className="text-xl text-muted-foreground group-open:hidden"
+                >
+                    +
+                </span>
 
-            <form action={formAction}>
+                <span
+                    aria-hidden="true"
+                    className="hidden text-xl text-muted-foreground group-open:block"
+                >
+                    −
+                </span>
+            </summary>
+
+            <form
+                action={formAction}
+                aria-busy={pending}
+                className="border-t border-border p-4 sm:p-5"
+            >
                 <fieldset disabled={pending} className="space-y-5">
                     <div className="grid gap-5 md:grid-cols-2">
                         <div>
@@ -176,6 +193,6 @@ export default function CreateUserForm() {
                     </p>
                 )}
             </form>
-        </section>
+        </details>
     );
 }
