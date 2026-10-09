@@ -123,51 +123,98 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+
   html {
     @apply font-sans;
   }
 }
+
 @layer base {
-  html { scrollbar-gutter: stable; }
-  body { line-height: 1.5; }
-  button, input, select, textarea { font-family: inherit; }
-  button:enabled, [role="button"], summary { cursor: pointer; }
-  button:disabled { cursor: not-allowed; }
+  html {
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    line-height: 1.5;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+  }
+
+  button:enabled,
+  [role="button"],
+  summary {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
   :where(a, button, input, select, textarea, summary):focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 3px;
   }
-  table { font-variant-numeric: tabular-nums; }
+
+  table {
+    font-variant-numeric: tabular-nums;
+  }
 }
 
 @layer base {
+
   /* Native date/time/select controls follow the active theme as well. */
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="submit"]):not([type="button"]),
-  select, textarea {
+  select,
+  textarea {
     background-color: var(--card);
     color: var(--foreground);
   }
-  input::placeholder, textarea::placeholder {
+
+  input::placeholder,
+  textarea::placeholder {
     color: var(--muted-foreground);
     opacity: 1;
   }
-  option, optgroup {
+
+  option,
+  optgroup {
     background-color: var(--popover);
     color: var(--popover-foreground);
   }
-  input[type="checkbox"], input[type="radio"] { accent-color: var(--primary); }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: var(--primary);
+  }
+
   input:autofill {
     box-shadow: 0 0 0 1000px var(--card) inset;
     -webkit-text-fill-color: var(--foreground);
     caret-color: var(--foreground);
   }
+
   input:-webkit-autofill {
     -webkit-box-shadow: 0 0 0 1000px var(--card) inset;
     -webkit-text-fill-color: var(--foreground);
     caret-color: var(--foreground);
   }
-  ::selection { background-color: var(--primary); color: var(--primary-foreground); }
+
+  ::selection {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+  }
+}
+
+/* Keep our custom password visibility button. */
+input#password::-ms-reveal {
+  display: none;
 }

@@ -17,6 +17,7 @@ import {
 import ThemeToggle from "@/components/theme-toggle";
 import OverviewRefresh from "@/components/overview-refresh";
 import { createClient as createSessionClient } from "@/lib/supabase/server";
+import Form from "next/form";
 
 type SearchParams = {
   q?: string | string[];
@@ -586,9 +587,9 @@ async function PublicOverview({ searchParams }: Props) {
             )}
           </div>
 
-          <form
+          <Form
             action="/"
-            method="get"
+            scroll={false}
             role="search"
             aria-label="Search public invoices"
             className="grid gap-3 px-4 py-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-[minmax(220px,1fr)_160px_160px_auto_auto] lg:items-end"
@@ -674,7 +675,7 @@ async function PublicOverview({ searchParams }: Props) {
             <Link href="/" className={secondaryButtonClass}>
               Reset
             </Link>
-          </form>
+          </Form>
 
           {failed ? (
             <div
