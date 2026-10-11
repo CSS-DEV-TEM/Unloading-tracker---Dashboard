@@ -43,6 +43,7 @@ const ACTION_LABELS: Record<string, string> = {
     USER_PROFILE_RECOVERED: "User profile recovered",
     ADMIN_BOOTSTRAPPED: "Initial admin created",
     ACTIVITY_LOGS_CLEARED: "Activity history cleared",
+    INVOICE_DELETED: "Invoice deleted",
 };
 
 const inputClass =
@@ -173,11 +174,8 @@ async function ActivityContent({ searchParams }: PageProps) {
 
     if (!filterError) {
         const fields =
-            "id, invoice_id, actor_name, action, entity_type, changes, occurred_at";
-
-        const selection = filters.invoice
-            ? `${fields}, invoices!inner(invoice_number)`
-            : `${fields}, invoices(invoice_number)`;
+            "id, invoice_id, invoice_number_snapshot, actor_name, action, entity_type, changes, occurred_at";
+        const selection = `${fields}, invoices(invoice_number)`;
 
         let query = supabase
             .from("activity_logs")
@@ -185,7 +183,7 @@ async function ActivityContent({ searchParams }: PageProps) {
 
         if (filters.invoice) {
             query = query.eq(
-                "invoices.invoice_number",
+                "invoice_number_snapshot",
                 filters.invoice,
             );
         }

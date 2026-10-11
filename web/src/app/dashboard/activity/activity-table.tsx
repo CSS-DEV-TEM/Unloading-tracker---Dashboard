@@ -8,6 +8,7 @@ export type ActivityRow = {
     id: string;
     invoice_id: string | null;
     actor_name: string | null;
+    invoice_number_snapshot: string | null;
     action: string;
     entity_type: string;
     changes: unknown;
@@ -28,6 +29,7 @@ export const ACTION_LABELS: Record<string, string> = {
     USER_PROFILE_RECOVERED: "User profile recovered",
     ADMIN_BOOTSTRAPPED: "Initial admin created",
     ACTIVITY_LOGS_CLEARED: "Activity history cleared",
+    INVOICE_DELETED: "Invoice deleted",
 };
 
 const FIELD_LABELS: Record<string, string> = {
@@ -299,8 +301,18 @@ export default function ActivityTable({
                                                 className="rounded font-medium text-blue-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-blue-300"
                                             >
                                                 {row.invoices?.invoice_number ??
+                                                    row.invoice_number_snapshot ??
                                                     "View invoice"}
                                             </Link>
+                                        ) : row.invoice_number_snapshot ? (
+                                            <div>
+                                                <span className="break-words text-sm font-medium text-foreground">
+                                                    {row.invoice_number_snapshot}
+                                                </span>
+                                                <span className="mt-1 block text-xs text-muted-foreground">
+                                                    Deleted invoice
+                                                </span>
+                                            </div>
                                         ) : (
                                             <span className="text-xs text-muted-foreground">
                                                 {row.action === "ACTIVITY_LOGS_CLEARED"

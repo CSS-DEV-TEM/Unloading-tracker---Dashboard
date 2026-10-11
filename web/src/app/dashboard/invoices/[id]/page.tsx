@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import ProcessForm from "./process-form";
 import type { ProcessFormData, ProcessStage } from "./types";
 import { Pencil } from "lucide-react";
-
+import DeleteInvoiceButton from "./delete-invoice-button";
 
 type PageProps = {
     params: Promise<{ id: string }>;
@@ -208,14 +208,26 @@ async function InvoiceContent({ params }: PageProps) {
                             </dl>
                         </div>
 
-                        <Link
-                            href={`/dashboard/invoices/${invoice.id}/details`}
-                            aria-label="Edit invoice details"
-                            title="Edit invoice details"
-                            className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        >
-                            <Pencil aria-hidden="true" className="size-4" />
-                        </Link>
+                        <div className="flex shrink-0 items-center gap-2">
+                            <Link
+                                href={`/dashboard/invoices/${invoice.id}/details`}
+                                aria-label="Edit invoice details"
+                                title="Edit invoice details"
+                                className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                                <Pencil aria-hidden="true" className="size-4" />
+                            </Link>
+
+                            {profile.role === "ADMIN" && (
+                                <DeleteInvoiceButton
+                                    key={`${invoice.id}-${invoice.version}`}
+                                    invoiceId={invoice.id}
+                                    invoiceNumber={invoice.invoice_number}
+                                    supplier={invoice.supplier}
+                                    version={invoice.version}
+                                />
+                            )}
+                        </div>
                     </div>
 
                     <dl className="grid grid-cols-2 gap-x-6 gap-y-4 border-t border-border bg-muted/20 px-5 py-4 text-sm sm:grid-cols-4 sm:px-6">

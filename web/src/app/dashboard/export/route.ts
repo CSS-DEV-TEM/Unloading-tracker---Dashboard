@@ -68,7 +68,23 @@ function excelDateTime(value: string | null) {
     // Store Sri Lanka wall-clock time in the exported cell.
     return new Date(timestamp + 330 * 60 * 1000);
 }
+function validDocumentDate(value: unknown): value is string {
+    if (
+        typeof value !== "string" ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(value) ||
+        value < "0001-01-01" ||
+        value > "9999-12-31"
+    ) {
+        return false;
+    }
 
+    const date = new Date(`${value}T00:00:00.000Z`);
+
+    return (
+        Number.isFinite(date.getTime()) &&
+        date.toISOString().slice(0, 10) === value
+    );
+}
 export async function POST(request: Request) {
     const origin = request.headers.get("origin");
 
@@ -101,10 +117,44 @@ export async function POST(request: Request) {
         return failure("Only active administrators can export invoices.", 403);
     }
 
-    const { data, error } = await supabase.rpc(
-        "prepare_invoice_export",
-    );
+    let body: unknown;
 
+    try {
+        body = await request.json();
+    } catch {
+        return failure("Select a document date range.", 400);
+    }
+
+    if (
+        typeof body !== "object" ||
+        body === null ||
+        Array.isArray(body) ||
+        !("fromDate" in body) ||
+        !("toDate" in body)
+    ) {
+        return failure("Select a From date and To date.", 400);
+    }
+
+    const { fromDate, toDate } = body;
+
+    if (
+        !validDocumentDate(fromDate) ||
+        !validDocumentDate(toDate) ||
+        fromDate > toDate
+    ) {
+        return failure(
+            "Select valid dates. To date must be on or after From date.",
+            400,
+        );
+    }
+
+    const { data, error } = await supabase.rpc(
+        "prepare_invoice_export_range",
+        {
+            p_from_date: fromDate,
+            p_to_date: toDate,
+        },
+    );
     if (error) {
         if (error.code === "42501") {
             return failure("Administrator access is required.", 403);
@@ -112,7 +162,7 @@ export async function POST(request: Request) {
 
         if (error.code === "54000") {
             return failure(
-                "This export exceeds 10,000 invoices. A date-range export is required.",
+                "This range contains more than 10,000 invoices. Select a smaller date range.",
                 413,
             );
         }
@@ -125,13 +175,20 @@ export async function POST(request: Request) {
     }
 
     const records = data as ExportRecord[];
+    if (records.length === 0) {
+        return failure(
+            "No invoices were found within the selected document date range.",
+            404,
+        );
+    }
 
     try {
         const workbook = new ExcelJS.Workbook();
 
         workbook.creator = "EFL · 3PL — CSS Division";
         workbook.created = new Date();
-        workbook.subject = "Unloading tracker — all invoices";
+        workbook.subject =
+            `Unloading tracker — document dates ${fromDate} to ${toDate}`;
         workbook.description =
             "AX/D365 start and end times are displayed in Sri Lanka time (UTC+05:30).";
 
