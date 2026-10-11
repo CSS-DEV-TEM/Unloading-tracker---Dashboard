@@ -27,7 +27,7 @@ type Invoice = {
     document_share_date: string;
     roll_quantity: number | null;
     status: "Pending" | "Complete" | "Reject";
-    remark: string | null;
+    pending_reason: string | null;
     completed_at: string | null;
     pre_grn_stages: {
         started_at: string | null;
@@ -46,7 +46,7 @@ const HEADINGS = [
     "Start Date",
     "Completion Date",
     "Status",
-    "Remark",
+    "Pending reason",
 ];
 
 const statusStyles = {
@@ -212,7 +212,7 @@ async function DashboardContent({
       document_share_date,
       roll_quantity,
       status,
-      remark,
+      pending_reason,
       completed_at,
       pre_grn_stages (
         started_at
@@ -492,17 +492,18 @@ async function DashboardContent({
                                                 </td>
 
                                                 <td className="px-4 py-3">
-                                                    {invoice.remark?.trim() ? (
-                                                        <details className="min-w-40 max-w-64 rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/40 p-2 text-blue-900 dark:text-blue-200">
+                                                    {invoice.pending_reason?.trim() ? (
+                                                        <details className="min-w-40 max-w-64 rounded-lg border border-amber-200 bg-amber-50 p-2 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
                                                             <summary className="cursor-pointer text-xs font-semibold">
-                                                                View remark
+                                                                View pending reason
                                                             </summary>
+
                                                             <p className="mt-2 whitespace-pre-wrap break-words text-xs leading-5">
-                                                                {invoice.remark}
+                                                                {invoice.pending_reason}
                                                             </p>
                                                         </details>
                                                     ) : (
-                                                        <span className="text-slate-400">—</span>
+                                                        <span className="text-muted-foreground">—</span>
                                                     )}
                                                 </td>
                                             </tr>

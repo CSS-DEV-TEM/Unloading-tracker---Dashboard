@@ -18,6 +18,7 @@ import ThemeToggle from "@/components/theme-toggle";
 import OverviewRefresh from "@/components/overview-refresh";
 import { createClient as createSessionClient } from "@/lib/supabase/server";
 import Form from "next/form";
+import PendingReasonDialog from "@/components/pending-reason-dialog";
 
 type SearchParams = {
   q?: string | string[];
@@ -41,6 +42,7 @@ type PublicInvoice = {
   document_share_date: string | null;
   roll_quantity: number | null;
   status: InvoiceStatus;
+  pending_reason: string | null;
   started_at: string | null;
   completed_at: string | null;
   stages: {
@@ -337,7 +339,7 @@ async function PublicOverview({ searchParams }: Props) {
   });
 
   const [overviewResult, summaryResult] = await Promise.all([
-    supabase.rpc("get_public_invoice_overview_v2", {
+    supabase.rpc("get_public_invoice_overview_v3", {
       p_search: q,
       p_status: status,
       p_page: page,
@@ -734,7 +736,17 @@ async function PublicOverview({ searchParams }: Props) {
                       >
                         <th
                           scope="row"
-                          className="sticky left-0 z-10 w-44 min-w-44 max-w-44 border-b border-r border-border bg-card px-4 py-3 align-top font-semibold text-foreground group-hover:bg-muted group-focus-within:bg-muted [overflow-wrap:anywhere]"
+                          style={
+                            invoice.status === "Pending" &&
+                              invoice.pending_reason?.trim()
+                              ? { boxShadow: "inset 3px 0 0 #f59e0b" }
+                              : undefined
+                          }
+                          className="sticky left-0 z-10 w-44 min-w-44 max-w-44
+                                      border-b border-r border-border bg-card px-4 py-3
+                                      align-top font-semibold text-foreground
+                                      group-hover:bg-muted group-focus-within:bg-muted
+                                      [overflow-wrap:anywhere]"
                         >
                           {invoice.invoice_number}
                         </th>
@@ -792,15 +804,23 @@ async function PublicOverview({ searchParams }: Props) {
                         </td>
 
                         <td className="px-4 py-3 align-top">
-                          <span
-                            className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-medium ${statusStyles[invoice.status]}`}
-                          >
-                            {
-                              statusLabels[
-                              invoice.status
-                              ]
-                            }
-                          </span>
+                          <div className="flex flex-col items-start">
+                            <span
+                              className={`inline-flex whitespace-nowrap rounded-full border
+                                px-2.5 py-1 text-xs font-medium ${statusStyles[invoice.status]}`}
+                            >
+                              {statusLabels[invoice.status]}
+                            </span>
+
+                            {invoice.status === "Pending" &&
+                              invoice.pending_reason?.trim() && (
+                                <PendingReasonDialog
+                                  invoiceNumber={invoice.invoice_number}
+                                  supplier={invoice.supplier}
+                                  reason={invoice.pending_reason.trim()}
+                                />
+                              )}
+                          </div>
                         </td>
 
                         <td className="px-4 py-3 align-top">
