@@ -11,6 +11,7 @@ import InvoiceSummary from "./invoice-summary";
 import ExportButton from "./export-button";
 import OverviewRefresh from "@/components/overview-refresh";
 import Form from "next/form";
+import VehicleLabel from "@/components/vehicle-label";
 
 type SearchParams = Promise<{
     q?: string | string[];
@@ -21,6 +22,7 @@ type SearchParams = Promise<{
 type Invoice = {
     id: string;
     invoice_number: string;
+    vehicle_number: string | null;
     supplier: string;
     system_type: string;
     shipment_type: string;
@@ -206,6 +208,7 @@ async function DashboardContent({
         `
       id,
       invoice_number,
+      vehicle_number,
       supplier,
       system_type,
       shipment_type,
@@ -231,7 +234,7 @@ async function DashboardContent({
         const pattern = JSON.stringify(`%${escaped}%`);
 
         query = query.or(
-            `invoice_number.ilike.${pattern},supplier.ilike.${pattern}`,
+            `invoice_number.ilike.${pattern},supplier.ilike.${pattern},vehicle_number.ilike.${pattern}`,
         );
     }
 
@@ -286,7 +289,7 @@ async function DashboardContent({
                     <div className="border-b border-border px-6 py-5">
                         <h2 className="font-semibold">Invoice records</h2>
                         <p className="mt-1 text-sm text-muted-foreground">
-                            Search by invoice number or supplier.
+                            Search by invoice number, supplier or vehicle number.
                         </p>
                         <details className="mt-2 text-xs text-muted-foreground">
                             <summary className="w-fit cursor-pointer rounded hover:text-foreground">
@@ -310,7 +313,7 @@ async function DashboardContent({
                                 htmlFor="search"
                                 className="mb-2 block text-xs font-medium text-muted-foreground dark:text-slate-300"
                             >
-                                Invoice / Supplier
+                                Invoice / Supplier / Vehicle
                             </label>
 
                             <div className="relative">
@@ -325,7 +328,7 @@ async function DashboardContent({
                                     type="search"
                                     defaultValue={q}
                                     maxLength={100}
-                                    placeholder="Search invoices..."
+                                    placeholder="Search invoice, supplier or vehicle number"
                                     className="h-10 w-full rounded-lg border border-input pl-10 pr-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-ring/25"
                                 />
                             </div>
@@ -440,6 +443,10 @@ async function DashboardContent({
 
 
                                                         </Link>
+
+                                                        <div>
+                                                            <VehicleLabel value={invoice.vehicle_number} />
+                                                        </div>
 
 
                                                     </div>

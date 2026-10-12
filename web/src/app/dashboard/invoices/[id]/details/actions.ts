@@ -23,6 +23,7 @@ export async function saveInvoiceDetails(
     const rollText = text("rollQuantity");
     const documentDate = text("documentDate");
     const shipmentType = text("shipmentType");
+    const vehicleNumber = text("vehicleNumber");
 
     const fail = (
         error: string,
@@ -46,6 +47,9 @@ export async function saveInvoiceDetails(
 
     if (!supplier || supplier.length > 250) {
         return fail("Enter a supplier name of up to 250 characters.");
+    }
+    if (vehicleNumber.length > 30) {
+        return fail("Vehicle number must be 30 characters or fewer.");
     }
 
     const rollQuantity = rollText === "" ? null : Number(rollText);
@@ -87,7 +91,7 @@ export async function saveInvoiceDetails(
         return fail("Your session has expired. Please sign in again.");
     }
 
-    const { error } = await supabase.rpc("update_invoice_details", {
+    const { error } = await supabase.rpc("update_invoice_details_v2", {
         p_invoice_id: id,
         p_expected_version: version,
         p_invoice_number: invoiceNumber,
@@ -95,6 +99,7 @@ export async function saveInvoiceDetails(
         p_roll_quantity: rollQuantity,
         p_document_share_date: documentDate,
         p_shipment_type: shipmentType,
+        p_vehicle_number: vehicleNumber || null,
     });
 
     if (error) {

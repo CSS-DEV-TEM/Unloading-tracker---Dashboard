@@ -218,3 +218,19 @@
 input#password::-ms-reveal {
   display: none;
 }
+
+.invoice-middle-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.25rem;
+}
+
+.invoice-middle-row>div {
+  min-width: 0;
+}
+
+@media (min-width: 640px) {
+  .invoice-middle-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
