@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import VehicleInput from "@/components/vehicle-input";
 import { useActionState, useState } from "react";
 import { saveInvoiceDetails } from "./actions";
 
@@ -133,7 +134,7 @@ export default function DetailsForm({ invoice }: Props) {
                                 </span>
                             </label>
 
-                            <input
+                            <VehicleInput
                                 id="vehicle-number"
                                 name="vehicleNumber"
                                 type="text"

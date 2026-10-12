@@ -26,7 +26,7 @@ export default function OverviewRefresh() {
     const [pending, startTransition] = useTransition();
 
     const isOverview =
-        pathname === "/" || pathname === "/dashboard";
+        pathname === "/" || pathname === "/dashboard" || pathname === "/dashboard/vehicles";
 
     useEffect(() => {
         if (!isOverview) return;
@@ -63,7 +63,7 @@ export default function OverviewRefresh() {
 
             return (
                 element instanceof HTMLElement &&
-                (element.matches("input, textarea, select") ||
+                (element.matches("input, textarea, select") || document.querySelector("dialog[open]") !== null ||
                     element.isContentEditable)
             );
         }
@@ -155,6 +155,7 @@ export default function OverviewRefresh() {
             handleVisibilityChange,
         );
         document.addEventListener("focusout", handleFocusOut);
+        document.addEventListener("close", handleFocusOut, true);
         window.addEventListener("online", handleOnline);
         window.addEventListener("offline", handleOffline);
 
@@ -170,6 +171,7 @@ export default function OverviewRefresh() {
                 handleVisibilityChange,
             );
             document.removeEventListener("focusout", handleFocusOut);
+            document.removeEventListener("close", handleFocusOut, true);
             window.removeEventListener("online", handleOnline);
             window.removeEventListener("offline", handleOffline);
 

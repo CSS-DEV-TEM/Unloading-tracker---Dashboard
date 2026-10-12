@@ -21,6 +21,9 @@ export type ActivityRow = {
 export const ACTION_LABELS: Record<string, string> = {
     INVOICE_CREATED: "Invoice created",
     INVOICE_UPDATED: "Invoice process updated",
+    VEHICLE_CREATED: "Vehicle created",
+    VEHICLE_RENAMED: "Vehicle renamed",
+    INVOICE_VEHICLE_UPDATED: "Vehicle assignment updated",
     INVOICE_DETAILS_UPDATED: "Invoice details updated",
     INVOICE_EXPORT_REQUESTED: "Invoice Excel export requested",
     USER_CREATED: "User created",
@@ -33,6 +36,7 @@ export const ACTION_LABELS: Record<string, string> = {
 };
 
 const FIELD_LABELS: Record<string, string> = {
+    vehicle_number: "Vehicle number",
     invoice: "Invoice created",
     invoice_number: "Invoice number",
     supplier: "Supplier",
@@ -319,7 +323,9 @@ export default function ActivityTable({
                                                     ? "Activity history"
                                                     : row.entity_type === "invoice_export"
                                                         ? "Invoice export"
-                                                        : "User accounts"}
+                                                        : row.entity_type === "vehicle"
+                                                            ? "Vehicle management"
+                                                            : "User accounts"}
                                             </span>
                                         )}
                                     </td>

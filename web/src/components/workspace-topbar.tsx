@@ -15,6 +15,7 @@ type Props = {
 };
 
 function getPage(pathname: string) {
+    if (pathname.startsWith("/dashboard/vehicles")) return { title: "Vehicle management", parent: null };
     if (pathname === "/dashboard") {
         return { title: "Invoices", parent: null };
     }

@@ -35,6 +35,9 @@ const PAGE_SIZE = 25;
 const ACTION_LABELS: Record<string, string> = {
     INVOICE_CREATED: "Invoice created",
     INVOICE_UPDATED: "Invoice process updated",
+    VEHICLE_CREATED: "Vehicle created",
+    VEHICLE_RENAMED: "Vehicle renamed",
+    INVOICE_VEHICLE_UPDATED: "Vehicle assignment updated",
     INVOICE_DETAILS_UPDATED: "Invoice details updated",
     INVOICE_EXPORT_REQUESTED: "Invoice Excel export requested",
     USER_CREATED: "User created",
