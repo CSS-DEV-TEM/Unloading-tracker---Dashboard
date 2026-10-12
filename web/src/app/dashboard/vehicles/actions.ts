@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
-export type VehicleRow = { id: string; vehicle_number: string; version: number };
+export type VehicleRow = { id: string; vehicle_number: string; version: number; is_archived: boolean };
 export type InvoiceChoice = { id: string; invoice_number: string; supplier: string; vehicle_number: string | null; vehicle_id: string | null; version: number };
 export type Result = { error: string; success?: string };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -21,6 +21,8 @@ async function access(admin = false) {
 
 function message(error: { code?: string }) {
     if (error.code === "40001" || error.code === "40P01") return "A record changed while saving. Reload, review your selection and try again.";
+    if (error.code === "PVA01") return "This vehicle is archived. Ask an administrator to restore it before assigning invoices.";
+    if (error.code === "23503") return "This vehicle has assigned invoices. Archive it instead, or reload to review its assignments.";
     if (error.code === "23505") return "That vehicle already exists. Assign invoices to the existing vehicle instead.";
     if (error.code === "42501") return "Your account does not have permission for this action.";
     if (error.code === "P0002") return "A selected record no longer exists. Reload and try again.";
@@ -43,7 +45,7 @@ export async function vehicleSuggestions(search: string): Promise<{ items: Vehic
     try {
         const db = await access();
         const key = search.slice(0, 100).replace(/[\s-]+/g, "").toUpperCase();
-        let query = db.from("vehicles").select("id,vehicle_number,version").order("vehicle_number").limit(20);
+        let query = db.from("vehicles").select("id,vehicle_number,version,is_archived").eq("is_archived", false).order("vehicle_number").limit(20);
         if (key) query = query.ilike("number_key", pattern(key));
         const { data, error } = await query;
         if (error) return { items: [], error: "Unable to load vehicle suggestions." };
@@ -92,5 +94,21 @@ export async function assignInvoices(vehicleId: string | null, items: { id: stri
         if (error) return { error: message(error) };
         refresh();
         return { error: "", success: `${data ?? 0} invoice assignment(s) updated.` };
+    } catch { return { error: "Unable to save. Check your session and try again." }; }
+}
+
+export async function changeVehicleState(
+    id: string, version: number, action: "archive" | "restore" | "delete", confirmation = "",
+): Promise<Result> {
+    if (!uuid.test(id) || !Number.isSafeInteger(version) || version < 1 ||
+        !["archive", "restore", "delete"].includes(action)) return { error: "Invalid vehicle action. Reload first." };
+    try {
+        const db = await access(true);
+        const { error } = action === "delete"
+            ? await db.rpc("delete_vehicle", { p_vehicle_id: id, p_expected_version: version, p_confirmation: confirmation })
+            : await db.rpc("set_vehicle_archived", { p_vehicle_id: id, p_expected_version: version, p_archived: action === "archive" });
+        if (error) return { error: message(error) };
+        refresh();
+        return { error: "", success: `Vehicle ${action === "delete" ? "deleted" : action === "archive" ? "archived" : "restored"}.` };
     } catch { return { error: "Unable to save. Check your session and try again." }; }
 }

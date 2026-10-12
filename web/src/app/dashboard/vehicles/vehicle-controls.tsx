@@ -2,8 +2,8 @@
 
 import { useId, useRef, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, X, Search, Unlink } from "lucide-react";
-import { assignInvoices, saveVehicle, searchAssignable, type InvoiceChoice, type VehicleRow } from "./actions";
+import { Plus, Pencil, X, Search, Unlink, Archive, RotateCcw, Trash2 } from "lucide-react";
+import { changeVehicleState, assignInvoices, saveVehicle, searchAssignable, type InvoiceChoice, type VehicleRow } from "./actions";
 
 const button = "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-input px-4 text-sm font-medium hover:bg-muted disabled:opacity-50";
 const primary = "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-semibold text-white hover:bg-blue-800 disabled:opacity-50";
@@ -33,15 +33,15 @@ export function VehicleEditor({ vehicle }: { vehicle?: VehicleRow }) {
     const [error, setError] = useState("");
     const [pending, start] = useTransition();
     const id = useId();
-    return <Modal title={vehicle ? "Rename vehicle" : "Add vehicle"} pending={pending}
+    return <Modal title={vehicle ? "Edit vehicle" : "Add vehicle"} pending={pending}
         onOpen={() => { setNumber(vehicle?.vehicle_number ?? ""); setError(""); }}
-        trigger={vehicle ? <><Pencil className="size-4" />Rename</> : <><Plus className="size-4" />Add vehicle</>}>
+        trigger={vehicle ? <><Pencil className="size-4" />Edit vehicle</> : <><Plus className="size-4" />Add vehicle</>}>
         {close => <form onSubmit={e => {
             e.preventDefault(); start(async () => {
                 try {
                     const result = await saveVehicle(vehicle?.id ?? null, vehicle?.version ?? null, number);
                     setError(result.error);
-                    if (!result.error && result.id) { close(); router.push(`/dashboard/vehicles?vehicle=${result.id}`); router.refresh(); }
+                    if (!result.error && result.id) { close(); router.push(`/dashboard/vehicles?vehicle=${result.id}&state=${vehicle?.is_archived ? "archived" : "active"}`, { scroll: false }); router.refresh(); }
                 } catch { setError("Unable to save. Please try again."); }
             });
         }} className="space-y-4">
@@ -134,5 +134,63 @@ export function RemoveAssignment({ invoice }: { invoice: InvoiceChoice }) {
                 catch { setError("Unable to save. Try again."); }
             })}>{pending ? "Removing…" : "Remove assignment"}</button></div>
         </div>}
+    </Modal>;
+}
+
+export function VehicleLifecycle({ vehicle, invoiceCount }: { vehicle: VehicleRow; invoiceCount: number }) {
+    return <>
+        <VehicleStateDialog vehicle={vehicle} action={vehicle.is_archived ? "restore" : "archive"} invoiceCount={invoiceCount} />
+        {invoiceCount === 0 && <VehicleStateDialog vehicle={vehicle} action="delete" invoiceCount={invoiceCount} />}
+    </>;
+}
+
+function VehicleStateDialog({ vehicle, action, invoiceCount }: {
+    vehicle: VehicleRow; action: "archive" | "restore" | "delete"; invoiceCount: number;
+}) {
+    const router = useRouter();
+    const [error, setError] = useState("");
+    const [confirmation, setConfirmation] = useState("");
+    const [pending, start] = useTransition();
+    const id = useId();
+    const deleting = action === "delete";
+    const title = deleting ? "Delete vehicle" : action === "archive" ? "Archive vehicle" : "Restore vehicle";
+    const Icon = deleting ? Trash2 : action === "archive" ? Archive : RotateCcw;
+    return <Modal title={title} pending={pending} onOpen={() => { setError(""); setConfirmation(""); }}
+        trigger={<><Icon aria-hidden="true" className="size-4" />{title}</>}>
+        {close => <form className="space-y-5" onSubmit={e => {
+            e.preventDefault();
+            start(async () => {
+                try {
+                    const result = await changeVehicleState(vehicle.id, vehicle.version, action, confirmation);
+                    setError(result.error);
+                    if (!result.error) {
+                        close();
+                        const params = new URLSearchParams({ state: action === "archive" ? "archived" : "active", notice: action });
+                        if (!deleting) params.set("vehicle", vehicle.id);
+                        router.push(`/dashboard/vehicles?${params}`, { scroll: false });
+                        router.refresh();
+                    }
+                } catch { setError("Unable to save. Please try again."); }
+            });
+        }}>
+            <div className="rounded-xl border border-border bg-muted/40 p-4">
+                <p className="text-xs text-muted-foreground">Vehicle number</p>
+                <p className="mt-1 break-words text-lg font-semibold">{vehicle.vehicle_number}</p>
+                <p className="mt-2 text-sm text-muted-foreground">{invoiceCount} assigned invoices</p>
+            </div>
+            <p className="text-sm leading-6 text-muted-foreground">{deleting
+                ? "Permanently delete this unassigned vehicle? Invoice records and existing activity history will remain. This action cannot be undone."
+                : action === "archive"
+                    ? "Hide this vehicle from the active list and new assignment suggestions. Existing invoices and their vehicle labels will remain unchanged. You can restore it later."
+                    : "Make this vehicle available for new invoice assignments again. Existing invoices will remain unchanged."}</p>
+            {deleting && <div><label htmlFor={id} className="mb-2 block text-sm font-medium">Type {vehicle.vehicle_number} to confirm</label>
+                <input id={id} className={input} value={confirmation} onChange={e => setConfirmation(e.target.value)} autoComplete="off" spellCheck={false} maxLength={30} disabled={pending} required /></div>}
+            {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+            <div className="flex flex-wrap justify-end gap-3 border-t border-border pt-4">
+                <button autoFocus type="button" className={button} disabled={pending} onClick={close}>Cancel</button>
+                <button className={deleting ? "inline-flex min-h-11 items-center justify-center rounded-lg bg-red-700 px-4 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-50" : primary}
+                    disabled={pending || (deleting && confirmation !== vehicle.vehicle_number)}>{pending ? "Saving…" : title}</button>
+            </div>
+        </form>}
     </Modal>;
 }

@@ -22,6 +22,9 @@ export const ACTION_LABELS: Record<string, string> = {
     INVOICE_CREATED: "Invoice created",
     INVOICE_UPDATED: "Invoice process updated",
     VEHICLE_CREATED: "Vehicle created",
+    VEHICLE_ARCHIVED: "Vehicle archived",
+    VEHICLE_RESTORED: "Vehicle restored",
+    VEHICLE_DELETED: "Vehicle deleted",
     VEHICLE_RENAMED: "Vehicle renamed",
     INVOICE_VEHICLE_UPDATED: "Vehicle assignment updated",
     INVOICE_DETAILS_UPDATED: "Invoice details updated",
@@ -36,6 +39,7 @@ export const ACTION_LABELS: Record<string, string> = {
 };
 
 const FIELD_LABELS: Record<string, string> = {
+    is_archived: "Archived",
     vehicle_number: "Vehicle number",
     invoice: "Invoice created",
     invoice_number: "Invoice number",
