@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import {
+    Truck,
     Activity,
     ArrowUpRight,
     LayoutDashboard,
@@ -40,6 +41,7 @@ export default function AdminSidebar({
                 pathname === "/dashboard" ||
                 pathname.startsWith("/dashboard/invoices/"),
         },
+        { href: "/dashboard/vehicles", label: "Vehicle management", icon: Truck, active: pathname.startsWith("/dashboard/vehicles") },
         ...(isAdmin
             ? [
                 {

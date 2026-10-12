@@ -10,6 +10,8 @@ The application gives operations teams a shared view of invoice progress, AX/D36
 - [Features](#features)
 - [User roles](#user-roles)
 - [Daily workflow](#daily-workflow)
+- [Vehicle management](#vehicle-management)
+- [Pending reasons](#pending-reasons)
 - [Export invoices to Excel](#export-invoices-to-excel)
 - [Delete an invoice](#delete-an-invoice)
 - [Technology stack](#technology-stack)
@@ -25,7 +27,7 @@ The application gives operations teams a shared view of invoice progress, AX/D36
 
 Unloading Tracker organizes invoice processing into one workspace so teams can find records, update progress and review the history of changes.
 
-Each invoice can include its supplier, system, shipment type, document date, roll quantity and final status. Related processing stages and ASN information provide additional operational context.
+Each invoice can include its supplier, system, shipment type, document date, roll quantity, optional vehicle number, pending reason and final status. Related processing stages and ASN information provide additional operational context.
 
 The application has two entry points:
 
@@ -38,11 +40,13 @@ The application has two entry points:
 
 ### Invoice workspace
 
-- Search invoices by invoice number or supplier.
+- Search invoices by invoice number, supplier or vehicle number.
 - Filter records by Pending, Complete or Reject status.
 - Use summary cards to select a status filter.
 - Open an invoice by selecting its invoice number.
-- Create invoices and edit their basic details.
+- Create invoices and edit their basic details, including an optional vehicle number.
+- Display vehicle labels beneath invoice numbers and on the process page.
+- Show pending reasons in the invoice table.
 - Track AX/D365 processing stages and ASN updates.
 - Export invoices within a custom Document date range to an editable Excel workbook (administrators only).
 - View paginated records and live update connection feedback.
@@ -50,10 +54,21 @@ The application has two entry points:
 ### Read-only overview
 
 - Display invoice totals and status summary cards.
-- Search records and filter by status or system.
+- Search by invoice number, supplier or vehicle number, and filter by status or system.
+- Display vehicle labels and highlight pending invoices that have a reason.
+- Open the pending-reason control to read the full explanation.
 - View supplier, shipment, dates, quantities and processing information.
 - View the ASN information exposed by the overview endpoint.
 - Provide a route back to the dashboard for eligible signed-in users.
+
+### Vehicle registry
+
+- Add and search vehicle numbers from the sidebar’s **Vehicle management** section.
+- View each vehicle’s assigned invoices and invoice count.
+- Select existing invoices, review their current assignments and confirm a batch assignment.
+- Reassign invoices or remove their vehicle assignment without deleting the invoice.
+- Reuse existing vehicles or create new ones when saving invoice details.
+- Rename a vehicle as an administrator and update its linked invoice labels.
 
 ### Administration and account settings
 
@@ -80,8 +95,8 @@ The application has two entry points:
 | Role | Access |
 | --- | --- |
 | Visitor | View and search the read-only invoice overview. |
-| Active user (`USER`) | Access the invoice workspace and account settings, subject to server and database permissions. |
-| Active administrator (`ADMIN`) | Access the invoice workspace, date-range Excel export, invoice deletion, user management and activity log administration. |
+| Active user (`USER`) | Manage invoices, add vehicles, assign/reassign/unassign invoices and access account settings, subject to server and database permissions. |
+| Active administrator (`ADMIN`) | All active-user capabilities, plus vehicle renaming, date-range Excel export, invoice deletion, user management and activity log administration. |
 | Inactive account | Not permitted to use the protected workspace. |
 
 Accounts are provisioned by an administrator. The application does not provide an open self-registration workflow.
@@ -89,13 +104,51 @@ Accounts are provisioned by an administrator. The application does not provide a
 ## Daily workflow
 
 1. **Find an invoice:** search the overview or sign in to the internal dashboard.
-2. **Create a record:** an authorized user enters the invoice and supplier details.
+2. **Create a record:** an authorized user enters the invoice and supplier details, optionally selecting or entering a vehicle number.
 3. **Update processing:** open the invoice number and record the applicable AX/D365 stages and ASN information.
 4. **Maintain status:** update the invoice to the appropriate Pending, Complete or Reject state.
 5. **Review progress:** use the table, summary cards and filters to locate outstanding work.
 6. **Review history:** an administrator opens the activity log to inspect recorded actions and changes.
 
 Summary cards show **all-time totals**, independent of the table filters. A card selection changes the table status filter; an existing search may still narrow the displayed results.
+
+## Vehicle management
+
+Open **Vehicle management** from the workspace sidebar. Active users and administrators can add vehicles and manage invoice assignments; only administrators can rename a vehicle.
+
+### Add a vehicle and assign invoices
+
+1. Select **Add vehicle**, enter its number and save.
+2. Find the vehicle and select **View invoices**.
+3. Select **Assign invoices** and search the existing invoice records.
+4. Select up to **50 invoices** in one batch, including across search-result pages.
+5. Select **Review selection** to inspect the current and proposed assignments.
+6. Select **Confirm assignment**.
+
+An invoice has at most one current vehicle; a vehicle can have many invoices. Assigning an invoice that already belongs to another vehicle moves it to the selected vehicle. This registry tracks current assignments, not separate journeys or trips.
+
+### Use vehicles when creating or editing an invoice
+
+The optional **Vehicle number** field offers existing vehicle suggestions and accepts a new number. Saving the invoice reuses a matching vehicle or creates a new registry entry. Leaving the field blank keeps the invoice unassigned; clearing an existing value removes its assignment.
+
+Numbers are matched without regard to letter case, whitespace or hyphens. For example, `WP-ABC-1234` and `wp abc 1234` match the same vehicle. The registry’s saved display number is used consistently on linked invoices. Vehicle numbers are limited to 30 characters.
+
+### Remove an assignment or rename a vehicle
+
+- **Remove assignment:** confirm the action in the vehicle’s invoice list. The invoice remains available in the dashboard.
+- **Rename:** an administrator selects **Rename** for the vehicle. Saving updates its linked invoice labels. A name that matches another vehicle is rejected rather than merging the records.
+
+Labels on the dashboard, read-only overview and process page use the updated vehicle number. Dashboard and overview search can locate invoices by their displayed vehicle number. Vehicle registry matching ignores spaces and hyphens; invoice-table search remains a text search, so use the displayed format when needed.
+
+Assignment changes are checked against the invoice version. If a selected invoice changes before confirmation, the batch is rejected without partially applying the assignments. Reload the latest records and review the selection again.
+
+Vehicle creation, renaming and invoice assignment changes are recorded in the activity log. The interface does not provide vehicle deletion.
+
+## Pending reasons
+
+The dashboard displays **Pending reason** rather than the internal remark in the relevant table field. On the read-only overview, a pending invoice with a reason receives a visual highlight and a control for viewing the full explanation. Pending invoices without a reason do not show that reason indicator.
+
+The public overview exposes the pending reason for Pending invoices. Treat it as viewer-visible operational information; keep internal-only notes in the appropriate internal field. This display change does not remove remarks from the existing Excel export.
 
 ## Export invoices to Excel
 
@@ -195,11 +248,24 @@ For a new environment:
 
 1. Ask the maintainer for the complete, current migration set.
 2. Apply the project's Supabase migrations in filename order using the team's migration process.
-3. Confirm the overview RPC functions, activity-clear function and `202610110001_invoice_delete_and_date_export.sql` are included. Apply the delete/export migration before using the corresponding updated UI.
+3. Confirm the complete overview and summary RPC definitions, pending-reason support, activity-clear function and the feature migrations listed below are included. Apply database changes before the corresponding UI changes.
 4. Confirm the required Realtime configuration is enabled for the application's subscriptions.
 5. Have the maintainer provision the first active administrator account.
 
 For an existing team environment, use its approved configuration. Do not rerun setup SQL blindly against a shared or production database.
+
+Feature migrations include:
+
+| Migration | Purpose |
+| --- | --- |
+| `202610110001_invoice_delete_and_date_export.sql` | Administrator invoice deletion and Document date export. |
+| `202610120001_invoice_vehicle_number.sql` | Optional invoice vehicle numbers and create/edit support. |
+| `202610120002_public_vehicle_search.sql` | Vehicle details and search in the public overview. |
+| `202610120003_vehicle_management.sql` | Vehicle registry, invoice links, assignment operations, synchronization and audit events. |
+
+These are incremental migrations, not a standalone database installation. Keep the complete earlier migration history in the repository, including the public overview and summary functions used by the current application. Verify a new environment before deployment; the feature list above is not the complete migration list.
+
+If SQL reports `42723: function "vehicle_key" already exists with same argument types`, stop rerunning that migration and check its application history and definitions with the maintainer. Existing objects alone do not prove that every migration statement completed. Keep the migration file in the repository; do not drop functions or tables to bypass the error.
 
 An authenticated account also needs a matching `profiles` record with the appropriate role and active status. Running `npm ci` does not create the database or administrator account.
 
@@ -220,6 +286,9 @@ Open [http://localhost:3000](http://localhost:3000), or the address printed by t
 | `/` | Read-only invoice overview. |
 | `/login` | Workspace sign-in. |
 | `/dashboard` | Invoice summary, search, filters and records. |
+| `/dashboard/invoices/new` | Create an invoice with an optional vehicle number. |
+| `/dashboard/invoices/[id]/details` | Edit invoice details and its vehicle assignment. |
+| `/dashboard/vehicles` | Vehicle registry and invoice assignments. |
 | `/dashboard/invoices/[id]` | Invoice processing page. |
 | `/dashboard/export` | Administrator-only POST endpoint for date-range Excel downloads; not a navigable page. |
 | `/dashboard/users` | Administrator user management. |
@@ -242,6 +311,7 @@ web/
         invoices/              Invoice screens, update and delete actions
         export/                Date-range Excel download endpoint
         export-button.tsx      Export date-selection dialog
+        vehicles/              Vehicle registry, dialogs and assignment actions
         users/                 User administration
         activity/              Activity filters and expandable records
         settings/              Account settings
@@ -263,7 +333,8 @@ The primary tables include:
 | Table | Responsibility |
 | --- | --- |
 | `profiles` | User names, roles and active access state. |
-| `invoices` | Invoice identity, supplier, operational fields and status. |
+| `invoices` | Invoice identity, supplier, pending reason, operational fields, status and current vehicle link. |
+| `vehicles` | Unique vehicle registry, display numbers and versions. |
 | `pre_grn_stages` | System-specific processing progress. |
 | `asn_updates` | ASN sharing and assignment information. |
 | `activity_logs` | Recorded actors, actions, changes, timestamps and invoice-number snapshots. |
@@ -271,6 +342,8 @@ The primary tables include:
 Protected operations rely on server-side authorization and database permissions. Hiding a button is not an authorization control.
 
 The public overview uses dedicated database functions to expose a selected set of fields. Internal remarks, administrative history and other restricted data should not be added to those responses without review.
+
+`invoices.vehicle_id` links each assigned invoice to `vehicles`. Database triggers keep `invoices.vehicle_number` synchronized as the display/search value used by existing invoice views. Vehicle writes use authorized database functions; direct client writes to the registry are not granted. Assignment and rename operations use version checks to reject conflicting updates.
 
 Invoice deletion retains audit history through `invoice_number_snapshot` and a nullable invoice reference. The `delete_invoice` function checks administrator access, confirmation and the expected invoice version. The `prepare_invoice_export_range` function validates the date range and returns a consistent dataset for workbook generation.
 
@@ -296,6 +369,11 @@ Before submitting a change, check the affected workflow as well as:
 - Sign-in and active/inactive account behaviour.
 - Invoice search, status cards, reset and pagination.
 - Invoice creation and processing updates where relevant.
+- Optional vehicle entry, automatic creation and reuse of numbers with different case/spacing/hyphens.
+- Batch vehicle assignment, reassignment, removal and stale-version rejection.
+- Administrator-only vehicle renaming and synchronized dashboard/overview/process labels.
+- Vehicle-number search in the dashboard and overview.
+- Pending-reason highlights and readable dialogs in both themes.
 - Administrator-only routes and actions, including rejected delete/export requests from non-admin accounts.
 - Delete confirmation, stale-version rejection and retained history using a disposable test invoice.
 - Export date boundaries, same-day exports, empty ranges and the record limit.
@@ -322,6 +400,12 @@ A successful build does not replace workflow and permission testing against the 
 | No invoices are found for an export | Check Document dates, not creation dates, and confirm the selected range. |
 | Excel contains records outside the dashboard search results | Export uses only the selected Document date range; table filters are independent. |
 | Export exceeds 10,000 invoices | Split the range into smaller date ranges. No partial workbook is returned. |
+| A vehicle cannot be renamed | Only active administrators can rename; check for a duplicate normalized number or a stale version. |
+| Vehicle assignment reports that a record changed | Reload the latest invoices and review the batch again; the rejected batch does not partially save. |
+| A new vehicle is missing after typing its number | New entries are created when the invoice is saved, not while typing. |
+| Vehicle search returns no invoices | Try the vehicle number as displayed on the invoice label; table search does not normalize separators like the registry does. |
+| A pending reason is not shown on the overview | Confirm the invoice is Pending, has a nonblank reason and the current public overview RPC is installed. |
+| `vehicle_key` already exists during migration | Check migration history and definitions before applying any repair; do not repeatedly run the create migration. |
 | Live updates are disconnected | Check network connectivity and the project's Realtime configuration. |
 | New environment values are not taking effect | Restart the application server after editing `.env.local`. |
 

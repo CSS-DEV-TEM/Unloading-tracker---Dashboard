@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import VehicleInput from "@/components/vehicle-input";
 import { useActionState } from "react";
 import { Loader2 } from "lucide-react";
 import { createInvoice } from "./actions";
@@ -90,7 +91,7 @@ export default function InvoiceForm({ today }: { today: string }) {
                             Vehicle number
                         </label>
 
-                        <input
+                        <VehicleInput
                             id="vehicleNumber"
                             name="vehicleNumber"
                             type="text"
