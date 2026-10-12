@@ -19,6 +19,7 @@ import OverviewRefresh from "@/components/overview-refresh";
 import { createClient as createSessionClient } from "@/lib/supabase/server";
 import Form from "next/form";
 import PendingReasonDialog from "@/components/pending-reason-dialog";
+import VehicleLabel from "@/components/vehicle-label";
 
 type SearchParams = {
   q?: string | string[];
@@ -37,6 +38,7 @@ type PublicInvoice = {
   id: string;
   invoice_number: string;
   supplier: string;
+  vehicle_number: string | null;
   system_type: string;
   shipment_type: string;
   document_share_date: string | null;
@@ -601,7 +603,7 @@ async function PublicOverview({ searchParams }: Props) {
                 htmlFor="public-search"
                 className="mb-2 block text-xs font-medium text-muted-foreground"
               >
-                Invoice / Supplier
+                Invoice / Supplier/ Vehicle Number
               </label>
 
               <div className="relative">
@@ -617,7 +619,7 @@ async function PublicOverview({ searchParams }: Props) {
                   type="search"
                   defaultValue={q}
                   maxLength={100}
-                  placeholder="Search invoice or supplier"
+                  placeholder="Search invoice,supplier or Vehicle Number"
                   className={`${inputClass} pl-10`}
                 />
               </div>
@@ -743,14 +745,17 @@ async function PublicOverview({ searchParams }: Props) {
                               : undefined
                           }
                           className="sticky left-0 z-10 w-44 min-w-44 max-w-44
-                                      border-b border-r border-border bg-card px-4 py-3
-                                      align-top font-semibold text-foreground
-                                      group-hover:bg-muted group-focus-within:bg-muted
-                                      [overflow-wrap:anywhere]"
+                                                    border-b border-r border-border bg-card px-4 py-3
+                                                    align-top font-semibold text-foreground
+                                                    group-hover:bg-muted group-focus-within:bg-muted
+                                                    [overflow-wrap:anywhere]"
                         >
-                          {invoice.invoice_number}
-                        </th>
+                          <div>{invoice.invoice_number}</div>
 
+                          <div>
+                            <VehicleLabel value={invoice.vehicle_number} />
+                          </div>
+                        </th>
                         <td className="min-w-48 max-w-64 break-words px-4 py-3 align-top">
                           {invoice.supplier}
                         </td>

@@ -23,6 +23,13 @@ export async function createInvoice(
     const shipment = text("shipment");
     const date = text("documentDate");
     const quantityText = text("rollQuantity");
+    const vehicleNumber = text("vehicleNumber");
+
+    if (vehicleNumber.length > 30) {
+        return {
+            error: "Vehicle number must be 30 characters or fewer.",
+        };
+    }
 
     if (!invoice || invoice.length > 100) {
         return {
@@ -80,13 +87,14 @@ export async function createInvoice(
         };
     }
 
-    const { error } = await supabase.rpc("create_invoice", {
+    const { error } = await supabase.rpc("create_invoice_v2", {
         p_invoice_number: invoice,
         p_supplier: supplier,
         p_roll_quantity: quantity,
         p_system_type: system,
         p_document_share_date: date,
         p_shipment_type: shipment,
+        p_vehicle_number: vehicleNumber || null,
     });
 
     if (error) {

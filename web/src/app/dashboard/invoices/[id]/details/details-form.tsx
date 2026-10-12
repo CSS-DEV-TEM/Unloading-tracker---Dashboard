@@ -11,6 +11,7 @@ type Props = {
         invoice_number: string;
         supplier: string;
         roll_quantity: number | null;
+        vehicle_number: string | null;
         document_share_date: string;
         shipment_type: string;
         system_type: string;
@@ -21,6 +22,7 @@ export default function DetailsForm({ invoice }: Props) {
     const [values, setValues] = useState({
         invoiceNumber: invoice.invoice_number,
         supplier: invoice.supplier,
+        vehicleNumber: invoice.vehicle_number ?? "",
         rollQuantity:
             invoice.roll_quantity === null
                 ? ""
@@ -95,27 +97,82 @@ export default function DetailsForm({ invoice }: Props) {
                         />
                     </div>
 
-                    <div>
-                        <label
-                            htmlFor="roll-quantity"
-                            className="mb-2 block text-sm font-medium"
-                        >
-                            Roll quantity — optional
-                        </label>
+                    <div className="grid gap-5 sm:col-span-2 sm:grid-cols-3">
+                        <div className="min-w-0">
+                            <label
+                                htmlFor="roll-quantity"
+                                className="mb-2 block text-sm font-medium"
+                            >
+                                Roll quantity
+                            </label>
 
-                        <input
-                            id="roll-quantity"
-                            name="rollQuantity"
-                            type="number"
-                            min={0}
-                            max={2147483647}
-                            step={1}
-                            value={values.rollQuantity}
-                            onChange={(event) =>
-                                update("rollQuantity", event.target.value)
-                            }
-                            className={inputClass}
-                        />
+                            <input
+                                id="roll-quantity"
+                                name="rollQuantity"
+                                type="number"
+                                min={0}
+                                max={2147483647}
+                                step={1}
+                                placeholder="Optional"
+                                value={values.rollQuantity}
+                                onChange={(event) =>
+                                    update("rollQuantity", event.target.value)
+                                }
+                                className={inputClass}
+                            />
+                        </div>
+
+                        <div className="min-w-0">
+                            <label
+                                htmlFor="vehicle-number"
+                                className="mb-2 block text-sm font-medium"
+                            >
+                                Vehicle number
+                                <span className="ml-1 text-xs font-normal text-muted-foreground">
+                                    (optional)
+                                </span>
+                            </label>
+
+                            <input
+                                id="vehicle-number"
+                                name="vehicleNumber"
+                                type="text"
+                                maxLength={30}
+                                autoComplete="off"
+                                spellCheck={false}
+                                placeholder="e.g. WP ABC-1234"
+                                value={values.vehicleNumber}
+                                onChange={(event) =>
+                                    update("vehicleNumber", event.target.value)
+                                }
+                                className={inputClass}
+                            />
+                        </div>
+
+                        <div className="min-w-0">
+                            <label
+                                htmlFor="current-system"
+                                className="mb-2 block text-sm font-medium"
+                            >
+                                System
+                            </label>
+
+                            <input
+                                id="current-system"
+                                type="text"
+                                value={invoice.system_type}
+                                readOnly
+                                aria-describedby="current-system-help"
+                                className={`${inputClass} text-muted-foreground`}
+                            />
+
+                            <p
+                                id="current-system-help"
+                                className="mt-1.5 text-xs text-muted-foreground"
+                            >
+                                System cannot be changed.
+                            </p>
+                        </div>
                     </div>
 
                     <div>

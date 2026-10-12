@@ -7,7 +7,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import ProcessForm from "./process-form";
 import type { ProcessFormData, ProcessStage } from "./types";
-import { Pencil } from "lucide-react";
+import { Pencil, Truck } from "lucide-react";
 import DeleteInvoiceButton from "./delete-invoice-button";
 
 type PageProps = {
@@ -83,7 +83,7 @@ async function InvoiceContent({ params }: PageProps) {
             .from("invoices")
             .select(
                 `
-          id, invoice_number, supplier, roll_quantity,
+          id, invoice_number, supplier, roll_quantity, vehicle_number,
           system_type, shipment_type, document_share_date,
           pending_reason, remark, status, version
         `,
@@ -197,15 +197,40 @@ async function InvoiceContent({ params }: PageProps) {
                                 </h1>
                             </div>
 
-                            <dl className="min-w-0 sm:border-l sm:border-border sm:pl-6">
-                                <dt className="text-xs font-medium text-muted-foreground">
-                                    Supplier
-                                </dt>
+                            <div className="min-w-0 sm:border-l sm:border-border sm:pl-6">
+                                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                                    <p className="text-xs font-medium text-muted-foreground">
+                                        Supplier
+                                    </p>
 
-                                <dd className="mt-1.5 break-words text-base font-medium text-foreground">
+                                    <span
+                                        style={{
+                                            backgroundColor: "var(--background)",
+                                            color: "var(--foreground)",
+                                            borderColor: "var(--border)",
+                                        }}
+                                        className="inline-flex max-w-full items-center gap-1.5
+        rounded-md border px-2 py-1 text-xs"
+                                    >
+                                        <Truck
+                                            aria-hidden="true"
+                                            className="size-3.5 shrink-0"
+                                        />
+
+                                        <span className="shrink-0 text-muted-foreground">
+                                            Vehicle ·
+                                        </span>
+
+                                        <span className="min-w-0 break-words font-medium">
+                                            {invoice.vehicle_number?.trim() || "Not added"}
+                                        </span>
+                                    </span>
+                                </div>
+
+                                <p className="mt-1.5 break-words text-base font-medium text-foreground">
                                     {invoice.supplier}
-                                </dd>
-                            </dl>
+                                </p>
+                            </div>
                         </div>
 
                         <div className="flex shrink-0 items-center gap-2">
