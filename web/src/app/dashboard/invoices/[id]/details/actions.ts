@@ -103,6 +103,7 @@ export async function saveInvoiceDetails(
     });
 
     if (error) {
+        if (error.code === "PVA01") { return fail("This vehicle is archived. Keep the existing assignment, choose an active vehicle or ask an administrator to restore it."); }
         if (error.code === "40001") {
             return fail(
                 "Another user updated this invoice. Copy any changes you want to keep, then reload the latest record.",
@@ -122,6 +123,7 @@ export async function saveInvoiceDetails(
     }
 
     revalidatePath("/");
+    revalidatePath("/dashboard/vehicles");
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/activity");
     revalidatePath(`/dashboard/invoices/${id}`);

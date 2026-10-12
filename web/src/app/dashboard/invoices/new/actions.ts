@@ -98,6 +98,7 @@ export async function createInvoice(
     });
 
     if (error) {
+        if (error.code === "PVA01") { return { error: "This vehicle is archived. Ask an administrator to restore it, choose an active vehicle or leave the field blank." }; }
         return {
             error:
                 error.code === "42501"
@@ -106,6 +107,7 @@ export async function createInvoice(
         };
     }
 
+    revalidatePath("/dashboard/vehicles");
     revalidatePath("/dashboard");
     redirect("/dashboard?notice=invoice-created");
 }
