@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import VehicleInput from "@/components/vehicle-input";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { saveInvoiceDetails } from "./actions";
 
 type Props = {
@@ -13,9 +13,11 @@ type Props = {
         supplier: string;
         roll_quantity: number | null;
         vehicle_number: string | null;
+        vehicle_received_date: string | null;
         document_share_date: string;
         shipment_type: string;
         system_type: string;
+        status: string;
     };
 };
 
@@ -24,6 +26,8 @@ export default function DetailsForm({ invoice }: Props) {
         invoiceNumber: invoice.invoice_number,
         supplier: invoice.supplier,
         vehicleNumber: invoice.vehicle_number ?? "",
+        receivedDate: invoice.vehicle_received_date ?? "",
+        originalReceivedDate: invoice.vehicle_received_date ?? "",
         rollQuantity:
             invoice.roll_quantity === null
                 ? ""
@@ -31,6 +35,30 @@ export default function DetailsForm({ invoice }: Props) {
         documentDate: invoice.document_share_date,
         shipmentType: invoice.shipment_type,
     });
+    useEffect(() => {
+        const latestDate = invoice.vehicle_received_date ?? "";
+        const originalVehicle = invoice.vehicle_number ?? "";
+
+        setValues((previous) => {
+            // Keep any vehicle or date change the user is editing.
+            if (
+                previous.vehicleNumber !== originalVehicle ||
+                previous.receivedDate !== previous.originalReceivedDate
+            ) {
+                return previous;
+            }
+
+            if (previous.originalReceivedDate === latestDate) {
+                return previous;
+            }
+
+            return {
+                ...previous,
+                receivedDate: latestDate,
+                originalReceivedDate: latestDate,
+            };
+        });
+    }, [invoice.vehicle_received_date, invoice.vehicle_number]);
 
     const [state, formAction, pending] = useActionState(
         saveInvoiceDetails,
@@ -53,6 +81,16 @@ export default function DetailsForm({ invoice }: Props) {
         >
             <input type="hidden" name="invoiceId" value={invoice.id} />
             <input type="hidden" name="version" value={invoice.version} />
+            <input
+                type="hidden"
+                name="originalReceivedDate"
+                value={values.originalReceivedDate}
+            />
+            <input
+                type="hidden"
+                name="originalVehicleNumber"
+                value={invoice.vehicle_number ?? ""}
+            />
 
             <fieldset disabled={pending} className="space-y-5">
                 <div className="grid gap-5 sm:grid-cols-2">
@@ -134,20 +172,61 @@ export default function DetailsForm({ invoice }: Props) {
                                 </span>
                             </label>
 
-                            <VehicleInput
-                                id="vehicle-number"
-                                name="vehicleNumber"
-                                type="text"
-                                maxLength={30}
-                                autoComplete="off"
-                                spellCheck={false}
-                                placeholder="e.g. WP ABC-1234"
-                                value={values.vehicleNumber}
-                                onChange={(event) =>
-                                    update("vehicleNumber", event.target.value)
-                                }
-                                className={inputClass}
-                            />
+                            {invoice.status === "Complete" ? (
+                                <>
+                                    <input id="vehicle-number" name="vehicleNumber" type="text"
+                                        value={values.vehicleNumber} readOnly className={`${inputClass} opacity-70`}
+                                        aria-describedby="vehicle-locked-help" placeholder="Not assigned" />
+                                    <p id="vehicle-locked-help" className="mt-1.5 text-xs text-muted-foreground">
+                                        Vehicle assignment is locked while this invoice is Complete. Save it as Pending before changing the vehicle.
+                                    </p>
+                                </>
+                            ) : (
+                                <VehicleInput
+                                    id="vehicle-number"
+                                    name="vehicleNumber"
+                                    type="text"
+                                    maxLength={30}
+                                    autoComplete="off"
+                                    spellCheck={false}
+                                    placeholder="e.g. WP ABC-1234"
+                                    value={values.vehicleNumber}
+                                    onChange={(event) => {
+                                        const nextNumber = event.target.value;
+
+                                        setValues((previous) => ({
+                                            ...previous,
+                                            vehicleNumber: nextNumber,
+                                            receivedDate: "",
+                                        }));
+                                    }}
+                                    className={inputClass}
+                                />
+                            )}
+                            <div className="mt-3">
+                                <label
+                                    htmlFor="received-date"
+                                    className="mb-2 block text-sm font-medium"
+                                >
+                                    Received date
+                                    <span className="ml-1 text-xs font-normal text-muted-foreground">
+                                        (optional)
+                                    </span>
+                                </label>
+
+                                <input
+                                    id="received-date"
+                                    name="receivedDate"
+                                    type="date"
+                                    value={values.receivedDate}
+                                    onChange={(event) =>
+                                        update("receivedDate", event.target.value)
+                                    }
+                                    min="0001-01-01"
+                                    max="9999-12-31"
+                                    className={inputClass}
+                                />
+                            </div>
                         </div>
 
                         <div className="min-w-0">

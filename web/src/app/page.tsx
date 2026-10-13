@@ -39,6 +39,7 @@ type PublicInvoice = {
   invoice_number: string;
   supplier: string;
   vehicle_number: string | null;
+  vehicle_received_date: string | null;
   system_type: string;
   shipment_type: string;
   document_share_date: string | null;
@@ -219,6 +220,13 @@ function ProcessingDetails({
               </div>
 
               <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
+                <dt className="text-muted-foreground">
+                  Started
+                </dt>
+                <dd className="text-right">
+                  <DateTime value={stage.started_at} />
+                </dd>
+
                 <dt className="text-muted-foreground">
                   Ended
                 </dt>
@@ -754,7 +762,10 @@ async function PublicOverview({ searchParams }: Props) {
                           <div>{invoice.invoice_number}</div>
 
                           <div>
-                            <VehicleLabel value={invoice.vehicle_number} />
+                            <VehicleLabel
+                              value={invoice.vehicle_number}
+                              receivedDate={invoice.vehicle_received_date}
+                            />
                           </div>
                         </th>
                         <td className="min-w-48 max-w-64 break-words px-4 py-3 align-top">

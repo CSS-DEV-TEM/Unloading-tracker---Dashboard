@@ -20,6 +20,14 @@ export default function ProcessForm({
     userNames: string[];
 }) {
     const [form, setForm] = useState(initial);
+    const reopening = initial.asn_shared && !form.asn_shared;
+    const effectiveStatus = form.asn_shared
+        ? "Complete"
+        : reopening
+            ? "Pending"
+            : form.status === "Reject"
+                ? "Reject"
+                : "Pending";
 
     const [state, formAction, pending] = useActionState(
         updateInvoiceProcess,
@@ -218,7 +226,7 @@ export default function ProcessForm({
                                 name="asnShared"
                                 checked={form.asn_shared}
                                 onChange={(event) =>
-                                    setForm({ ...form, asn_shared: event.target.checked })
+                                    setForm({ ...form, asn_shared: event.target.checked, status: event.target.checked ? "Complete" : "Pending" })
                                 }
                                 className="size-4 accent-blue-700"
                             />
@@ -288,30 +296,82 @@ export default function ProcessForm({
                 </section>
 
                 <section className="rounded-xl border border-border bg-card p-6">
-                    <label htmlFor="status" className="block text-sm font-semibold">
-                        Final status
-                    </label>
-
-                    <select
-                        id="status"
+                    <input
+                        type="hidden"
                         name="status"
-                        value={form.status}
-                        onChange={(event) =>
-                            setForm({
-                                ...form,
-                                status: event.target.value as ProcessFormData["status"],
-                            })
-                        }
-                        className={`${inputClass} sm:max-w-xs`}
-                    >
-                        <option value="Pending">Pending</option>
-                        <option value="Complete">Complete</option>
-                        <option value="Reject">Reject</option>
-                    </select>
+                        value={effectiveStatus}
+                    />
 
-                    <p className="mt-3 text-sm text-muted-foreground">
-                        Choose Complete when the overall task is finished.
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <h2 className="text-sm font-semibold">
+                                Invoice status
+                            </h2>
+
+                            <p className="mt-1 text-xs text-muted-foreground">
+                                Status changes are applied when you save.
+                            </p>
+                        </div>
+
+                        <span
+                            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${effectiveStatus === "Complete"
+                                ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300"
+                                : effectiveStatus === "Reject"
+                                    ? "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+                                    : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300"
+                                }`}
+                        >
+                            <span
+                                className="size-1.5 rounded-full bg-current"
+                                aria-hidden="true"
+                            />
+                            {effectiveStatus}
+                        </span>
+                    </div>
+
+                    <p className="mt-4 text-sm text-muted-foreground">
+                        {form.asn_shared
+                            ? "ASN SHARE is selected. Saving will complete this invoice."
+                            : reopening
+                                ? "Saving will return this invoice to Pending. Save this change before rejecting it."
+                                : effectiveStatus === "Reject"
+                                    ? "This invoice is marked for rejection. Save changes to apply."
+                                    : "This invoice remains Pending until ASN SHARE is selected and saved."}
                     </p>
+
+                    {!form.asn_shared && (
+                        <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-border pt-4">
+                            {effectiveStatus === "Reject" ? (
+                                <button
+                                    type="button"
+                                    disabled={pending || reopening}
+                                    onClick={() =>
+                                        setForm((previous) => ({
+                                            ...previous,
+                                            status: "Pending",
+                                        }))
+                                    }
+                                    className="inline-flex min-h-10 items-center justify-center rounded-lg border border-input px-4 text-sm font-medium hover:bg-muted disabled:opacity-50"
+                                >
+                                    Undo rejection
+                                </button>
+                            ) : (
+                                <button
+                                    type="button"
+                                    disabled={pending}
+                                    onClick={() =>
+                                        setForm((previous) => ({
+                                            ...previous,
+                                            status: "Reject",
+                                        }))
+                                    }
+                                    className="inline-flex min-h-10 items-center justify-center rounded-lg border border-red-200 bg-red-50 px-4 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-950/50"
+                                >
+                                    Reject invoice
+                                </button>
+                            )}
+                        </div>
+                    )}
                 </section>
             </fieldset>
 

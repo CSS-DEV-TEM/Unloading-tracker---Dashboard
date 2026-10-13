@@ -196,6 +196,10 @@ export async function updateInvoiceProcess(
         return fail("Unable to save changes. Check the values and try again.");
     }
 
+    revalidatePath("/");
+    revalidatePath("/dashboard/vehicles");
+    revalidatePath("/dashboard/activity");
+    revalidatePath(`/dashboard/invoices/${invoiceId}/details`);
     revalidatePath("/dashboard");
     revalidatePath(`/dashboard/invoices/${invoiceId}`);
     redirect("/dashboard?notice=process-updated");

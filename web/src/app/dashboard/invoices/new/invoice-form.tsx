@@ -101,6 +101,23 @@ export default function InvoiceForm({ today }: { today: string }) {
                             placeholder="Optional · ABC-1234"
                             className={inputClass}
                         />
+                        <div className="mt-3">
+                            <label htmlFor="receivedDate" className={labelClass}>
+                                Received date
+                                <span className="ml-1 text-xs font-normal text-muted-foreground">
+                                    (optional)
+                                </span>
+                            </label>
+
+                            <input
+                                id="receivedDate"
+                                name="receivedDate"
+                                type="date"
+                                min="0001-01-01"
+                                max="9999-12-31"
+                                className={inputClass}
+                            />
+                        </div>
                     </div>
 
                     <div className="min-w-0">

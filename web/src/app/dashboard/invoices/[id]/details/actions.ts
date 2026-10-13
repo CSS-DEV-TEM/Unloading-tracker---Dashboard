@@ -24,11 +24,50 @@ export async function saveInvoiceDetails(
     const documentDate = text("documentDate");
     const shipmentType = text("shipmentType");
     const vehicleNumber = text("vehicleNumber");
+    const receivedDate = text("receivedDate");
+    const originalReceivedDate = text("originalReceivedDate");
+    const originalVehicleNumber = text("originalVehicleNumber");
 
     const fail = (
         error: string,
         conflict = false,
     ): DetailsState => ({ error, conflict });
+
+    function validOptionalDate(value: string) {
+        if (!value) return true;
+
+        const parsed = new Date(`${value}T00:00:00Z`);
+
+        return (
+            /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+            !Number.isNaN(parsed.getTime()) &&
+            parsed.toISOString().slice(0, 10) === value
+        );
+    }
+
+    if (!validOptionalDate(receivedDate)) {
+        return fail("Select a valid received date, or leave it blank.");
+    }
+
+    if (!validOptionalDate(originalReceivedDate)) {
+        return fail("Reload the page to get the current received date.", true);
+    }
+
+    if (receivedDate && !vehicleNumber) {
+        return fail(
+            "Enter a vehicle number, or leave the received date blank.",
+        );
+    }
+
+    const vehicleKey = (value: string) =>
+        value.replace(/[\s-]+/g, "").toUpperCase();
+
+    const receivedDateChanged =
+        receivedDate !== "" &&
+        (
+            receivedDate !== originalReceivedDate ||
+            vehicleKey(vehicleNumber) !== vehicleKey(originalVehicleNumber)
+        );
 
     if (
         !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
@@ -91,22 +130,37 @@ export async function saveInvoiceDetails(
         return fail("Your session has expired. Please sign in again.");
     }
 
-    const { error } = await supabase.rpc("update_invoice_details_v2", {
-        p_invoice_id: id,
-        p_expected_version: version,
-        p_invoice_number: invoiceNumber,
-        p_supplier: supplier,
-        p_roll_quantity: rollQuantity,
-        p_document_share_date: documentDate,
-        p_shipment_type: shipmentType,
-        p_vehicle_number: vehicleNumber || null,
-    });
+    const { error } = await supabase.rpc(
+        "save_invoice_with_received_date",
+        {
+            p_invoice_id: id,
+            p_expected_version: version,
+            p_invoice_number: invoiceNumber,
+            p_supplier: supplier,
+            p_roll_quantity: rollQuantity,
+            p_system_type: null,
+            p_document_share_date: documentDate,
+            p_shipment_type: shipmentType,
+            p_vehicle_number: vehicleNumber || null,
+            p_received_date: receivedDateChanged
+                ? receivedDate
+                : null,
+            p_expected_received_date: receivedDateChanged
+                ? originalReceivedDate || null
+                : null,
+        },
+    );
 
     if (error) {
-        if (error.code === "PVA01") { return fail("This vehicle is archived. Keep the existing assignment, choose an active vehicle or ask an administrator to restore it."); }
-        if (error.code === "40001") {
+        if (error.code === "PVC01") {
             return fail(
-                "Another user updated this invoice. Copy any changes you want to keep, then reload the latest record.",
+                "Vehicle assignment or received date is locked by completed or ASN shared invoices. Reopen the affected invoices as Pending before changing it.",
+            );
+        }
+        if (error.code === "PVA01") { return fail("This vehicle is archived. Keep the existing assignment, choose an active vehicle or ask an administrator to restore it."); }
+        if (error.code === "40001" || error.code === "40P01") {
+            return fail(
+                "The invoice or vehicle received date changed while you were editing. Copy your changes, then reload the latest record.",
                 true,
             );
         }
@@ -123,11 +177,11 @@ export async function saveInvoiceDetails(
     }
 
     revalidatePath("/");
-    revalidatePath("/dashboard/vehicles");
     revalidatePath("/dashboard");
+    revalidatePath("/dashboard/vehicles");
     revalidatePath("/dashboard/activity");
-    revalidatePath(`/dashboard/invoices/${id}`);
-    revalidatePath(`/dashboard/invoices/${id}/details`);
+    revalidatePath("/dashboard/invoices/[id]", "page");
+    revalidatePath("/dashboard/invoices/[id]/details", "page");
 
     redirect(`/dashboard/invoices/${id}?notice=invoice-updated`);
 }

@@ -23,6 +23,9 @@ type Invoice = {
     id: string;
     invoice_number: string;
     vehicle_number: string | null;
+    vehicle: {
+        received_date: string | null;
+    } | null;
     supplier: string;
     system_type: string;
     shipment_type: string;
@@ -206,10 +209,13 @@ async function DashboardContent({
 
     let query = supabase.from("invoices").select(
         `
-      id,
-      invoice_number,
-      vehicle_number,
-      supplier,
+    id,
+    invoice_number,
+    vehicle_number,
+    vehicle:vehicles!invoices_vehicle_id_fkey (
+        received_date
+    ),
+    supplier,
       system_type,
       shipment_type,
       document_share_date,
@@ -245,7 +251,12 @@ async function DashboardContent({
         .order("id", { ascending: false })
         .range(from, from + PAGE_SIZE - 1);
 
-    const invoices = (data ?? []) as Invoice[];
+    const invoices = (data ?? []).map((row) => ({
+        ...row,
+        vehicle: Array.isArray(row.vehicle)
+            ? (row.vehicle[0] ?? null)
+            : (row.vehicle ?? null),
+    })) as Invoice[];
     const total = count ?? 0;
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -445,7 +456,10 @@ async function DashboardContent({
                                                         </Link>
 
                                                         <div>
-                                                            <VehicleLabel value={invoice.vehicle_number} />
+                                                            <VehicleLabel
+                                                                value={invoice.vehicle_number}
+                                                                receivedDate={invoice.vehicle?.received_date}
+                                                            />
                                                         </div>
 
 
