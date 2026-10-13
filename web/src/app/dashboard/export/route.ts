@@ -13,6 +13,7 @@ type Stage = {
 
 type ExportRecord = {
     invoice: {
+        vehicle_number: string | null;
         invoice_number: string;
         supplier: string;
         roll_quantity: number | null;
@@ -197,12 +198,13 @@ export async function POST(request: Request) {
         sheet.views = [
             {
                 state: "frozen",
-                xSplit: 2,
+                xSplit: 3,
                 ySplit: 1,
             },
         ];
 
         sheet.columns = [
+            { header: "Vehicle Number", key: "vehicleNumber", width: 22 },
             { header: "Invoice", key: "invoice", width: 24 },
             { header: "SUPPLIER", key: "supplier", width: 32 },
             { header: "ROLL QTY", key: "roll", width: 14 },
@@ -249,6 +251,7 @@ export async function POST(request: Request) {
             { header: "status", key: "status", width: 18 },
         ];
 
+        sheet.getColumn("vehicleNumber").numFmt = "@";
         sheet.getColumn("invoice").numFmt = "@";
         sheet.getColumn("roll").numFmt = "0";
 
@@ -293,6 +296,7 @@ export async function POST(request: Request) {
             // Strings stay strings, including invoice numbers with leading zeros.
             // User-entered values are never assigned as Excel formulas.
             sheet.addRow({
+                vehicleNumber: invoice.vehicle_number ?? "",
                 invoice: invoice.invoice_number,
                 supplier: invoice.supplier,
                 roll: invoice.roll_quantity,
@@ -371,7 +375,10 @@ export async function POST(request: Request) {
 
         sheet.autoFilter = {
             from: { row: 1, column: 1 },
-            to: { row: sheet.rowCount, column: 20 },
+            to: {
+                row: sheet.rowCount,
+                column: sheet.columnCount,
+            },
         };
 
         sheet.pageSetup = {
