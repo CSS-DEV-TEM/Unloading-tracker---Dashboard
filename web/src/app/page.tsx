@@ -52,6 +52,7 @@ type PublicInvoice = {
     started_at: string | null;
     ended_at: string | null;
     is_done: boolean;
+    assigned_user_name: string | null;
   }[];
   asn: {
     is_shared: boolean;
@@ -219,17 +220,17 @@ function ProcessingDetails({
 
               <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
                 <dt className="text-muted-foreground">
-                  Started
-                </dt>
-                <dd className="text-right">
-                  <DateTime value={stage.started_at} />
-                </dd>
-
-                <dt className="text-muted-foreground">
                   Ended
                 </dt>
                 <dd className="text-right">
                   <DateTime value={stage.ended_at} />
+                </dd>
+
+                <dt className="text-muted-foreground">
+                  {stage.system_name} user
+                </dt>
+                <dd className="min-w-0 text-right font-medium [overflow-wrap:anywhere]">
+                  {stage.assigned_user_name?.trim() || "Not assigned"}
                 </dd>
               </dl>
             </section>
