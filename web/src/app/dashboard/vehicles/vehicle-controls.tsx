@@ -2,8 +2,28 @@
 
 import { useId, useRef, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, X, Search, Unlink, Archive, RotateCcw, Trash2 } from "lucide-react";
-import { changeVehicleState, assignInvoices, saveVehicle, searchAssignable, type InvoiceChoice, type VehicleRow } from "./actions";
+import {
+    Plus,
+    Pencil,
+    X,
+    Search,
+    Unlink,
+    Archive,
+    RotateCcw,
+    Trash2,
+
+} from "lucide-react";
+import {
+    changeVehicleState,
+    assignInvoices,
+    saveVehicle,
+    updateVehicleDetails,
+    saveVehicleArrival,
+    searchAssignable,
+    type InvoiceChoice,
+    type VehicleRow,
+
+} from "./actions";
 
 const button = "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-input px-4 text-sm font-medium hover:bg-muted disabled:opacity-50";
 const primary = "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-semibold text-white hover:bg-blue-800 disabled:opacity-50";
@@ -27,31 +47,227 @@ function Modal({ title, trigger, children, pending = false, onOpen }: { title: s
     </>;
 }
 
-export function VehicleEditor({ vehicle }: { vehicle?: VehicleRow }) {
+export function VehicleEditor({
+    vehicle,
+}: {
+    vehicle?: VehicleRow;
+}) {
     const router = useRouter();
-    const [number, setNumber] = useState(vehicle?.vehicle_number ?? "");
+
+
+    const [number, setNumber] = useState(
+        vehicle?.vehicle_number ?? "",
+    );
+    const [receivedDate, setReceivedDate] = useState(
+        vehicle?.received_date ?? "",
+    );
     const [error, setError] = useState("");
     const [pending, start] = useTransition();
+
     const id = useId();
-    return <Modal title={vehicle ? "Edit vehicle" : "Add vehicle"} pending={pending}
-        onOpen={() => { setNumber(vehicle?.vehicle_number ?? ""); setError(""); }}
-        trigger={vehicle ? <><Pencil className="size-4" />Edit vehicle</> : <><Plus className="size-4" />Add vehicle</>}>
-        {close => <form onSubmit={e => {
-            e.preventDefault(); start(async () => {
-                try {
-                    const result = await saveVehicle(vehicle?.id ?? null, vehicle?.version ?? null, number);
-                    setError(result.error);
-                    if (!result.error && result.id) { close(); router.push(`/dashboard/vehicles?vehicle=${result.id}&state=${vehicle?.is_archived ? "archived" : "active"}`, { scroll: false }); router.refresh(); }
-                } catch { setError("Unable to save. Please try again."); }
-            });
-        }} className="space-y-4">
-            <label htmlFor={id} className="block text-sm font-medium">Vehicle number</label>
-            <input autoFocus id={id} value={number} onChange={e => setNumber(e.target.value)} required maxLength={30} disabled={pending} className={input} placeholder="WP ABC-1234" />
-            <p className="text-sm text-muted-foreground">{vehicle ? "This changes the number displayed on every invoice assigned to this vehicle." : "If this number already exists, its vehicle record will open."}</p>
-            {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-            <div className="flex justify-end gap-3 border-t border-border pt-4"><button type="button" disabled={pending} onClick={close} className={button}>Cancel</button><button disabled={pending} className={primary}>{pending ? "Saving…" : vehicle ? "Save changes" : "Save vehicle"}</button></div>
-        </form>}
-    </Modal>;
+    const dateId = `${id}-received-date`;
+    const editing = Boolean(vehicle);
+
+
+    return (
+        <Modal
+            title={editing ? "Edit vehicle" : "Add vehicle"}
+            pending={pending}
+            onOpen={() => {
+                setNumber(vehicle?.vehicle_number ?? "");
+                setReceivedDate(vehicle?.received_date ?? "");
+                setError("");
+            }}
+            trigger={
+                editing ? (
+                    <>
+                        <Pencil
+                            className="size-4"
+                            aria-hidden="true"
+                        />
+                        Edit vehicle
+                    </>
+                ) : (
+                    <>
+                        <Plus
+                            className="size-4"
+                            aria-hidden="true"
+                        />
+                        Add vehicle
+                    </>
+                )
+            }
+        >
+            {(close) => (
+                <>
+                    <form
+                        className="space-y-5"
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            setError("");
+
+                            start(async () => {
+                                try {
+                                    if (vehicle) {
+                                        const result = await updateVehicleDetails(
+                                            vehicle.id,
+                                            vehicle.version,
+                                            number,
+                                            receivedDate,
+                                        );
+
+                                        if (result.error) {
+                                            setError(result.error);
+                                            return;
+                                        }
+
+                                        close();
+                                        router.refresh();
+                                        return;
+                                    }
+
+                                    if (!editing && receivedDate) {
+                                        const result =
+                                            await saveVehicleArrival(
+                                                number,
+                                                receivedDate,
+                                            );
+
+                                        if (result.error) {
+                                            setError(result.error);
+                                            return;
+                                        }
+
+                                        close();
+
+                                        router.push("/dashboard/vehicles", { scroll: false });
+                                        router.refresh();
+                                        return;
+                                    }
+
+                                    const result = await saveVehicle(
+                                        null,
+                                        null,
+                                        number,
+                                    );
+
+                                    if (result.error) {
+                                        setError(result.error);
+                                        return;
+                                    }
+
+                                    close();
+                                    router.push("/dashboard/vehicles", { scroll: false });
+                                    router.refresh();
+                                } catch {
+                                    setError(
+                                        "Unable to save. Please try again.",
+                                    );
+                                }
+                            });
+                        }}
+                    >
+                        <div>
+                            <label
+                                htmlFor={id}
+                                className="mb-2 block text-sm font-medium"
+                            >
+                                Vehicle number
+                            </label>
+
+                            <div className="relative">
+                                <input
+                                    autoFocus
+                                    id={id}
+                                    value={number}
+                                    onChange={(event) =>
+                                        setNumber(event.target.value)
+                                    }
+                                    required
+                                    maxLength={30}
+                                    disabled={pending}
+                                    className={input}
+                                    placeholder="WP ABC-1234"
+                                    autoComplete="off"
+                                    spellCheck={false}
+                                />
+
+
+                            </div>
+                        </div>
+
+                        <div>
+                            <label
+                                htmlFor={dateId}
+                                className="mb-2 block text-sm font-medium"
+                            >
+                                Received date
+                                <span className="ml-2 text-xs font-normal text-muted-foreground">
+                                    Optional
+                                </span>
+                            </label>
+
+                            <input
+                                id={dateId}
+                                type="date"
+                                value={receivedDate}
+                                onChange={(event) =>
+                                    setReceivedDate(event.target.value)
+                                }
+                                min="0001-01-01"
+                                max="9999-12-31"
+                                disabled={pending}
+                                className={input}
+                            />
+                        </div>
+
+                        <p className="text-sm leading-6 text-muted-foreground">
+                            {editing
+                                ? "Update the vehicle number and received date, then save your changes."
+                                : "Enter the vehicle number and received date."}
+                        </p>
+
+                        {error && (
+                            <p
+                                role="alert"
+                                className="rounded-lg border border-destructive/30
+                            bg-destructive/5 px-3 py-2 text-sm text-destructive"
+                            >
+                                {error}
+                            </p>
+                        )}
+
+                        <div className="flex justify-end gap-3 border-t border-border pt-4">
+                            <button
+                                type="button"
+                                disabled={pending}
+                                onClick={close}
+                                className={button}
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="submit"
+                                disabled={pending}
+                                className={primary}
+                            >
+                                {pending
+                                    ? "Saving…"
+                                    : editing
+                                        ? "Save changes"
+                                        : receivedDate
+                                            ? "Save arrival"
+                                            : "Save vehicle"}
+                            </button>
+                        </div>
+                    </form>
+
+
+                </>
+            )}
+        </Modal>
+    );
 }
 
 export function AssignDialog({ vehicle }: { vehicle: VehicleRow }) {
@@ -90,9 +306,10 @@ export function AssignDialog({ vehicle }: { vehicle: VehicleRow }) {
                     {loading ? <p role="status" className="p-4 text-sm">Loading invoices…</p> : rows.length === 0 ? <p className="p-4 text-sm text-muted-foreground">No matching invoices.</p> : rows.map(row => {
                         const checked = selected.some(item => item.id === row.id);
                         const assigned = row.vehicle_id === vehicle.id;
+                        const locked = row.status === "Complete";
                         return <label key={row.id} className="flex items-start gap-3 p-3 text-sm">
-                            <input type="checkbox" className="mt-1 size-4" checked={checked} disabled={busy || assigned || (!checked && selected.length >= 50)} onChange={() => setSelected(old => checked ? old.filter(item => item.id !== row.id) : [...old, row])} />
-                            <span className="min-w-0"><span className="block break-words font-semibold">{row.invoice_number}</span><span className="block break-words text-muted-foreground">{row.supplier}</span><span className="mt-1 block text-xs text-muted-foreground">{assigned ? "Already assigned to this vehicle" : `Current vehicle: ${row.vehicle_number || "Unassigned"}`}</span></span>
+                            <input type="checkbox" className="mt-1 size-4" checked={checked} disabled={busy || locked || assigned || (!checked && selected.length >= 50)} onChange={() => setSelected(old => checked ? old.filter(item => item.id !== row.id) : [...old, row])} />
+                            <span className="min-w-0"><span className="block break-words font-semibold">{row.invoice_number}</span><span className="block break-words text-muted-foreground">{row.supplier}</span><span className="mt-1 block text-xs text-muted-foreground">{locked ? "Complete · Reopen as Pending to change vehicle" : assigned ? "Already assigned to this vehicle" : `Current vehicle: ${row.vehicle_number || "Unassigned"}`}</span></span>
                         </label>;
                     })}
                 </div>

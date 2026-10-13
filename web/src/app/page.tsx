@@ -39,6 +39,7 @@ type PublicInvoice = {
   invoice_number: string;
   supplier: string;
   vehicle_number: string | null;
+  vehicle_received_date: string | null;
   system_type: string;
   shipment_type: string;
   document_share_date: string | null;
@@ -52,6 +53,7 @@ type PublicInvoice = {
     started_at: string | null;
     ended_at: string | null;
     is_done: boolean;
+    assigned_user_name: string | null;
   }[];
   asn: {
     is_shared: boolean;
@@ -230,6 +232,13 @@ function ProcessingDetails({
                 </dt>
                 <dd className="text-right">
                   <DateTime value={stage.ended_at} />
+                </dd>
+
+                <dt className="text-muted-foreground">
+                  {stage.system_name} user
+                </dt>
+                <dd className="min-w-0 text-right font-medium [overflow-wrap:anywhere]">
+                  {stage.assigned_user_name?.trim() || "Not assigned"}
                 </dd>
               </dl>
             </section>
@@ -753,7 +762,10 @@ async function PublicOverview({ searchParams }: Props) {
                           <div>{invoice.invoice_number}</div>
 
                           <div>
-                            <VehicleLabel value={invoice.vehicle_number} />
+                            <VehicleLabel
+                              value={invoice.vehicle_number}
+                              receivedDate={invoice.vehicle_received_date}
+                            />
                           </div>
                         </th>
                         <td className="min-w-48 max-w-64 break-words px-4 py-3 align-top">

@@ -236,6 +236,7 @@ async function InvoiceContent({ params }: PageProps) {
                         <div className="flex shrink-0 items-center gap-2">
                             <Link
                                 href={`/dashboard/invoices/${invoice.id}/details`}
+                                prefetch={false}
                                 aria-label="Edit invoice details"
                                 title="Edit invoice details"
                                 className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

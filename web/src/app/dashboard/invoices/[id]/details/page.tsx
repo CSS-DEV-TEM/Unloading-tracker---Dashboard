@@ -53,7 +53,7 @@ async function DetailsContent({ params }: Props) {
     const { data: invoice, error } = await supabase
         .from("invoices")
         .select(
-            "id, version, invoice_number, supplier, roll_quantity, vehicle_number, document_share_date, shipment_type, system_type",
+            "id, version, invoice_number, supplier, roll_quantity, vehicle_id, vehicle_number, document_share_date, shipment_type, system_type, status",
         )
         .eq("id", id)
         .maybeSingle();
@@ -64,6 +64,21 @@ async function DetailsContent({ params }: Props) {
 
     if (!invoice) {
         notFound();
+    }
+    let vehicleReceivedDate: string | null = null;
+
+    if (invoice.vehicle_id) {
+        const { data: vehicle, error: vehicleError } = await supabase
+            .from("vehicles")
+            .select("received_date")
+            .eq("id", invoice.vehicle_id)
+            .maybeSingle();
+
+        if (vehicleError) {
+            throw new Error("Unable to load the vehicle received date.");
+        }
+
+        vehicleReceivedDate = vehicle?.received_date ?? null;
     }
 
     return (
@@ -88,7 +103,10 @@ async function DetailsContent({ params }: Props) {
 
                 <DetailsForm
                     key={`${invoice.id}-${invoice.version}`}
-                    invoice={invoice}
+                    invoice={{
+                        ...invoice,
+                        vehicle_received_date: vehicleReceivedDate,
+                    }}
                 />
             </div>
         </main>

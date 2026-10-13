@@ -24,6 +24,27 @@ export async function createInvoice(
     const date = text("documentDate");
     const quantityText = text("rollQuantity");
     const vehicleNumber = text("vehicleNumber");
+    const receivedDate = text("receivedDate");
+
+    if (receivedDate) {
+        if (!vehicleNumber) {
+            return {
+                error: "Enter a vehicle number, or leave the received date blank.",
+            };
+        }
+
+        const parsed = new Date(`${receivedDate}T00:00:00Z`);
+
+        if (
+            !/^\d{4}-\d{2}-\d{2}$/.test(receivedDate) ||
+            Number.isNaN(parsed.getTime()) ||
+            parsed.toISOString().slice(0, 10) !== receivedDate
+        ) {
+            return {
+                error: "Select a valid received date, or leave it blank.",
+            };
+        }
+    }
 
     if (vehicleNumber.length > 30) {
         return {
@@ -87,27 +108,63 @@ export async function createInvoice(
         };
     }
 
-    const { error } = await supabase.rpc("create_invoice_v2", {
-        p_invoice_number: invoice,
-        p_supplier: supplier,
-        p_roll_quantity: quantity,
-        p_system_type: system,
-        p_document_share_date: date,
-        p_shipment_type: shipment,
-        p_vehicle_number: vehicleNumber || null,
-    });
+    const { error } = await supabase.rpc(
+        "save_invoice_with_received_date",
+        {
+            p_invoice_id: null,
+            p_expected_version: null,
+            p_invoice_number: invoice,
+            p_supplier: supplier,
+            p_roll_quantity: quantity,
+            p_system_type: system,
+            p_document_share_date: date,
+            p_shipment_type: shipment,
+            p_vehicle_number: vehicleNumber || null,
+            p_received_date: receivedDate || null,
+            p_expected_received_date: null,
+        },
+    );
 
     if (error) {
-        if (error.code === "PVA01") { return { error: "This vehicle is archived. Ask an administrator to restore it, choose an active vehicle or leave the field blank." }; }
+        if (error.code === "PVC01") {
+            return {
+                error:
+                    "This vehicle has completed or ASN shared invoices. Leave the received date blank to keep its current date, or reopen the linked invoices before changing it.",
+            };
+        }
+
+        if (error.code === "40001" || error.code === "40P01") {
+            return {
+                error:
+                    "A record changed while saving. Review your details and try again.",
+            };
+        }
+
+        if (error.code === "PVA01") {
+            return {
+                error:
+                    "This vehicle is archived. Choose an active vehicle or ask an administrator to restore it.",
+            };
+        }
+
+        if (error.code === "42501") {
+            return {
+                error:
+                    "Your account does not have active dashboard access.",
+            };
+        }
+
         return {
-            error:
-                error.code === "42501"
-                    ? "Your account does not have active dashboard access."
-                    : "Unable to save the invoice. Please try again.",
+            error: "Unable to save the invoice. Please try again.",
         };
     }
 
-    revalidatePath("/dashboard/vehicles");
+    revalidatePath("/");
     revalidatePath("/dashboard");
+    revalidatePath("/dashboard/vehicles");
+    revalidatePath("/dashboard/activity");
+    revalidatePath("/dashboard/invoices/[id]", "page");
+    revalidatePath("/dashboard/invoices/[id]/details", "page");
+
     redirect("/dashboard?notice=invoice-created");
 }
