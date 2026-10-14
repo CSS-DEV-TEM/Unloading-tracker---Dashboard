@@ -8,7 +8,7 @@ type CreateState = {
     error: string;
 };
 
-export async function createInvoice(
+export async function saveImportedInvoice(
     _previousState: CreateState,
     formData: FormData,
 ): Promise<CreateState> {
@@ -126,6 +126,16 @@ export async function createInvoice(
     );
 
     if (error) {
+        if (
+            error.code === "23505" &&
+            error.message.includes("invoices_invoice_number_normalized_uidx")
+        ) {
+            return {
+                error:
+                    `Invoice "${invoice}" already exists. ` +
+                    "Open the existing invoice to edit it, or remove this draft from the import.",
+            };
+        }
         if (error.code === "PVC01") {
             return {
                 error:
@@ -165,6 +175,19 @@ export async function createInvoice(
     revalidatePath("/dashboard/activity");
     revalidatePath("/dashboard/invoices/[id]", "page");
     revalidatePath("/dashboard/invoices/[id]/details", "page");
+
+    return { error: "" };
+}
+
+export async function createInvoice(
+    previousState: CreateState,
+    formData: FormData,
+): Promise<CreateState> {
+    const result = await saveImportedInvoice(previousState, formData);
+
+    if (result.error) {
+        return result;
+    }
 
     redirect("/dashboard?notice=invoice-created");
 }
