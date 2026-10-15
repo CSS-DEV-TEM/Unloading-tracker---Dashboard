@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 
 
 
-const MAX_BYTES = 10 * 1024 * 1024;
+const MAX_BYTES = 4 * 1024 * 1024;
 
 export async function POST(request: Request) {
     const supabase = await createClient();
@@ -38,8 +38,9 @@ export async function POST(request: Request) {
     }
 
     const apiUrl = process.env.INVOICE_IMPORT_API_URL;
+    const apiKey = process.env.INVOICE_IMPORT_API_KEY;
 
-    if (!apiUrl) {
+    if (!apiUrl || !apiKey) {
         return NextResponse.json(
             { error: "Invoice import service is not configured." },
             { status: 503 },
@@ -73,7 +74,7 @@ export async function POST(request: Request) {
 
     if (file.size > MAX_BYTES) {
         return NextResponse.json(
-            { error: "PDF must be 10 MB or smaller." },
+            { error: "PDF must be 4 MB or smaller." },
             { status: 413 },
         );
     }
@@ -94,6 +95,9 @@ export async function POST(request: Request) {
             `${apiUrl.replace(/\/+$/, "")}/extract`,
             {
                 method: "POST",
+                headers: {
+                    "X-API-Key": apiKey,
+                },
                 body: upload,
                 cache: "no-store",
                 signal: AbortSignal.timeout(60_000),

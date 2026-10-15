@@ -1,10 +1,20 @@
 import logging
+import os
+import secrets
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Annotated, Literal
 
 import pdfplumber
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import (
+    Depends,
+    FastAPI,
+    File,
+    Form,
+    Header,
+    HTTPException,
+    UploadFile,
+)
 
 from extract_pdf import extract_invoices
 
@@ -16,7 +26,7 @@ app = FastAPI(
 
 logger = logging.getLogger(__name__)
 
-MAX_FILE_BYTES = 10 * 1024 * 1024
+MAX_FILE_BYTES = 4 * 1024 * 1024
 MAX_PAGES = 30
 
 
@@ -24,8 +34,32 @@ MAX_PAGES = 30
 def health():
     return {"status": "ok"}
 
+def require_api_key(
+    x_api_key: Annotated[str | None, Header()] = None,
+):
+    expected_key = os.environ.get("INVOICE_IMPORT_API_KEY", "")
+    received_key = x_api_key or ""
 
-@app.post("/extract")
+    if not expected_key:
+        raise HTTPException(
+            status_code=503,
+            detail="Invoice import service is not configured.",
+        )
+
+    if not secrets.compare_digest(
+        received_key.encode("utf-8"),
+        expected_key.encode("utf-8"),
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid service credentials.",
+        )
+
+
+@app.post(
+    "/extract",
+    dependencies=[Depends(require_api_key)],
+)
 def extract(
     file: Annotated[UploadFile, File()],
     date_format: Annotated[Literal["mdy", "dmy"], Form()],
@@ -51,7 +85,7 @@ def extract(
         if len(content) > MAX_FILE_BYTES:
             raise HTTPException(
                 status_code=413,
-                detail="PDF must be 10 MB or smaller.",
+                detail="PDF must be 4 MB or smaller.",
             )
 
         if b"%PDF-" not in content[:1024]:
