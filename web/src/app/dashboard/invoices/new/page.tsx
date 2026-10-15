@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import InvoiceForm from "./invoice-form";
+import Link from "next/link";
 
 async function NewInvoiceContent() {
     await connection();
@@ -63,6 +64,15 @@ async function NewInvoiceContent() {
                 <h1 className="mt-2 text-2xl font-semibold tracking-tight">
                     New invoice
                 </h1>
+                <Link
+                    href="/dashboard/invoices/import"
+                    className="mt-4 inline-flex min-h-10 items-center justify-center
+                    rounded-lg border border-blue-600 px-4 py-2 text-sm font-semibold
+                    text-blue-700 hover:bg-blue-50
+                    dark:text-blue-400 dark:hover:bg-blue-950/40"
+                >
+                    Import PDF
+                </Link>
 
                 <p className="mt-2 text-sm text-muted-foreground">
                     Enter the invoice details to begin tracking.

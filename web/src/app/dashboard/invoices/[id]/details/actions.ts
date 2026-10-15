@@ -152,6 +152,15 @@ export async function saveInvoiceDetails(
     );
 
     if (error) {
+        if (
+            error.code === "23505" &&
+            error.message.includes("invoices_invoice_number_normalized_uidx")
+        ) {
+            return fail(
+                `Invoice "${invoiceNumber}" is already used by another invoice. ` +
+                "Enter a different invoice number.",
+            );
+        }
         if (error.code === "PVC01") {
             return fail(
                 "Vehicle assignment or received date is locked by completed or ASN shared invoices. Reopen the affected invoices as Pending before changing it.",
