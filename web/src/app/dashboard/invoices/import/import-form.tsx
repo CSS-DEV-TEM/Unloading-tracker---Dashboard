@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { saveImportedInvoice } from "../new/actions";
+import { createClient as createStorageClient } from "@supabase/supabase-js";
 
 type ExtractedInvoice = {
     invoice_number: string;
@@ -53,7 +54,7 @@ type EditableField =
     | "date"
     | "shipment";
 
-const MAX_BYTES = 4 * 1024 * 1024;
+const MAX_BYTES = 10 * 1024 * 1024;
 const MAX_QUANTITY = 2147483647;
 
 const inputClass =
@@ -187,6 +188,102 @@ function buildDraft(
     };
 }
 
+async function extractStoredPdf(file: File, dateFormat: string) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+    if (!url || !key) {
+        throw new Error("PDF storage is not configured.");
+    }
+
+    const storageClient = createStorageClient(url, key, {
+        auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+            detectSessionInUrl: false,
+        },
+    });
+
+    const preparation = await fetch("/api/invoices/extract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            action: "upload",
+            filename: file.name,
+            size: file.size,
+        }),
+    });
+
+    const prepared = await preparation.json();
+
+    if (!preparation.ok) {
+        throw new Error(
+            typeof prepared.error === "string"
+                ? prepared.error
+                : "Unable to prepare the PDF upload.",
+        );
+    }
+
+    if (
+        typeof prepared.path !== "string" ||
+        typeof prepared.token !== "string"
+    ) {
+        throw new Error("Invalid upload response.");
+    }
+
+    try {
+        const { error } = await storageClient.storage
+            .from("invoice-imports")
+            .uploadToSignedUrl(
+                prepared.path,
+                prepared.token,
+                file,
+                { contentType: "application/pdf" },
+            );
+
+        if (error) {
+            throw new Error("PDF upload failed. Check your connection and retry.");
+        }
+
+        const response = await fetch("/api/invoices/extract", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                action: "extract",
+                path: prepared.path,
+                filename: file.name,
+                date_format: dateFormat,
+            }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                typeof result.error === "string"
+                    ? result.error
+                    : "Extraction failed.",
+            );
+        }
+
+        return result;
+    } finally {
+        // Also attempt cleanup after upload/network failures.
+        try {
+            await fetch("/api/invoices/extract", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    action: "cleanup",
+                    path: prepared.path,
+                }),
+            });
+        } catch {
+            // Preserve the original extraction result/error.
+        }
+    }
+}
+
 export default function ImportForm() {
     const [files, setFiles] = useState<PdfItem[]>([]);
     const [drafts, setDrafts] = useState<Draft[]>([]);
@@ -276,7 +373,7 @@ export default function ImportForm() {
                 file.size === 0 ||
                 file.size > MAX_BYTES
             ) {
-                notices.push(`${file.name}: select a non-empty PDF up to 4 MB.`);
+                notices.push(`${file.name}: select a non-empty PDF up to 10 MB.`);
                 continue;
             }
 
@@ -335,24 +432,10 @@ export default function ImportForm() {
                 });
 
                 try {
-                    const form = new FormData();
-                    form.set("file", item.file);
-                    form.set("date_format", item.dateFormat);
-
-                    const response = await fetch("/api/invoices/extract", {
-                        method: "POST",
-                        body: form,
-                    });
-
-                    const result = await response.json();
-
-                    if (!response.ok) {
-                        throw new Error(
-                            typeof result.error === "string"
-                                ? result.error
-                                : "Extraction failed.",
-                        );
-                    }
+                    const result = await extractStoredPdf(
+                        item.file,
+                        item.dateFormat,
+                    );
 
                     if (!Array.isArray(result.invoices)) {
                         throw new Error("Invalid extraction response.");
@@ -670,7 +753,7 @@ export default function ImportForm() {
                 </fieldset>
 
                 <p className="mt-3 text-xs text-muted-foreground">
-                    Maximum 4 MB and 30 pages per PDF. Files are extracted one
+                    Maximum 10 MB and 50 pages per PDF. Files are extracted one
                     at a time. You can add more PDFs before saving.
                 </p>
 
