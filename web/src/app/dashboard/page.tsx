@@ -1,5 +1,5 @@
-
 import Link from "next/link";
+import Form from "next/form";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
@@ -10,7 +10,6 @@ import { signOut } from "@/app/login/actions";
 import InvoiceSummary from "./invoice-summary";
 import ExportButton from "./export-button";
 import OverviewRefresh from "@/components/overview-refresh";
-import Form from "next/form";
 import VehicleLabel from "@/components/vehicle-label";
 
 type SearchParams = Promise<{
@@ -31,6 +30,7 @@ type Invoice = {
     shipment_type: string;
     document_share_date: string;
     roll_quantity: number | null;
+    meter_quantity: number | null;
     status: "Pending" | "Complete" | "Reject";
     pending_reason: string | null;
     completed_at: string | null;
@@ -55,18 +55,32 @@ const HEADINGS = [
 ];
 
 const statusStyles = {
-    Pending: "border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300",
-    Complete: "border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300",
-    Reject: "border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300",
+    Pending:
+        "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300",
+    Complete:
+        "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300",
+    Reject:
+        "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300",
 };
 
 function single(value: string | string[] | undefined) {
     return typeof value === "string" ? value : "";
 }
 
-function formatDate(value: string) {
-    const [year, month, day] = value.split("-");
-    return `${day}/${month}/${year}`;
+function formatDate(value: string | null) {
+    if (!value) return "—";
+
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+
+    return match ? `${match[3]}/${match[2]}/${match[1]}` : "—";
+}
+
+function formatMeters(value: number | null) {
+    return value == null
+        ? "—"
+        : Number(value).toLocaleString("en-GB", {
+            maximumFractionDigits: 3,
+        });
 }
 
 function earliestStart(stages: Invoice["pre_grn_stages"]) {
@@ -89,13 +103,13 @@ function earliestStart(stages: Invoice["pre_grn_stages"]) {
 
 function DateTimeCell({ value }: { value: string | null }) {
     if (!value) {
-        return <span className="text-slate-400">—</span>;
+        return <span className="text-muted-foreground">—</span>;
     }
 
     const date = new Date(value);
 
     if (Number.isNaN(date.getTime())) {
-        return <span className="text-slate-400">—</span>;
+        return <span className="text-muted-foreground">—</span>;
     }
 
     const dateLabel = new Intl.DateTimeFormat("en-GB", {
@@ -119,7 +133,7 @@ function DateTimeCell({ value }: { value: string | null }) {
             title={`${dateLabel}, ${timeLabel} — Sri Lanka time`}
             className="inline-flex flex-col gap-1 whitespace-nowrap"
         >
-            <span className="text-foreground dark:text-slate-200">{dateLabel}</span>
+            <span className="text-foreground">{dateLabel}</span>
             <span className="text-xs text-muted-foreground">
                 {timeLabel} · SLST
             </span>
@@ -174,9 +188,9 @@ async function DashboardContent({
                     Dashboard access unavailable
                 </h1>
 
-                <p className="mt-3 text-muted-foreground dark:text-slate-300">
-                    Your account access could not be verified. Contact an
-                    administrator.
+                <p className="mt-3 text-muted-foreground">
+                    Your account access could not be verified.
+                    Contact an administrator.
                 </p>
 
                 <form action={signOut} className="mt-6">
@@ -192,9 +206,7 @@ async function DashboardContent({
     const q = single(params.q).trim().slice(0, 100);
     const requestedStatus = single(params.status);
 
-    const status = ["Pending", "Complete", "Reject"].includes(
-        requestedStatus,
-    )
+    const status = ["Pending", "Complete", "Reject"].includes(requestedStatus)
         ? requestedStatus
         : "";
 
@@ -209,24 +221,25 @@ async function DashboardContent({
 
     let query = supabase.from("invoices").select(
         `
-    id,
-    invoice_number,
-    vehicle_number,
-    vehicle:vehicles!invoices_vehicle_id_fkey (
-        received_date
-    ),
-    supplier,
-      system_type,
-      shipment_type,
-      document_share_date,
-      roll_quantity,
-      status,
-      pending_reason,
-      completed_at,
-      pre_grn_stages (
-        started_at
-      )
-    `,
+            id,
+            invoice_number,
+            vehicle_number,
+            vehicle:vehicles!invoices_vehicle_id_fkey (
+                received_date
+            ),
+            supplier,
+            system_type,
+            shipment_type,
+            document_share_date,
+            roll_quantity,
+            meter_quantity,
+            status,
+            pending_reason,
+            completed_at,
+            pre_grn_stages (
+                started_at
+            )
+        `,
         { count: "exact" },
     );
 
@@ -235,7 +248,6 @@ async function DashboardContent({
     }
 
     if (q) {
-        // Escape wildcard characters and quote the PostgREST filter value.
         const escaped = q.replace(/[\\%_*]/g, "\\$&");
         const pattern = JSON.stringify(`%${escaped}%`);
 
@@ -254,9 +266,10 @@ async function DashboardContent({
     const invoices = (data ?? []).map((row) => ({
         ...row,
         vehicle: Array.isArray(row.vehicle)
-            ? (row.vehicle[0] ?? null)
-            : (row.vehicle ?? null),
+            ? row.vehicle[0] ?? null
+            : row.vehicle ?? null,
     })) as Invoice[];
+
     const total = count ?? 0;
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -266,8 +279,6 @@ async function DashboardContent({
 
     return (
         <div className="min-h-screen bg-background text-foreground">
-
-
             <main className="mx-auto w-full max-w-[1600px] space-y-4 px-4 py-5 sm:px-6">
                 <section className="flex flex-wrap items-end justify-between gap-5">
                     <div>
@@ -293,7 +304,6 @@ async function DashboardContent({
                 </section>
 
                 <InvoiceSummary />
-
                 <OverviewRefresh />
 
                 <section className="overflow-hidden rounded-xl border border-border bg-card">
@@ -302,14 +312,15 @@ async function DashboardContent({
                         <p className="mt-1 text-sm text-muted-foreground">
                             Search by invoice number, supplier or vehicle number.
                         </p>
+
                         <details className="mt-2 text-xs text-muted-foreground">
                             <summary className="w-fit cursor-pointer rounded hover:text-foreground">
                                 About dates · Sri Lanka time
                             </summary>
                             <p className="mt-2 max-w-2xl leading-5">
                                 Start Date shows the earliest AX/D365 start.
-                                Completion Date shows when the invoice was marked Complete.
-                                All times are in Sri Lanka time.
+                                Completion Date shows when the invoice was
+                                marked Complete. All times are in Sri Lanka time.
                             </p>
                         </details>
                     </div>
@@ -322,14 +333,14 @@ async function DashboardContent({
                         <div className="flex-1">
                             <label
                                 htmlFor="search"
-                                className="mb-2 block text-xs font-medium text-muted-foreground dark:text-slate-300"
+                                className="mb-2 block text-xs font-medium text-muted-foreground"
                             >
                                 Invoice / Supplier / Vehicle
                             </label>
 
                             <div className="relative">
                                 <Search
-                                    className="absolute left-3 top-3 size-4 text-slate-400"
+                                    className="absolute left-3 top-3 size-4 text-muted-foreground"
                                     aria-hidden="true"
                                 />
                                 <input
@@ -340,7 +351,7 @@ async function DashboardContent({
                                     defaultValue={q}
                                     maxLength={100}
                                     placeholder="Search invoice, supplier or vehicle number"
-                                    className="h-10 w-full rounded-lg border border-input pl-10 pr-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-ring/25"
+                                    className="h-10 w-full rounded-lg border border-input bg-card pl-10 pr-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-ring/25"
                                 />
                             </div>
                         </div>
@@ -348,11 +359,10 @@ async function DashboardContent({
                         <div className="sm:w-44">
                             <label
                                 htmlFor="status"
-                                className="mb-2 block text-xs font-medium text-muted-foreground dark:text-slate-300"
+                                className="mb-2 block text-xs font-medium text-muted-foreground"
                             >
                                 Status
                             </label>
-
                             <select
                                 key={`status-${status}`}
                                 id="status"
@@ -385,7 +395,7 @@ async function DashboardContent({
                     {invoiceError ? (
                         <div
                             role="alert"
-                            className="mx-6 mb-6 rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 p-4 text-sm text-red-700 dark:text-red-400"
+                            className="mx-6 mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
                         >
                             Unable to load invoices. Refresh the page and try again.
                         </div>
@@ -399,8 +409,8 @@ async function DashboardContent({
                             >
                                 <table className="w-full min-w-[1300px] border-separate border-spacing-0 text-left text-sm">
                                     <caption className="sr-only">
-                                        Invoice records with start and completion dates
-                                        in Sri Lanka time
+                                        Invoice records with quantities, start and
+                                        completion dates in Sri Lanka time.
                                     </caption>
 
                                     <thead className="text-xs text-muted-foreground">
@@ -410,9 +420,7 @@ async function DashboardContent({
                                                     key={heading}
                                                     scope="col"
                                                     className={[
-                                                        "sticky top-0 border-b border-border",
-                                                        "bg-background px-4 py-3 font-medium",
-                                                        "whitespace-nowrap",
+                                                        "sticky top-0 whitespace-nowrap border-b border-border bg-background px-4 py-3 font-medium",
                                                         index === 0
                                                             ? "left-0 z-30 w-44 min-w-44 border-r"
                                                             : "z-20",
@@ -424,12 +432,7 @@ async function DashboardContent({
                                         </tr>
                                     </thead>
 
-                                    <tbody
-                                        className="[&>tr:not(:last-child)>td]:border-b
-                                                    [&>tr:not(:last-child)>th]:border-b
-                                                    [&>tr>td]:border-border
-                                                    [&>tr>th]:border-border"
-                                    >
+                                    <tbody className="[&>tr:not(:last-child)>td]:border-b [&>tr:not(:last-child)>th]:border-b [&>tr>td]:border-border [&>tr>th]:border-border">
                                         {invoices.map((invoice) => (
                                             <tr
                                                 key={invoice.id}
@@ -437,32 +440,20 @@ async function DashboardContent({
                                             >
                                                 <th
                                                     scope="row"
-                                                    className="sticky left-0 z-10 w-44 min-w-44 max-w-44
-                                                            border-r border-border bg-card px-4 py-3
-                                                            font-semibold text-blue-700 dark:text-blue-400
-                                                            group-hover:bg-muted group-focus-within:bg-muted
-                                                            [overflow-wrap:anywhere]"
+                                                    className="sticky left-0 z-10 w-44 min-w-44 max-w-44 border-r border-border bg-card px-4 py-3 font-semibold text-blue-700 group-hover:bg-muted group-focus-within:bg-muted dark:text-blue-400 [overflow-wrap:anywhere]"
                                                 >
                                                     <div className="flex flex-col items-start gap-1">
                                                         <Link
                                                             href={`/dashboard/invoices/${invoice.id}`}
-                                                            className="inline-flex flex-col gap-1 rounded focus-visible:outline-2 focus-visible:outline-blue-600"
+                                                            className="rounded hover:underline focus-visible:outline-2 focus-visible:outline-blue-600"
                                                         >
-                                                            <span className="hover:underline">
-                                                                {invoice.invoice_number}
-                                                            </span>
-
-
+                                                            {invoice.invoice_number}
                                                         </Link>
 
-                                                        <div>
-                                                            <VehicleLabel
-                                                                value={invoice.vehicle_number}
-                                                                receivedDate={invoice.vehicle?.received_date}
-                                                            />
-                                                        </div>
-
-
+                                                        <VehicleLabel
+                                                            value={invoice.vehicle_number}
+                                                            receivedDate={invoice.vehicle?.received_date}
+                                                        />
                                                     </div>
                                                 </th>
 
@@ -482,8 +473,34 @@ async function DashboardContent({
                                                     {formatDate(invoice.document_share_date)}
                                                 </td>
 
-                                                <td className="px-4 py-3">
-                                                    {invoice.roll_quantity ?? "—"}
+                                                <td className="whitespace-nowrap px-4 py-3 align-top tabular-nums">
+                                                    <div className="flex flex-col items-start gap-1.5">
+                                                        {invoice.roll_quantity != null && (
+                                                            <span>
+                                                                {Number(invoice.roll_quantity).toLocaleString("en-GB")}
+                                                            </span>
+                                                        )}
+
+                                                        {invoice.meter_quantity != null && (
+                                                            <div className="inline-flex items-center gap-2">
+                                                                <span>{formatMeters(invoice.meter_quantity)}</span>
+
+                                                                <span
+                                                                    className="rounded border border-blue-200 bg-blue-50
+                                                                     px-1.5 py-0.5 text-[10px] font-semibold leading-none
+                                                                     text-blue-700 dark:border-blue-800
+                                                                     dark:bg-blue-950/40 dark:text-blue-300"
+                                                                >
+                                                                    MTR
+                                                                </span>
+                                                            </div>
+                                                        )}
+
+                                                        {invoice.roll_quantity == null &&
+                                                            invoice.meter_quantity == null && (
+                                                                <span className="text-muted-foreground">—</span>
+                                                            )}
+                                                    </div>
                                                 </td>
 
                                                 <td className="px-4 py-3">
@@ -518,13 +535,14 @@ async function DashboardContent({
                                                             <summary className="cursor-pointer text-xs font-semibold">
                                                                 View pending reason
                                                             </summary>
-
                                                             <p className="mt-2 whitespace-pre-wrap break-words text-xs leading-5">
                                                                 {invoice.pending_reason}
                                                             </p>
                                                         </details>
                                                     ) : (
-                                                        <span className="text-muted-foreground">—</span>
+                                                        <span className="text-muted-foreground">
+                                                            —
+                                                        </span>
                                                     )}
                                                 </td>
                                             </tr>
@@ -549,7 +567,8 @@ async function DashboardContent({
                             <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border px-6 py-4">
                                 <p className="text-xs text-muted-foreground">
                                     Showing {total === 0 ? 0 : from + 1}–
-                                    {Math.min(from + invoices.length, total)} of {total} invoices
+                                    {Math.min(from + invoices.length, total)}
+                                    {" "}of {total} invoices
                                 </p>
 
                                 <nav
@@ -585,7 +604,10 @@ async function DashboardContent({
 
                 <footer className="flex flex-wrap justify-between gap-3 text-xs text-muted-foreground">
                     <p>EFL · 3PL — CSS Division</p>
-                    <Link href="/" className="text-blue-700 dark:text-blue-400 hover:underline">
+                    <Link
+                        href="/"
+                        className="text-blue-700 hover:underline dark:text-blue-400"
+                    >
                         View public overview →
                     </Link>
                 </footer>
@@ -603,7 +625,7 @@ export default function DashboardPage({
         <Suspense
             fallback={
                 <p className="min-h-screen bg-background p-10" role="status">
-                    Loading invoices...
+                    Loading invoices…
                 </p>
             }
         >

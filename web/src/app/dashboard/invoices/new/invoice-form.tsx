@@ -1,10 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import VehicleInput from "@/components/vehicle-input";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Loader2 } from "lucide-react";
+import VehicleInput from "@/components/vehicle-input";
+import { MAX_METERS } from "@/lib/meter-quantity";
 import { createInvoice } from "./actions";
+
+type QuantityUnit = "ROLLS" | "MTR";
+
+const MAX_ROLLS = 2147483647;
 
 const inputClass =
     "block h-11 w-full min-w-0 rounded-lg border border-input " +
@@ -16,9 +21,16 @@ const labelClass =
     "mb-2 block text-sm font-medium text-foreground";
 
 export default function InvoiceForm({ today }: { today: string }) {
-    const [state, formAction, pending] = useActionState(createInvoice, {
-        error: "",
-    });
+    const [state, formAction, pending] = useActionState(
+        createInvoice,
+        { error: "" },
+    );
+
+    const [quantity, setQuantity] = useState("");
+    const [quantityUnit, setQuantityUnit] =
+        useState<QuantityUnit>("ROLLS");
+
+    const isMeters = quantityUnit === "MTR";
 
     return (
         <form
@@ -26,16 +38,33 @@ export default function InvoiceForm({ today }: { today: string }) {
             aria-busy={pending}
             className="space-y-6"
         >
+            {/* Send the quantity to the selected database field. */}
+            <input
+                type="hidden"
+                name="rollQuantity"
+                value={isMeters ? "" : quantity}
+            />
+
+            <input
+                type="hidden"
+                name="meterQuantity"
+                value={isMeters ? quantity : ""}
+            />
+
             <fieldset
                 disabled={pending}
                 className="min-w-0 space-y-5"
             >
-                <legend className="sr-only">Invoice details</legend>
+                <legend className="sr-only">
+                    Invoice details
+                </legend>
 
-                {/* First row: two equal columns */}
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                    <div className="min-w-0">
-                        <label htmlFor="invoice" className={labelClass}>
+                <div className="grid gap-5 sm:grid-cols-2">
+                    <div>
+                        <label
+                            htmlFor="invoice"
+                            className={labelClass}
+                        >
                             Invoice number *
                         </label>
 
@@ -50,8 +79,11 @@ export default function InvoiceForm({ today }: { today: string }) {
                         />
                     </div>
 
-                    <div className="min-w-0">
-                        <label htmlFor="supplier" className={labelClass}>
+                    <div>
+                        <label
+                            htmlFor="supplier"
+                            className={labelClass}
+                        >
                             Supplier *
                         </label>
 
@@ -65,63 +97,76 @@ export default function InvoiceForm({ today }: { today: string }) {
                             className={inputClass}
                         />
                     </div>
-                </div>
 
-                {/* Middle row: three equal columns */}
-                <div className="invoice-middle-row">
-                    <div className="min-w-0">
-                        <label htmlFor="rollQuantity" className={labelClass}>
-                            Roll quantity
-                        </label>
+                    <div>
+                        <div className="grid grid-cols-[minmax(0,1fr)_110px] gap-2">
+                            <div>
+                                <label
+                                    htmlFor="quantity"
+                                    className={labelClass}
+                                >
+                                    Quantity
+                                </label>
 
-                        <input
-                            id="rollQuantity"
-                            name="rollQuantity"
-                            type="number"
-                            min={0}
-                            max={2147483647}
-                            step={1}
-                            placeholder="Optional"
-                            className={inputClass}
-                        />
-                    </div>
+                                <input
+                                    id="quantity"
+                                    type="number"
+                                    min={0}
+                                    max={isMeters ? MAX_METERS : MAX_ROLLS}
+                                    step={isMeters ? 0.001 : 1}
+                                    inputMode={isMeters ? "decimal" : "numeric"}
+                                    placeholder="Optional"
+                                    value={quantity}
+                                    onChange={(event) =>
+                                        setQuantity(event.target.value)
+                                    }
+                                    aria-describedby="quantity-help"
+                                    className={inputClass}
+                                />
+                            </div>
 
-                    <div className="min-w-0">
-                        <label htmlFor="vehicleNumber" className={labelClass}>
-                            Vehicle number
-                        </label>
+                            <div>
+                                <label
+                                    htmlFor="quantity-unit"
+                                    className={labelClass}
+                                >
+                                    Unit
+                                </label>
 
-                        <VehicleInput
-                            id="vehicleNumber"
-                            name="vehicleNumber"
-                            type="text"
-                            maxLength={30}
-                            autoComplete="off"
-                            spellCheck={false}
-                            placeholder="Optional · ABC-1234"
-                            className={inputClass}
-                        />
-                        <div className="mt-3">
-                            <label htmlFor="receivedDate" className={labelClass}>
-                                Received date
-                                <span className="ml-1 text-xs font-normal text-muted-foreground">
-                                    (optional)
-                                </span>
-                            </label>
-
-                            <input
-                                id="receivedDate"
-                                name="receivedDate"
-                                type="date"
-                                min="0001-01-01"
-                                max="9999-12-31"
-                                className={inputClass}
-                            />
+                                <select
+                                    id="quantity-unit"
+                                    value={quantityUnit}
+                                    onChange={(event) => {
+                                        setQuantityUnit(
+                                            event.target.value === "MTR"
+                                                ? "MTR"
+                                                : "ROLLS",
+                                        );
+                                    }}
+                                    className={inputClass}
+                                >
+                                    <option value="ROLLS">Rolls</option>
+                                    <option value="MTR">MTR</option>
+                                </select>
+                            </div>
                         </div>
+
+                        <p
+                            id="quantity-help"
+                            className="mt-1.5 text-xs text-muted-foreground"
+                        >
+                            {isMeters
+                                ? "Enter meters with up to 3 decimal places."
+                                : "Enter the number of rolls as a whole number."}
+                            {" "}Changing the unit does not convert the value.
+                        </p>
                     </div>
 
-                    <div className="min-w-0">
-                        <label htmlFor="system" className={labelClass}>
+                    <div>
+                        <label
+                            htmlFor="system"
+                            className={labelClass}
+                        >
                             System *
                         </label>
 
@@ -140,12 +185,55 @@ export default function InvoiceForm({ today }: { today: string }) {
                             <option value="AX/D365">AX/D365</option>
                         </select>
                     </div>
-                </div>
 
-                {/* Last row: two equal columns */}
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                    <div className="min-w-0">
-                        <label htmlFor="documentDate" className={labelClass}>
+                    <div>
+                        <label
+                            htmlFor="vehicleNumber"
+                            className={labelClass}
+                        >
+                            Vehicle number
+                        </label>
+
+                        <VehicleInput
+                            id="vehicleNumber"
+                            name="vehicleNumber"
+                            type="text"
+                            maxLength={30}
+                            autoComplete="off"
+                            spellCheck={false}
+                            placeholder="Optional · ABC-1234"
+                            className={inputClass}
+                        />
+                    </div>
+
+                    <div>
+                        <label
+                            htmlFor="receivedDate"
+                            className={labelClass}
+                        >
+                            Received date
+                        </label>
+
+                        <input
+                            id="receivedDate"
+                            name="receivedDate"
+                            type="date"
+                            min="0001-01-01"
+                            max="9999-12-31"
+                            className={inputClass}
+                        />
+
+                        <p className="mt-1.5 text-xs text-muted-foreground">
+                            Optional. Leave blank to keep an existing
+                            vehicle date.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label
+                            htmlFor="documentDate"
+                            className={labelClass}
+                        >
                             Document share date *
                         </label>
 
@@ -154,13 +242,18 @@ export default function InvoiceForm({ today }: { today: string }) {
                             name="documentDate"
                             type="date"
                             required
+                            min="0001-01-01"
+                            max="9999-12-31"
                             defaultValue={today}
                             className={inputClass}
                         />
                     </div>
 
-                    <div className="min-w-0">
-                        <label htmlFor="shipment" className={labelClass}>
+                    <div>
+                        <label
+                            htmlFor="shipment"
+                            className={labelClass}
+                        >
                             Local / Import *
                         </label>
 
@@ -182,43 +275,37 @@ export default function InvoiceForm({ today }: { today: string }) {
             </fieldset>
 
             <p className="text-sm leading-6 text-muted-foreground">
-                New invoices start as Pending. Processing details can be
-                updated after creation.
+                New invoices start as Pending. Processing details
+                can be updated after creation.
             </p>
 
             {state.error && (
                 <p
                     role="alert"
-                    className="rounded-lg border border-red-200 bg-red-50
-            p-3 text-sm text-red-700 dark:border-red-900
-            dark:bg-red-950/40 dark:text-red-300"
+                    className="rounded-lg border border-red-200
+                    bg-red-50 p-3 text-sm text-red-700
+                    dark:border-red-900 dark:bg-red-950/40
+                    dark:text-red-300"
                 >
                     {state.error}
                 </p>
             )}
 
-            <div
-                className="flex flex-wrap items-center justify-end gap-3
-          border-t border-border pt-5"
-            >
+            <div className="flex flex-wrap items-center justify-end gap-3 border-t border-border pt-5">
                 {pending ? (
                     <button
                         type="button"
                         disabled
-                        className="inline-flex min-h-11 items-center justify-center
-              rounded-lg border border-input bg-card px-4 py-2.5
-              text-sm font-medium text-muted-foreground opacity-60"
+                        className="rounded-lg border border-input
+                        px-4 py-2.5 text-sm opacity-60"
                     >
                         Cancel
                     </button>
                 ) : (
                     <Link
                         href="/dashboard"
-                        className="inline-flex min-h-11 items-center justify-center
-              rounded-lg border border-input bg-card px-4 py-2.5
-              text-sm font-medium text-foreground hover:bg-muted
-              focus-visible:outline-none focus-visible:ring-2
-              focus-visible:ring-ring"
+                        className="rounded-lg border border-input
+                        px-4 py-2.5 text-sm hover:bg-muted"
                     >
                         Cancel
                     </Link>
@@ -227,12 +314,11 @@ export default function InvoiceForm({ today }: { today: string }) {
                 <button
                     type="submit"
                     disabled={pending}
-                    className="inline-flex min-h-11 items-center justify-center
-            gap-2 rounded-lg bg-blue-700 px-5 py-2.5 text-sm
-            font-semibold text-white hover:bg-blue-800
-            focus-visible:outline-none focus-visible:ring-2
-            focus-visible:ring-ring disabled:cursor-wait
-            disabled:opacity-60"
+                    className="inline-flex min-h-11 items-center
+                    justify-center gap-2 rounded-lg bg-blue-700
+                    px-5 py-2.5 text-sm font-semibold text-white
+                    hover:bg-blue-800 disabled:cursor-wait
+                    disabled:opacity-60"
                 >
                     {pending && (
                         <Loader2

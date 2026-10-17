@@ -71,7 +71,7 @@ async function NewInvoiceContent() {
                     text-blue-700 hover:bg-blue-50
                     dark:text-blue-400 dark:hover:bg-blue-950/40"
                 >
-                    Import PDF
+                    Import from email
                 </Link>
 
                 <p className="mt-2 text-sm text-muted-foreground">

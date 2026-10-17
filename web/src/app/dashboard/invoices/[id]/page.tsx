@@ -1,13 +1,12 @@
-
 import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { notFound, redirect } from "next/navigation";
+import { Pencil, Truck } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import ProcessForm from "./process-form";
 import type { ProcessFormData, ProcessStage } from "./types";
-import { Pencil, Truck } from "lucide-react";
 import DeleteInvoiceButton from "./delete-invoice-button";
 
 type PageProps = {
@@ -81,13 +80,21 @@ async function InvoiceContent({ params }: PageProps) {
     ] = await Promise.all([
         supabase
             .from("invoices")
-            .select(
-                `
-          id, invoice_number, supplier, roll_quantity, vehicle_number,
-          system_type, shipment_type, document_share_date,
-          pending_reason, remark, status, version
-        `,
-            )
+            .select(`
+                id,
+                invoice_number,
+                supplier,
+                roll_quantity,
+                meter_quantity,
+                vehicle_number,
+                system_type,
+                shipment_type,
+                document_share_date,
+                pending_reason,
+                remark,
+                status,
+                version
+            `)
             .eq("id", id)
             .maybeSingle(),
 
@@ -146,7 +153,6 @@ async function InvoiceContent({ params }: PageProps) {
     const initial: ProcessFormData = {
         invoice_id: invoice.id,
         version: invoice.version,
-
         stages: stages.map((stage) => ({
             system_name: stage.system_name as ProcessStage["system_name"],
             started_at: toSriLankaInput(stage.started_at),
@@ -154,7 +160,6 @@ async function InvoiceContent({ params }: PageProps) {
             is_done: stage.is_done,
             assigned_user_name: stage.assigned_user_name ?? "",
         })),
-
         pending_reason: invoice.pending_reason ?? "",
         asn_share_date: asn.share_date ?? "",
         asn_shared: asn.is_shared,
@@ -177,8 +182,6 @@ async function InvoiceContent({ params }: PageProps) {
                     >
                         ← Back to dashboard
                     </Link>
-
-
                 </div>
 
                 <section
@@ -191,7 +194,6 @@ async function InvoiceContent({ params }: PageProps) {
                                 <p className="text-xs font-medium text-muted-foreground">
                                     Invoice number
                                 </p>
-
                                 <h1 className="mt-1.5 break-words text-xl font-semibold tracking-tight text-foreground">
                                     {invoice.invoice_number}
                                 </h1>
@@ -203,24 +205,14 @@ async function InvoiceContent({ params }: PageProps) {
                                         Supplier
                                     </p>
 
-                                    <span
-                                        style={{
-                                            backgroundColor: "var(--background)",
-                                            color: "var(--foreground)",
-                                            borderColor: "var(--border)",
-                                        }}
-                                        className="inline-flex max-w-full items-center gap-1.5
-        rounded-md border px-2 py-1 text-xs"
-                                    >
+                                    <span className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground">
                                         <Truck
                                             aria-hidden="true"
                                             className="size-3.5 shrink-0"
                                         />
-
                                         <span className="shrink-0 text-muted-foreground">
                                             Vehicle ·
                                         </span>
-
                                         <span className="min-w-0 break-words font-medium">
                                             {invoice.vehicle_number?.trim() || "Not added"}
                                         </span>
@@ -261,6 +253,7 @@ async function InvoiceContent({ params }: PageProps) {
                             <dt className="text-xs text-muted-foreground">
                                 System
                             </dt>
+
                             <dd className="mt-1.5 break-words font-medium text-foreground">
                                 {invoice.system_type}
                             </dd>
@@ -270,6 +263,7 @@ async function InvoiceContent({ params }: PageProps) {
                             <dt className="text-xs text-muted-foreground">
                                 Shipment
                             </dt>
+
                             <dd className="mt-1.5 break-words font-medium text-foreground">
                                 {invoice.shipment_type === "IMPORT"
                                     ? "Import"
@@ -283,10 +277,39 @@ async function InvoiceContent({ params }: PageProps) {
                             <dt className="text-xs text-muted-foreground">
                                 Roll quantity
                             </dt>
-                            <dd className="mt-1.5 font-medium tabular-nums text-foreground">
-                                {invoice.roll_quantity == null
-                                    ? "—"
-                                    : invoice.roll_quantity.toLocaleString("en-GB")}
+
+                            <dd className="mt-1.5 flex flex-col items-start gap-1.5 font-medium tabular-nums text-foreground">
+                                {invoice.roll_quantity != null && (
+                                    <span>
+                                        {Number(invoice.roll_quantity).toLocaleString("en-GB")}
+                                    </span>
+                                )}
+
+                                {invoice.meter_quantity != null && (
+                                    <span className="inline-flex items-center gap-2">
+                                        <span>
+                                            {Number(invoice.meter_quantity).toLocaleString(
+                                                "en-GB",
+                                                { maximumFractionDigits: 3 },
+                                            )}
+                                        </span>
+
+                                        <span
+                                            className="inline-flex items-center rounded-md
+                        border border-blue-200 bg-blue-50 px-1.5 py-0.5
+                        text-[10px] font-semibold leading-none text-blue-700
+                        dark:border-blue-800 dark:bg-blue-950/40
+                        dark:text-blue-300"
+                                        >
+                                            MTR
+                                        </span>
+                                    </span>
+                                )}
+
+                                {invoice.roll_quantity == null &&
+                                    invoice.meter_quantity == null && (
+                                        <span className="text-muted-foreground">—</span>
+                                    )}
                             </dd>
                         </div>
 
@@ -294,6 +317,7 @@ async function InvoiceContent({ params }: PageProps) {
                             <dt className="text-xs text-muted-foreground">
                                 Document date
                             </dt>
+
                             <dd className="mt-1.5 font-medium tabular-nums text-foreground">
                                 {invoice.document_share_date
                                     .split("-")
@@ -319,7 +343,7 @@ export default function InvoicePage({ params }: PageProps) {
         <Suspense
             fallback={
                 <p className="p-10 text-sm text-muted-foreground" role="status">
-                    Loading invoice...
+                    Loading invoice…
                 </p>
             }
         >

@@ -1,8 +1,6 @@
 import ExcelJS from "exceljs";
 import { createClient } from "@/lib/supabase/server";
 
-
-
 type Stage = {
     system_name: "AX" | "D365";
     started_at: string | null;
@@ -17,6 +15,7 @@ type ExportRecord = {
         invoice_number: string;
         supplier: string;
         roll_quantity: number | null;
+        meter_quantity: number | null;
         system_type: "AX" | "D365" | "AX/D365";
         document_share_date: string;
         shipment_type: string;
@@ -65,10 +64,10 @@ function excelDateTime(value: string | null) {
         throw new Error("Invalid timestamp in export data.");
     }
 
-    // Excel dates have no timezone.
-    // Store Sri Lanka wall-clock time in the exported cell.
+    // Excel dates have no timezone. Store Sri Lanka wall-clock time.
     return new Date(timestamp + 330 * 60 * 1000);
 }
+
 function validDocumentDate(value: unknown): value is string {
     if (
         typeof value !== "string" ||
@@ -86,6 +85,7 @@ function validDocumentDate(value: unknown): value is string {
         date.toISOString().slice(0, 10) === value
     );
 }
+
 export async function POST(request: Request) {
     const origin = request.headers.get("origin");
 
@@ -115,7 +115,10 @@ export async function POST(request: Request) {
     }
 
     if (!profile?.is_active || profile.role !== "ADMIN") {
-        return failure("Only active administrators can export invoices.", 403);
+        return failure(
+            "Only active administrators can export invoices.",
+            403,
+        );
     }
 
     let body: unknown;
@@ -156,6 +159,7 @@ export async function POST(request: Request) {
             p_to_date: toDate,
         },
     );
+
     if (error) {
         if (error.code === "42501") {
             return failure("Administrator access is required.", 403);
@@ -163,7 +167,8 @@ export async function POST(request: Request) {
 
         if (error.code === "54000") {
             return failure(
-                "This range contains more than 10,000 invoices. Select a smaller date range.",
+                "This range contains more than 10,000 invoices. " +
+                "Select a smaller date range.",
                 413,
             );
         }
@@ -176,6 +181,7 @@ export async function POST(request: Request) {
     }
 
     const records = data as ExportRecord[];
+
     if (records.length === 0) {
         return failure(
             "No invoices were found within the selected document date range.",
@@ -208,6 +214,7 @@ export async function POST(request: Request) {
             { header: "Invoice", key: "invoice", width: 24 },
             { header: "SUPPLIER", key: "supplier", width: 32 },
             { header: "ROLL QTY", key: "roll", width: 14 },
+            { header: "METERS QTY", key: "meters", width: 18 },
             { header: "System", key: "system", width: 16 },
             {
                 header: "DOCUMENT SHARE DATE",
@@ -254,6 +261,7 @@ export async function POST(request: Request) {
         sheet.getColumn("vehicleNumber").numFmt = "@";
         sheet.getColumn("invoice").numFmt = "@";
         sheet.getColumn("roll").numFmt = "0";
+        sheet.getColumn("meters").numFmt = "0.###";
 
         for (const key of ["documentDate", "asnDate"]) {
             sheet.getColumn(key).numFmt = "dd/mm/yyyy";
@@ -270,16 +278,19 @@ export async function POST(request: Request) {
 
         for (const record of records) {
             const invoice = record.invoice;
+
             const ax = record.stages.find(
                 (stage) => stage.system_name === "AX",
             );
+
             const d365 = record.stages.find(
                 (stage) => stage.system_name === "D365",
             );
 
             const needsAx = invoice.system_type !== "D365";
             const needsD365 = invoice.system_type !== "AX";
-            const expectedStageCount = invoice.system_type === "AX/D365" ? 2 : 1;
+            const expectedStageCount =
+                invoice.system_type === "AX/D365" ? 2 : 1;
 
             if (
                 !record.asn ||
@@ -288,18 +299,39 @@ export async function POST(request: Request) {
                 (needsD365 && !d365)
             ) {
                 return failure(
-                    "An invoice has incomplete process records. Repair it before exporting.",
+                    "An invoice has incomplete process records. " +
+                    "Repair it before exporting.",
                     409,
                 );
             }
 
-            // Strings stay strings, including invoice numbers with leading zeros.
+            const meters = invoice.meter_quantity == null
+                ? null
+                : Number(invoice.meter_quantity);
+
+            if (
+                meters !== null &&
+                (
+                    !Number.isFinite(meters) ||
+                    meters < 0 ||
+                    meters > 999999999.999
+                )
+            ) {
+                return failure(
+                    "An invoice has an invalid meter quantity. " +
+                    "Correct it before exporting.",
+                    409,
+                );
+            }
+
+            // Keep strings as strings, including leading-zero invoice numbers.
             // User-entered values are never assigned as Excel formulas.
             sheet.addRow({
                 vehicleNumber: invoice.vehicle_number ?? "",
                 invoice: invoice.invoice_number,
                 supplier: invoice.supplier,
                 roll: invoice.roll_quantity,
+                meters,
                 system: invoice.system_type,
                 documentDate: excelDate(invoice.document_share_date),
                 shipment: invoice.shipment_type,
@@ -389,7 +421,6 @@ export async function POST(request: Request) {
             printTitlesRow: "1:1",
         };
 
-        // No worksheet protection: users can edit the downloaded workbook.
         const buffer = await workbook.xlsx.writeBuffer();
 
         return new Response(new Uint8Array(buffer), {

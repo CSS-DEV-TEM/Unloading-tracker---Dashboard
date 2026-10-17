@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { meterText, meterUnits } from "@/lib/meter-quantity";
 
 type CreateState = {
     error: string;
@@ -17,40 +18,27 @@ export async function saveImportedInvoice(
         return typeof value === "string" ? value.trim() : "";
     }
 
+    function validDate(value: string) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+        if (value < "0001-01-01" || value > "9999-12-31") return false;
+
+        const parsed = new Date(`${value}T00:00:00Z`);
+
+        return (
+            !Number.isNaN(parsed.getTime()) &&
+            parsed.toISOString().slice(0, 10) === value
+        );
+    }
+
     const invoice = text("invoice");
     const supplier = text("supplier");
     const system = text("system");
     const shipment = text("shipment");
     const date = text("documentDate");
     const quantityText = text("rollQuantity");
+    const metersRaw = text("meterQuantity");
     const vehicleNumber = text("vehicleNumber");
     const receivedDate = text("receivedDate");
-
-    if (receivedDate) {
-        if (!vehicleNumber) {
-            return {
-                error: "Enter a vehicle number, or leave the received date blank.",
-            };
-        }
-
-        const parsed = new Date(`${receivedDate}T00:00:00Z`);
-
-        if (
-            !/^\d{4}-\d{2}-\d{2}$/.test(receivedDate) ||
-            Number.isNaN(parsed.getTime()) ||
-            parsed.toISOString().slice(0, 10) !== receivedDate
-        ) {
-            return {
-                error: "Select a valid received date, or leave it blank.",
-            };
-        }
-    }
-
-    if (vehicleNumber.length > 30) {
-        return {
-            error: "Vehicle number must be 30 characters or fewer.",
-        };
-    }
 
     if (!invoice || invoice.length > 100) {
         return {
@@ -72,28 +60,55 @@ export async function saveImportedInvoice(
         return { error: "Select Local or Import." };
     }
 
-    const parsedDate = new Date(`${date}T00:00:00Z`);
-
-    if (
-        !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
-        Number.isNaN(parsedDate.getTime()) ||
-        parsedDate.toISOString().slice(0, 10) !== date
-    ) {
+    if (!validDate(date)) {
         return { error: "Select a valid document share date." };
+    }
+
+    if (vehicleNumber.length > 30) {
+        return {
+            error: "Vehicle number must be 30 characters or fewer.",
+        };
+    }
+
+    if (receivedDate && !vehicleNumber) {
+        return {
+            error: "Enter a vehicle number, or leave the received date blank.",
+        };
+    }
+
+    if (receivedDate && !validDate(receivedDate)) {
+        return {
+            error: "Select a valid received date, or leave it blank.",
+        };
     }
 
     const quantity = quantityText === "" ? null : Number(quantityText);
 
     if (
         quantity !== null &&
-        (!/^\d+$/.test(quantityText) ||
+        (
+            !/^\d+$/.test(quantityText) ||
             !Number.isSafeInteger(quantity) ||
-            quantity > 2147483647)
+            quantity < 0 ||
+            quantity > 2147483647
+        )
     ) {
         return {
             error: "Roll quantity must be a valid non-negative whole number.",
         };
     }
+
+    const units = metersRaw === "" ? null : meterUnits(metersRaw);
+
+    if (metersRaw !== "" && units === null) {
+        return {
+            error:
+                "Meters must be between 0 and 999999999.999, " +
+                "with no more than 3 decimal places.",
+        };
+    }
+
+    const meters = units === null ? null : Number(meterText(units));
 
     const supabase = await createClient();
 
@@ -108,22 +123,20 @@ export async function saveImportedInvoice(
         };
     }
 
-    const { error } = await supabase.rpc(
-        "save_invoice_with_received_date",
-        {
-            p_invoice_id: null,
-            p_expected_version: null,
-            p_invoice_number: invoice,
-            p_supplier: supplier,
-            p_roll_quantity: quantity,
-            p_system_type: system,
-            p_document_share_date: date,
-            p_shipment_type: shipment,
-            p_vehicle_number: vehicleNumber || null,
-            p_received_date: receivedDate || null,
-            p_expected_received_date: null,
-        },
-    );
+    const { error } = await supabase.rpc("save_invoice_with_meters", {
+        p_invoice_id: null,
+        p_expected_version: null,
+        p_invoice_number: invoice,
+        p_supplier: supplier,
+        p_roll_quantity: quantity,
+        p_system_type: system,
+        p_document_share_date: date,
+        p_shipment_type: shipment,
+        p_vehicle_number: vehicleNumber || null,
+        p_received_date: receivedDate || null,
+        p_expected_received_date: null,
+        p_meter_quantity: meters,
+    });
 
     if (error) {
         if (
@@ -133,13 +146,16 @@ export async function saveImportedInvoice(
             return {
                 error:
                     `Invoice "${invoice}" already exists. ` +
-                    "Open the existing invoice to edit it, or remove this draft from the import.",
+                    "Open the existing invoice to edit it, or remove this draft.",
             };
         }
+
         if (error.code === "PVC01") {
             return {
                 error:
-                    "This vehicle has completed or ASN shared invoices. Leave the received date blank to keep its current date, or reopen the linked invoices before changing it.",
+                    "This vehicle has completed or ASN shared invoices. " +
+                    "Leave the received date blank to keep its current date, " +
+                    "or reopen the linked invoices before changing it.",
             };
         }
 
@@ -153,14 +169,14 @@ export async function saveImportedInvoice(
         if (error.code === "PVA01") {
             return {
                 error:
-                    "This vehicle is archived. Choose an active vehicle or ask an administrator to restore it.",
+                    "This vehicle is archived. Choose an active vehicle " +
+                    "or ask an administrator to restore it.",
             };
         }
 
         if (error.code === "42501") {
             return {
-                error:
-                    "Your account does not have active dashboard access.",
+                error: "Your account does not have active dashboard access.",
             };
         }
 

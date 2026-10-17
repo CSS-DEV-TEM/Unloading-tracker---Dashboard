@@ -53,7 +53,7 @@ async function DetailsContent({ params }: Props) {
     const { data: invoice, error } = await supabase
         .from("invoices")
         .select(
-            "id, version, invoice_number, supplier, roll_quantity, vehicle_id, vehicle_number, document_share_date, shipment_type, system_type, status",
+            "id, version, invoice_number, supplier, roll_quantity, meter_quantity, vehicle_id, vehicle_number, document_share_date, shipment_type, system_type, status",
         )
         .eq("id", id)
         .maybeSingle();

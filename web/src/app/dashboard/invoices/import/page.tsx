@@ -40,11 +40,11 @@ async function ImportContent() {
                 </p>
 
                 <h1 className="mt-2 text-2xl font-semibold tracking-tight">
-                    Import invoice PDF
+                    Import invoices from email
                 </h1>
 
                 <p className="mt-2 text-sm text-muted-foreground">
-                    Upload a PDF, review the extracted details, then save
+                    Paste an email table, review the extracted details, then save
                     the invoices to your dashboard.
                 </p>
 
