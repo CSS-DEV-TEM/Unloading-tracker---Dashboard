@@ -8,22 +8,13 @@ import {
     emailClipboardText,
     MAX_PASTE_LENGTH,
     parseEmailTable,
+    QuantityUnitRequiredError,
+} from "./email-table";
+import type {
+    ExtractedInvoice,
+    QuantityUnit,
 } from "./email-table";
 import { MAX_METERS, sumMeters } from "@/lib/meter-quantity";
-
-type ExtractedInvoice = {
-    invoice_number: string;
-    supplier: string | null;
-    roll_quantity: number | null;
-    meter_quantity: number | null;
-    roll_quantity_invalid: boolean;
-    meter_quantity_invalid: boolean;
-    system_type: string | null;
-    document_share_date: string | null;
-    shipment_type: string | null;
-    source_row_count: number;
-    review_notes: string[];
-};
 
 type SourcePart = {
     id: string;
@@ -89,13 +80,15 @@ function buildDraft(
     invoice: string = parts[0]?.data.invoice_number ?? "",
 ): Draft {
     const notes = parts.flatMap((part) =>
-        part.data.review_notes.map((note) => `${part.name}: ${note}`),
+        part.data.review_notes.map(
+            (note) => `${part.name}: ${note}`,
+        ),
     );
 
     function consistent(
         values: (string | null)[],
         label: string,
-    ): string {
+    ) {
         const cleaned = values.map((value) => (value ?? "").trim());
 
         if (
@@ -125,11 +118,23 @@ function buildDraft(
         "Local / Import",
     );
 
-    const sourceSystems = parts.map((part) => part.data.system_type);
+    const focParts = parts.filter((part) => part.data.is_foc);
+
+    const nonFocParts = parts.filter(
+        (part) => !part.data.is_foc,
+    );
+
+    const sourceSystems = nonFocParts.map(
+        (part) => part.data.system_type,
+    );
+
     let system = "";
 
-    if (
-        sourceSystems.length > 0 &&
+    if (sourceSystems.length === 0) {
+        notes.push(
+            "This invoice contains only FOC rows. Select the system manually.",
+        );
+    } else if (
         sourceSystems.every(
             (value) =>
                 value === "AX" ||
@@ -138,17 +143,31 @@ function buildDraft(
         )
     ) {
         const systems = new Set(
-            sourceSystems.flatMap((value) => (value ?? "").split("/")),
+            sourceSystems.flatMap(
+                (value) => (value ?? "").split("/"),
+            ),
         );
 
-        system = systems.size === 2
+        system = systems.has("AX") && systems.has("D365")
             ? "AX/D365"
-            : [...systems][0] ?? "";
+            : systems.has("AX")
+                ? "AX"
+                : "D365";
     } else {
-        notes.push("An unknown Sales order prefix needs review.");
+        notes.push(
+            "An unknown non-FOC PO prefix needs review. Select the system.",
+        );
     }
 
-    // Calculate rolls independently from meters.
+    if (focParts.length > 0) {
+        notes.push(
+            `${focParts.length} FOC row(s) included in the quantities. ` +
+            (system
+                ? `System ${system} was determined from the other PO rows.`
+                : "System requires manual selection."),
+        );
+    }
+
     const rollValues = parts
         .map((part) => part.data.roll_quantity)
         .filter((value): value is number => value !== null);
@@ -157,14 +176,17 @@ function buildDraft(
 
     if (parts.some((part) => part.data.roll_quantity_invalid)) {
         notes.push(
-            "Roll total left blank because a source roll quantity is invalid.",
+            "Roll total left blank because a source quantity is invalid.",
         );
     } else if (rollValues.length > 0) {
         const valid = rollValues.every(
             (value) => Number.isSafeInteger(value) && value >= 0,
         );
 
-        const total = rollValues.reduce((sum, value) => sum + value, 0);
+        const total = rollValues.reduce(
+            (sum, value) => sum + value,
+            0,
+        );
 
         if (
             valid &&
@@ -173,24 +195,28 @@ function buildDraft(
         ) {
             quantity = String(total);
         } else {
-            notes.push("Roll total is invalid or exceeds the supported limit.");
+            notes.push("Roll total exceeds the supported limit.");
         }
     }
 
-    const meterValues = parts.map((part) => part.data.meter_quantity);
+    const meterValues = parts.map(
+        (part) => part.data.meter_quantity,
+    );
+
     let meters = "";
 
     if (parts.some((part) => part.data.meter_quantity_invalid)) {
         notes.push(
-            "Meter total left blank because a source meter quantity is invalid.",
+            "Meter total left blank because a source quantity is invalid.",
         );
     } else {
         meters = sumMeters(meterValues);
 
-        if (meterValues.some((value) => value !== null) && meters === "") {
-            notes.push(
-                "Meter total is invalid or exceeds the supported limit.",
-            );
+        if (
+            meterValues.some((value) => value !== null) &&
+            meters === ""
+        ) {
+            notes.push("Meter total exceeds the supported limit.");
         }
     }
 
@@ -214,13 +240,22 @@ export default function ImportForm() {
     const [drafts, setDrafts] = useState<Draft[]>([]);
     const [emailText, setEmailText] = useState("");
     const [dateFormat, setDateFormat] = useState("mdy");
+    const [qtyUnit, setQtyUnit] = useState<QuantityUnit | "">("");
+    const [needsUnit, setNeedsUnit] = useState(false);
     const [busy, setBusy] = useState<"extract" | "save" | null>(null);
     const [message, setMessage] = useState("");
+
     const operation = useRef(false);
 
-    const hasUnknown = drafts.some((row) => row.status === "unknown");
-    const hasSaved = drafts.some((row) => row.status === "saved");
-    const hasUnsaved = drafts.some((row) => row.status !== "saved");
+    const hasUnknown = drafts.some(
+        (row) => row.status === "unknown",
+    );
+    const hasSaved = drafts.some(
+        (row) => row.status === "saved",
+    );
+    const hasUnsaved = drafts.some(
+        (row) => row.status !== "saved",
+    );
     const hasPastedText = emailText.trim().length > 0;
     const hasWork = hasPastedText || hasUnsaved;
 
@@ -236,10 +271,7 @@ export default function ImportForm() {
 
     for (const row of drafts) {
         const key = invoiceKey(row.invoice);
-
-        if (key) {
-            counts.set(key, (counts.get(key) ?? 0) + 1);
-        }
+        if (key) counts.set(key, (counts.get(key) ?? 0) + 1);
     }
 
     const hasDuplicates = [...counts.values()].some(
@@ -260,6 +292,15 @@ export default function ImportForm() {
             window.removeEventListener("beforeunload", warn);
         };
     }, [hasWork, busy]);
+
+    function changeText(text: string) {
+        setEmailText(text);
+
+        // A new or edited paste needs its own unit confirmation.
+        setQtyUnit("");
+        setNeedsUnit(false);
+        setMessage("");
+    }
 
     function patchRow(id: string, patch: Partial<Draft>) {
         setDrafts((current) =>
@@ -296,9 +337,10 @@ export default function ImportForm() {
         setMessage("");
 
         try {
-            const extracted: ExtractedInvoice[] = parseEmailTable(
+            const extracted = parseEmailTable(
                 emailText,
                 dateFormat,
+                qtyUnit || undefined,
             );
 
             const batchId = crypto.randomUUID().slice(0, 8);
@@ -323,12 +365,19 @@ export default function ImportForm() {
 
             setDrafts((current) => [...current, ...additions]);
             setEmailText("");
+            setQtyUnit("");
+            setNeedsUnit(false);
 
             setMessage(
                 `${extracted.length} source rows extracted into ` +
-                `${additions.length} invoice drafts. Review before saving.`,
+                `${additions.length} invoice drafts. ` +
+                "Review quantities and dates before saving.",
             );
         } catch (cause) {
+            if (cause instanceof QuantityUnitRequiredError) {
+                setNeedsUnit(true);
+            }
+
             setMessage(
                 cause instanceof Error
                     ? cause.message
@@ -344,7 +393,8 @@ export default function ImportForm() {
         if (operation.current || hasUnknown) return;
 
         const matches = drafts.filter(
-            (item) => invoiceKey(item.invoice) === invoiceKey(row.invoice),
+            (item) =>
+                invoiceKey(item.invoice) === invoiceKey(row.invoice),
         );
 
         if (matches.length < 2 || matches.some(isProtected)) return;
@@ -353,8 +403,8 @@ export default function ImportForm() {
             !window.confirm(
                 `Combine ${matches.length} drafts for "${row.invoice}"? ` +
                 "Only combine separate quantities, not repeated copies. " +
-                "Rolls and meters will be recalculated from original rows. " +
-                "Manual edits will reset except the invoice number.",
+                "Totals use the original rows. Manual edits will reset " +
+                "except the invoice number.",
             )
         ) {
             return;
@@ -375,7 +425,7 @@ export default function ImportForm() {
             }),
         );
 
-        setMessage("Drafts combined. Review both quantities and required fields.");
+        setMessage("Drafts combined. Review quantities and required fields.");
     }
 
     function removeDraft(row: Draft) {
@@ -419,10 +469,7 @@ export default function ImportForm() {
 
         try {
             for (const row of pendingRows) {
-                patchRow(row.id, {
-                    status: "saving",
-                    message: "",
-                });
+                patchRow(row.id, { status: "saving", message: "" });
 
                 const form = new FormData();
                 form.set("invoice", row.invoice);
@@ -446,14 +493,14 @@ export default function ImportForm() {
                     }
 
                     if (result.error) {
-                        failed += 1;
+                        failed++;
 
                         patchRow(row.id, {
                             status: "error",
                             message: result.error,
                         });
                     } else {
-                        saved += 1;
+                        saved++;
 
                         patchRow(row.id, {
                             status: "saved",
@@ -494,11 +541,11 @@ export default function ImportForm() {
         if (operation.current) return;
 
         if (
-            (hasWork || hasUnknown) &&
+            hasWork &&
             !window.confirm(
                 "Clear this preview and pasted text? Unsaved drafts will be " +
                 "discarded. Saved invoices remain in the dashboard. " +
-                "Check any unconfirmed invoice before importing it again.",
+                "Check any unconfirmed save before importing again.",
             )
         ) {
             return;
@@ -506,6 +553,8 @@ export default function ImportForm() {
 
         setDrafts([]);
         setEmailText("");
+        setQtyUnit("");
+        setNeedsUnit(false);
         setMessage("");
     }
 
@@ -520,8 +569,8 @@ export default function ImportForm() {
                 <div>
                     <h2 className="font-semibold">Paste email table</h2>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        Copy the complete table including its column headers.
-                        Qty(MTR) is saved as meters. Roll quantities stay separate.
+                        Copy the complete table, including headers.
+                        Explicit MTR and roll headers are recognized automatically.
                     </p>
                 </div>
 
@@ -539,11 +588,8 @@ export default function ImportForm() {
                     maxLength={MAX_PASTE_LENGTH}
                     rows={10}
                     spellCheck={false}
-                    placeholder={
-                        "Paste the table here, including Date, Sales order, " +
-                        "Qty or Qty(MTR), Invoice No and Supplier."
-                    }
-                    onChange={(event) => setEmailText(event.target.value)}
+                    placeholder="Paste Date, PO, Qty or Qty(MTR), Invoice No and Supplier."
+                    onChange={(event) => changeText(event.target.value)}
                     onPaste={(event) => {
                         if (pasteLocked) return;
 
@@ -556,13 +602,11 @@ export default function ImportForm() {
                             );
 
                             const target = event.currentTarget;
-                            const start = target.selectionStart;
-                            const end = target.selectionEnd;
 
                             const next =
-                                target.value.slice(0, start) +
+                                target.value.slice(0, target.selectionStart) +
                                 pasted +
-                                target.value.slice(end);
+                                target.value.slice(target.selectionEnd);
 
                             if (next.length > MAX_PASTE_LENGTH) {
                                 throw new Error(
@@ -570,8 +614,7 @@ export default function ImportForm() {
                                 );
                             }
 
-                            setEmailText(next);
-                            setMessage("");
+                            changeText(next);
                         } catch (cause) {
                             setMessage(
                                 cause instanceof Error
@@ -580,11 +623,7 @@ export default function ImportForm() {
                             );
                         }
                     }}
-                    className={
-                        "w-full rounded-lg border border-input bg-background " +
-                        "p-3 font-mono text-xs outline-none focus:ring-2 " +
-                        "focus:ring-ring/25 disabled:opacity-60"
-                    }
+                    className="w-full rounded-lg border border-input bg-background p-3 font-mono text-xs outline-none focus:ring-2 focus:ring-ring/25 disabled:opacity-60"
                 />
 
                 <div className="flex flex-wrap items-end gap-3">
@@ -593,24 +632,30 @@ export default function ImportForm() {
                             htmlFor="email-date-format"
                             className="mb-2 block text-sm font-medium"
                         >
-                            Date format in email
+                            Ambiguous date format
                         </label>
 
                         <select
                             id="email-date-format"
                             value={dateFormat}
                             disabled={pasteLocked}
-                            onChange={(event) => setDateFormat(event.target.value)}
+                            onChange={(event) =>
+                                setDateFormat(event.target.value)
+                            }
                             className={inputClass}
                         >
-                            <option value="mdy">MM/DD/YYYY</option>
-                            <option value="dmy">DD/MM/YYYY</option>
+                            <option value="mdy">Month / Day / Year</option>
+                            <option value="dmy">Day / Month / Year</option>
                         </select>
                     </div>
 
                     <button
                         type="submit"
-                        disabled={pasteLocked || !hasPastedText}
+                        disabled={
+                            pasteLocked ||
+                            !hasPastedText ||
+                            (needsUnit && !qtyUnit)
+                        }
                         className={buttonClass}
                     >
                         {busy === "extract" ? "Extracting…" : "Extract invoices"}
@@ -619,7 +664,7 @@ export default function ImportForm() {
                     <button
                         type="button"
                         disabled={pasteLocked || !hasPastedText}
-                        onClick={() => setEmailText("")}
+                        onClick={() => changeText("")}
                         className={secondaryClass}
                     >
                         Clear text
@@ -627,7 +672,71 @@ export default function ImportForm() {
                 </div>
 
                 <p className="text-xs text-muted-foreground">
-                    Sales order: SL → D365 · KP → AX · Both for the same
+                    Dates accept /, . and - separators. Unambiguous dates are
+                    recognized automatically. For dates such as 05/06/2026,
+                    the selected format is used.
+                </p>
+
+                {needsUnit && (
+                    <div
+                        role="group"
+                        aria-labelledby="quantity-unit-title"
+                        className="space-y-3 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/30"
+                    >
+                        <div>
+                            <h3
+                                id="quantity-unit-title"
+                                className="text-sm font-semibold"
+                            >
+                                What does Qty represent in this email?
+                            </h3>
+
+                            <p className="mt-1 text-sm text-muted-foreground">
+                                The header has no unit. Your pasted data is
+                                retained. Select the unit, then click Extract
+                                invoices again.
+                            </p>
+                        </div>
+
+                        <div className="max-w-xs">
+                            <label
+                                htmlFor="generic-quantity-unit"
+                                className="mb-2 block text-sm font-medium"
+                            >
+                                Qty column unit
+                            </label>
+
+                            <select
+                                id="generic-quantity-unit"
+                                value={qtyUnit}
+                                disabled={pasteLocked}
+                                onChange={(event) => {
+                                    const value = event.target.value;
+
+                                    setQtyUnit(
+                                        value === "ROLLS" || value === "MTR"
+                                            ? value
+                                            : "",
+                                    );
+                                }}
+                                className={inputClass}
+                            >
+                                <option value="">Select unit</option>
+                                <option value="ROLLS">Rolls</option>
+                                <option value="MTR">MTR — meters</option>
+                            </select>
+                        </div>
+
+                        <p className="text-xs text-muted-foreground">
+                            This applies only to headers named Qty or Quantity.
+                            If separate tables use different units, paste them
+                            separately.
+                        </p>
+                    </div>
+                )}
+
+                <p className="text-xs text-muted-foreground">
+                    PO: SL → D365 · KP → AX · Both for the same
                     invoice → AX/D365. Matching invoice rows are grouped.
                 </p>
 
@@ -649,14 +758,21 @@ export default function ImportForm() {
             )}
 
             {hasDuplicates && (
-                <p role="alert" className="text-sm text-amber-700 dark:text-amber-300">
-                    Duplicate invoice numbers exist in this preview. Combine
-                    separate quantities, or remove repeated copies before saving.
+                <p
+                    role="alert"
+                    className="text-sm text-amber-700 dark:text-amber-300"
+                >
+                    Duplicate invoice numbers exist in this preview.
+                    Combine separate quantities or remove repeated copies.
                 </p>
             )}
 
             {drafts.length > 0 && (
-                <form onSubmit={save} className="space-y-4" aria-busy={busy === "save"}>
+                <form
+                    onSubmit={save}
+                    className="space-y-4"
+                    aria-busy={busy === "save"}
+                >
                     <div className="overflow-x-auto rounded-xl border border-border">
                         <table className="w-full text-left text-sm">
                             <thead className="bg-muted">
@@ -671,7 +787,11 @@ export default function ImportForm() {
                                         "Local / Import *",
                                         "Status / Actions",
                                     ].map((heading) => (
-                                        <th key={heading} className="p-3 font-medium">
+                                        <th
+                                            key={heading}
+                                            scope="col"
+                                            className="p-3 font-medium"
+                                        >
                                             {heading}
                                         </th>
                                     ))}
@@ -707,7 +827,11 @@ export default function ImportForm() {
                                                 value={row[name]}
                                                 disabled={locked}
                                                 onChange={(event) =>
-                                                    edit(row.id, name, event.target.value)
+                                                    edit(
+                                                        row.id,
+                                                        name,
+                                                        event.target.value,
+                                                    )
                                                 }
                                                 className={inputClass}
                                             />
@@ -717,18 +841,22 @@ export default function ImportForm() {
                                     return (
                                         <tr key={row.id} className="align-top">
                                             <td className="min-w-[230px] p-3">
-                                                {field("invoice", "Invoice number", {
-                                                    required: true,
-                                                    maxLength: 100,
-                                                })}
+                                                {row.parts.some((part) => part.data.is_foc) && (
+                                                    <span
+                                                        className="mt-2 inline-flex items-center rounded-md
+                                                            border border-amber-200 bg-amber-50 px-2 py-1
+                                                            text-[10px] font-semibold text-amber-800
+                                                            dark:border-amber-900 dark:bg-amber-950/40
+                                                            dark:text-amber-300"
+                                                        title="Contains FOC PO rows. Their quantities are included."
+                                                    >
+                                                        FOC · Review
+                                                    </span>
+                                                )}
 
                                                 <details className="mt-2 text-xs">
                                                     <summary className="cursor-pointer text-muted-foreground">
-                                                        {row.parts.reduce(
-                                                            (sum, part) =>
-                                                                sum + part.data.source_row_count,
-                                                            0,
-                                                        )} source rows
+                                                        {row.parts.length} source rows
                                                     </summary>
 
                                                     <ul className="mt-2 space-y-2">
@@ -749,6 +877,7 @@ export default function ImportForm() {
                                                         <summary className="cursor-pointer text-amber-700 dark:text-amber-300">
                                                             Review notes ({row.notes.length})
                                                         </summary>
+
                                                         <ul className="mt-2 list-disc space-y-1 pl-4">
                                                             {row.notes.map((note) => (
                                                                 <li key={note}>{note}</li>
@@ -814,7 +943,7 @@ export default function ImportForm() {
 
                                             <td className="min-w-[150px] p-3">
                                                 <select
-                                                    aria-label={`Local / Import: ${row.invoice}`}
+                                                    aria-label={`Shipment: ${row.invoice}`}
                                                     required
                                                     disabled={locked}
                                                     value={row.shipment}
@@ -883,7 +1012,10 @@ export default function ImportForm() {
                     </div>
 
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                        <p role="status" className="text-sm text-muted-foreground">
+                        <p
+                            role="status"
+                            className="text-sm text-muted-foreground"
+                        >
                             {savedCount} saved · {remaining} remaining
                         </p>
 
