@@ -2,14 +2,22 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import type { FormEvent } from "react";
+import type { FormEvent, InputHTMLAttributes } from "react";
 import { saveImportedInvoice } from "../new/actions";
-import { createClient as createStorageClient } from "@supabase/supabase-js";
+import {
+    emailClipboardText,
+    MAX_PASTE_LENGTH,
+    parseEmailTable,
+} from "./email-table";
+import { MAX_METERS, sumMeters } from "@/lib/meter-quantity";
 
 type ExtractedInvoice = {
     invoice_number: string;
     supplier: string | null;
     roll_quantity: number | null;
+    meter_quantity: number | null;
+    roll_quantity_invalid: boolean;
+    meter_quantity_invalid: boolean;
     system_type: string | null;
     document_share_date: string | null;
     shipment_type: string | null;
@@ -17,18 +25,9 @@ type ExtractedInvoice = {
     review_notes: string[];
 };
 
-type PdfItem = {
-    id: string;
-    file: File;
-    dateFormat: string;
-    status: "queued" | "extracting" | "done" | "failed";
-    message: string;
-    issues: string[];
-};
-
 type SourcePart = {
-    fileId: string;
-    fileName: string;
+    id: string;
+    name: string;
     data: ExtractedInvoice;
 };
 
@@ -38,6 +37,7 @@ type Draft = {
     invoice: string;
     supplier: string;
     quantity: string;
+    meters: string;
     system: string;
     date: string;
     shipment: string;
@@ -50,12 +50,12 @@ type EditableField =
     | "invoice"
     | "supplier"
     | "quantity"
+    | "meters"
     | "system"
     | "date"
     | "shipment";
 
-const MAX_BYTES = 10 * 1024 * 1024;
-const MAX_QUANTITY = 2147483647;
+const MAX_ROLLS = 2147483647;
 
 const inputClass =
     "h-10 w-full rounded-lg border border-input bg-background px-3 " +
@@ -83,17 +83,13 @@ function isProtected(row: Draft) {
     return row.status === "saved" || row.status === "unknown";
 }
 
-// Always calculate from original source values.
-// Manually edited totals are never added together.
 function buildDraft(
     parts: SourcePart[],
-    id = crypto.randomUUID(),
-    invoice = parts[0]?.data.invoice_number ?? "",
+    id: string = crypto.randomUUID(),
+    invoice: string = parts[0]?.data.invoice_number ?? "",
 ): Draft {
     const notes = parts.flatMap((part) =>
-        (part.data.review_notes ?? []).map(
-            (note) => `${part.fileName}: ${note}`,
-        ),
+        part.data.review_notes.map((note) => `${part.name}: ${note}`),
     );
 
     function consistent(
@@ -103,13 +99,14 @@ function buildDraft(
         const cleaned = values.map((value) => (value ?? "").trim());
 
         if (
+            cleaned.length > 0 &&
             cleaned.every(Boolean) &&
             new Set(cleaned.map(normalize)).size === 1
         ) {
             return cleaned[0];
         }
 
-        notes.push(`${label} is missing or differs. Select the correct value.`);
+        notes.push(`${label} is missing or differs. Review this field.`);
         return "";
     }
 
@@ -132,6 +129,7 @@ function buildDraft(
     let system = "";
 
     if (
+        sourceSystems.length > 0 &&
         sourceSystems.every(
             (value) =>
                 value === "AX" ||
@@ -140,37 +138,60 @@ function buildDraft(
         )
     ) {
         const systems = new Set(
-            sourceSystems.flatMap((value) => value!.split("/")),
+            sourceSystems.flatMap((value) => (value ?? "").split("/")),
         );
 
-        system = systems.size === 2 ? "AX/D365" : [...systems][0];
+        system = systems.size === 2
+            ? "AX/D365"
+            : [...systems][0] ?? "";
     } else {
-        notes.push("System needs review.");
+        notes.push("An unknown Sales order prefix needs review.");
     }
 
-    const quantities = parts.map((part) => part.data.roll_quantity);
+    // Calculate rolls independently from meters.
+    const rollValues = parts
+        .map((part) => part.data.roll_quantity)
+        .filter((value): value is number => value !== null);
+
     let quantity = "";
 
-    if (
-        quantities.every(
-            (value) =>
-                typeof value === "number" &&
-                Number.isSafeInteger(value) &&
-                value >= 0,
-        )
-    ) {
-        const total = quantities.reduce<number>(
-            (sum, value) => sum + (value ?? 0),
-            0,
+    if (parts.some((part) => part.data.roll_quantity_invalid)) {
+        notes.push(
+            "Roll total left blank because a source roll quantity is invalid.",
+        );
+    } else if (rollValues.length > 0) {
+        const valid = rollValues.every(
+            (value) => Number.isSafeInteger(value) && value >= 0,
         );
 
-        if (Number.isSafeInteger(total) && total <= MAX_QUANTITY) {
+        const total = rollValues.reduce((sum, value) => sum + value, 0);
+
+        if (
+            valid &&
+            Number.isSafeInteger(total) &&
+            total <= MAX_ROLLS
+        ) {
             quantity = String(total);
         } else {
-            notes.push("Total quantity exceeds the supported limit.");
+            notes.push("Roll total is invalid or exceeds the supported limit.");
         }
+    }
+
+    const meterValues = parts.map((part) => part.data.meter_quantity);
+    let meters = "";
+
+    if (parts.some((part) => part.data.meter_quantity_invalid)) {
+        notes.push(
+            "Meter total left blank because a source meter quantity is invalid.",
+        );
     } else {
-        notes.push("Total left blank because a source quantity is unreadable.");
+        meters = sumMeters(meterValues);
+
+        if (meterValues.some((value) => value !== null) && meters === "") {
+            notes.push(
+                "Meter total is invalid or exceeds the supported limit.",
+            );
+        }
     }
 
     return {
@@ -179,6 +200,7 @@ function buildDraft(
         invoice,
         supplier,
         quantity,
+        meters,
         system,
         date,
         shipment,
@@ -188,105 +210,9 @@ function buildDraft(
     };
 }
 
-async function extractStoredPdf(file: File, dateFormat: string) {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-
-    if (!url || !key) {
-        throw new Error("PDF storage is not configured.");
-    }
-
-    const storageClient = createStorageClient(url, key, {
-        auth: {
-            persistSession: false,
-            autoRefreshToken: false,
-            detectSessionInUrl: false,
-        },
-    });
-
-    const preparation = await fetch("/api/invoices/extract", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            action: "upload",
-            filename: file.name,
-            size: file.size,
-        }),
-    });
-
-    const prepared = await preparation.json();
-
-    if (!preparation.ok) {
-        throw new Error(
-            typeof prepared.error === "string"
-                ? prepared.error
-                : "Unable to prepare the PDF upload.",
-        );
-    }
-
-    if (
-        typeof prepared.path !== "string" ||
-        typeof prepared.token !== "string"
-    ) {
-        throw new Error("Invalid upload response.");
-    }
-
-    try {
-        const { error } = await storageClient.storage
-            .from("invoice-imports")
-            .uploadToSignedUrl(
-                prepared.path,
-                prepared.token,
-                file,
-                { contentType: "application/pdf" },
-            );
-
-        if (error) {
-            throw new Error("PDF upload failed. Check your connection and retry.");
-        }
-
-        const response = await fetch("/api/invoices/extract", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                action: "extract",
-                path: prepared.path,
-                filename: file.name,
-                date_format: dateFormat,
-            }),
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-            throw new Error(
-                typeof result.error === "string"
-                    ? result.error
-                    : "Extraction failed.",
-            );
-        }
-
-        return result;
-    } finally {
-        // Also attempt cleanup after upload/network failures.
-        try {
-            await fetch("/api/invoices/extract", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    action: "cleanup",
-                    path: prepared.path,
-                }),
-            });
-        } catch {
-            // Preserve the original extraction result/error.
-        }
-    }
-}
-
 export default function ImportForm() {
-    const [files, setFiles] = useState<PdfItem[]>([]);
     const [drafts, setDrafts] = useState<Draft[]>([]);
+    const [emailText, setEmailText] = useState("");
     const [dateFormat, setDateFormat] = useState("mdy");
     const [busy, setBusy] = useState<"extract" | "save" | null>(null);
     const [message, setMessage] = useState("");
@@ -295,35 +221,30 @@ export default function ImportForm() {
     const hasUnknown = drafts.some((row) => row.status === "unknown");
     const hasSaved = drafts.some((row) => row.status === "saved");
     const hasUnsaved = drafts.some((row) => row.status !== "saved");
-
-    const pendingFiles = files.filter(
-        (file) => file.status === "queued" || file.status === "failed",
-    );
-
-    const remaining = drafts.filter(
-        (row) => !isProtected(row),
-    ).length;
+    const hasPastedText = emailText.trim().length > 0;
+    const hasWork = hasPastedText || hasUnsaved;
 
     const savedCount = drafts.filter(
         (row) => row.status === "saved",
+    ).length;
+
+    const remaining = drafts.filter(
+        (row) => !isProtected(row),
     ).length;
 
     const counts = new Map<string, number>();
 
     for (const row of drafts) {
         const key = invoiceKey(row.invoice);
-        if (key) counts.set(key, (counts.get(key) ?? 0) + 1);
+
+        if (key) {
+            counts.set(key, (counts.get(key) ?? 0) + 1);
+        }
     }
 
-    const hasDuplicates = [...counts.values()].some((count) => count > 1);
-    const hasWork =
-        hasUnsaved ||
-        files.some(
-            (file) =>
-                file.status === "queued" ||
-                file.status === "extracting" ||
-                file.status === "failed",
-        );
+    const hasDuplicates = [...counts.values()].some(
+        (count) => count > 1,
+    );
 
     useEffect(() => {
         if (!hasWork && !busy) return;
@@ -334,16 +255,11 @@ export default function ImportForm() {
         }
 
         window.addEventListener("beforeunload", warn);
-        return () => window.removeEventListener("beforeunload", warn);
-    }, [hasWork, busy]);
 
-    function patchFile(id: string, patch: Partial<PdfItem>) {
-        setFiles((current) =>
-            current.map((file) =>
-                file.id === id ? { ...file, ...patch } : file,
-            ),
-        );
-    }
+        return () => {
+            window.removeEventListener("beforeunload", warn);
+        };
+    }, [hasWork, busy]);
 
     function patchRow(id: string, patch: Partial<Draft>) {
         setDrafts((current) =>
@@ -354,188 +270,74 @@ export default function ImportForm() {
     }
 
     function edit(id: string, field: EditableField, value: string) {
-        patchRow(id, {
-            [field]: value,
-            status: "draft",
-            message: "",
-        });
+        if (operation.current || hasUnknown) return;
+
+        setDrafts((current) =>
+            current.map((row) =>
+                row.id === id && !isProtected(row)
+                    ? {
+                        ...row,
+                        [field]: value,
+                        status: "draft",
+                        message: "",
+                    }
+                    : row,
+            ),
+        );
     }
 
-    function addFiles(selected: FileList | null) {
-        if (!selected || operation.current || hasSaved || hasUnknown) return;
-
-        const additions: PdfItem[] = [];
-        const notices: string[] = [];
-
-        for (const file of Array.from(selected)) {
-            if (
-                !file.name.toLowerCase().endsWith(".pdf") ||
-                file.size === 0 ||
-                file.size > MAX_BYTES
-            ) {
-                notices.push(`${file.name}: select a non-empty PDF up to 10 MB.`);
-                continue;
-            }
-
-            // Catch accidental reselection of the same file.
-            // This is not content-based duplicate detection.
-            const alreadySelected = [...files, ...additions].some(
-                (item) =>
-                    item.file.name === file.name &&
-                    item.file.size === file.size &&
-                    item.file.lastModified === file.lastModified,
-            );
-
-            if (alreadySelected) {
-                notices.push(`${file.name}: already selected.`);
-                continue;
-            }
-
-            additions.push({
-                id: crypto.randomUUID(),
-                file,
-                dateFormat,
-                status: "queued",
-                message: "Ready to extract",
-                issues: [],
-            });
-        }
-
-        setFiles((current) => [...current, ...additions]);
-        setMessage(notices.join(" "));
-    }
-
-    async function extract(event: FormEvent<HTMLFormElement>) {
+    function extractEmail(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
 
-        if (
-            operation.current ||
-            hasSaved ||
-            hasUnknown ||
-            pendingFiles.length === 0
-        ) {
-            return;
-        }
+        if (operation.current || hasSaved || hasUnknown) return;
 
         operation.current = true;
         setBusy("extract");
         setMessage("");
 
-        let failed = 0;
-
         try {
-            for (const item of pendingFiles) {
-                patchFile(item.id, {
-                    status: "extracting",
-                    message: "Extracting…",
-                    issues: [],
+            const extracted: ExtractedInvoice[] = parseEmailTable(
+                emailText,
+                dateFormat,
+            );
+
+            const batchId = crypto.randomUUID().slice(0, 8);
+            const grouped = new Map<string, SourcePart[]>();
+
+            extracted.forEach((data, index) => {
+                const key = invoiceKey(data.invoice_number);
+                const parts = grouped.get(key) ?? [];
+
+                parts.push({
+                    id: crypto.randomUUID(),
+                    name: `Email ${batchId} · row ${index + 1}`,
+                    data,
                 });
 
-                try {
-                    const result = await extractStoredPdf(
-                        item.file,
-                        item.dateFormat,
-                    );
+                grouped.set(key, parts);
+            });
 
-                    if (!Array.isArray(result.invoices)) {
-                        throw new Error("Invalid extraction response.");
-                    }
+            const additions = [...grouped.values()].map(
+                (parts) => buildDraft(parts),
+            );
 
-                    const invoices = result.invoices as ExtractedInvoice[];
-
-                    const rows = invoices.map((data) =>
-                        buildDraft([
-                            {
-                                fileId: item.id,
-                                fileName: item.file.name,
-                                data,
-                            },
-                        ]),
-                    );
-
-                    const issues = Array.isArray(result.document_issues)
-                        ? result.document_issues.map(
-                            (issue: { message: string }) => issue.message,
-                        )
-                        : [];
-
-                    setDrafts((current) => [...current, ...rows]);
-
-                    patchFile(item.id, {
-                        status: "done",
-                        message:
-                            `${invoices.length} invoices · ` +
-                            `${result.source_rows ?? 0} source rows`,
-                        issues:
-                            invoices.length === 0
-                                ? [...issues, "No invoice drafts extracted."]
-                                : issues,
-                    });
-                } catch (cause) {
-                    failed += 1;
-
-                    patchFile(item.id, {
-                        status: "failed",
-                        message:
-                            cause instanceof Error
-                                ? cause.message
-                                : "Extraction failed. Try again.",
-                    });
-                }
-            }
+            setDrafts((current) => [...current, ...additions]);
+            setEmailText("");
 
             setMessage(
-                failed
-                    ? `${failed} PDF(s) failed. Retry extraction or remove them. Successful results are retained.`
-                    : "Extraction complete. Review invoice details before saving.",
+                `${extracted.length} source rows extracted into ` +
+                `${additions.length} invoice drafts. Review before saving.`,
+            );
+        } catch (cause) {
+            setMessage(
+                cause instanceof Error
+                    ? cause.message
+                    : "Unable to extract the email table.",
             );
         } finally {
             operation.current = false;
             setBusy(null);
         }
-    }
-
-    function removeFile(id: string) {
-        if (operation.current || hasUnknown) return;
-
-        const affected = drafts.filter(
-            (row) =>
-                !isProtected(row) &&
-                row.parts.some((part) => part.fileId === id),
-        );
-
-        if (
-            affected.length > 0 &&
-            !window.confirm(
-                "Remove this PDF? Its unsaved data will be removed. " +
-                "Affected combined rows will be recalculated from remaining PDFs, " +
-                "resetting their manual edits except the invoice number. " +
-                "Saved invoices will remain unchanged.",
-            )
-        ) {
-            return;
-        }
-
-        setFiles((current) => current.filter((file) => file.id !== id));
-
-        setDrafts((current) =>
-            current.flatMap((row) => {
-                if (
-                    isProtected(row) ||
-                    !row.parts.some((part) => part.fileId === id)
-                ) {
-                    return [row];
-                }
-
-                const parts = row.parts.filter((part) => part.fileId !== id);
-
-                return parts.length
-                    ? [buildDraft(parts, row.id, row.invoice)]
-                    : [];
-            }),
-        );
-
-        setMessage("PDF removed from this batch. Saved invoices are unchanged.");
     }
 
     function combine(row: Draft) {
@@ -551,8 +353,8 @@ export default function ImportForm() {
             !window.confirm(
                 `Combine ${matches.length} drafts for "${row.invoice}"? ` +
                 "Only combine separate quantities, not repeated copies. " +
-                "The total will use original extracted quantities. " +
-                "Manual edits in these drafts will be reset except the invoice number.",
+                "Rolls and meters will be recalculated from original rows. " +
+                "Manual edits will reset except the invoice number.",
             )
         ) {
             return;
@@ -568,22 +370,22 @@ export default function ImportForm() {
 
         setDrafts((current) =>
             current.flatMap((item) => {
-                if (item.id === matches[0].id) return [merged];
+                if (item.id === merged.id) return [merged];
                 return ids.has(item.id) ? [] : [item];
             }),
         );
 
-        setMessage("Drafts combined. Review the quantity and required fields.");
+        setMessage("Drafts combined. Review both quantities and required fields.");
     }
 
     function removeDraft(row: Draft) {
-        if (operation.current || isProtected(row) || hasUnknown) return;
+        if (operation.current || hasUnknown || isProtected(row)) return;
 
-        if (!window.confirm(`Remove draft "${row.invoice}" from this preview?`)) {
-            return;
-        }
+        if (!window.confirm(`Remove draft "${row.invoice}"?`)) return;
 
-        setDrafts((current) => current.filter((item) => item.id !== row.id));
+        setDrafts((current) =>
+            current.filter((item) => item.id !== row.id),
+        );
     }
 
     async function save(event: FormEvent<HTMLFormElement>) {
@@ -591,36 +393,42 @@ export default function ImportForm() {
 
         if (operation.current || hasUnknown) return;
 
-        if (pendingFiles.length > 0) {
-            setMessage("Extract or remove the queued/failed PDFs before saving.");
+        if (hasPastedText) {
+            setMessage("Extract or clear the pasted text before saving.");
             return;
         }
 
         if (hasDuplicates) {
             setMessage(
-                "Resolve duplicate invoice numbers first: combine separate quantities, " +
-                "remove repeated copies, or correct an invoice number.",
+                "Combine separate quantities or remove duplicate drafts first.",
             );
             return;
         }
 
-        const pending = drafts.filter((row) => !isProtected(row));
-        if (pending.length === 0) return;
+        const pendingRows = drafts.filter((row) => !isProtected(row));
+
+        if (pendingRows.length === 0) return;
 
         operation.current = true;
         setBusy("save");
         setMessage("");
 
+        let saved = 0;
         let failed = 0;
+        let uncertain = false;
 
         try {
-            for (const row of pending) {
-                patchRow(row.id, { status: "saving", message: "Saving…" });
+            for (const row of pendingRows) {
+                patchRow(row.id, {
+                    status: "saving",
+                    message: "",
+                });
 
                 const form = new FormData();
                 form.set("invoice", row.invoice);
                 form.set("supplier", row.supplier);
                 form.set("rollQuantity", row.quantity);
+                form.set("meterQuantity", row.meters);
                 form.set("system", row.system);
                 form.set("documentDate", row.date);
                 form.set("shipment", row.shipment);
@@ -633,37 +441,48 @@ export default function ImportForm() {
                         form,
                     );
 
+                    if (!result || typeof result.error !== "string") {
+                        throw new Error("Save confirmation was not received.");
+                    }
+
                     if (result.error) {
                         failed += 1;
+
                         patchRow(row.id, {
                             status: "error",
                             message: result.error,
                         });
                     } else {
+                        saved += 1;
+
                         patchRow(row.id, {
                             status: "saved",
-                            message: "Saved",
+                            message: "Saved successfully.",
                         });
                     }
                 } catch {
+                    uncertain = true;
+
                     patchRow(row.id, {
                         status: "unknown",
                         message:
-                            "Save result unconfirmed. Check this invoice in the dashboard.",
+                            "Save confirmation was not received. This invoice " +
+                            "may already be saved. Check the dashboard before " +
+                            "starting another batch.",
                     });
 
-                    setMessage(
-                        "Saving stopped after a connection error. Check the dashboard " +
-                        "before clearing this batch or importing again.",
-                    );
-                    return;
+                    break;
                 }
             }
 
             setMessage(
-                failed
-                    ? `${failed} invoice(s) failed. Correct or remove those drafts and retry. Saved rows will not be resubmitted.`
-                    : "All remaining invoices saved.",
+                uncertain
+                    ? "Saving stopped because one result is unconfirmed. " +
+                    "Check the dashboard before importing again."
+                    : `${saved} saved in this attempt. ${failed} failed. ` +
+                    (failed
+                        ? "Correct the failed drafts and retry."
+                        : "Import complete."),
             );
         } finally {
             operation.current = false;
@@ -675,194 +494,178 @@ export default function ImportForm() {
         if (operation.current) return;
 
         if (
-            hasWork &&
+            (hasWork || hasUnknown) &&
             !window.confirm(
-                hasUnknown
-                    ? "Check the unconfirmed invoice in the dashboard first. " +
-                    "Clear this batch now? Saved invoices will remain."
-                    : "Clear selected PDFs and unsaved drafts? Saved invoices will remain.",
+                "Clear this preview and pasted text? Unsaved drafts will be " +
+                "discarded. Saved invoices remain in the dashboard. " +
+                "Check any unconfirmed invoice before importing it again.",
             )
         ) {
             return;
         }
 
-        setFiles([]);
         setDrafts([]);
+        setEmailText("");
         setMessage("");
     }
 
+    const pasteLocked = busy !== null || hasSaved || hasUnknown;
+
     return (
-        <div className="mt-6 space-y-5">
+        <div className="space-y-6">
             <form
-                onSubmit={extract}
-                className="rounded-xl border border-border bg-card p-5"
+                onSubmit={extractEmail}
+                className="space-y-4 rounded-xl border border-border bg-card p-4 sm:p-6"
             >
-                <fieldset
-                    disabled={busy !== null || hasSaved || hasUnknown}
-                    className="grid gap-4 md:grid-cols-[1fr_220px_auto] md:items-end"
+                <div>
+                    <h2 className="font-semibold">Paste email table</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        Copy the complete table including its column headers.
+                        Qty(MTR) is saved as meters. Roll quantities stay separate.
+                    </p>
+                </div>
+
+                <label
+                    htmlFor="email-table"
+                    className="block text-sm font-medium"
                 >
+                    Email table
+                </label>
+
+                <textarea
+                    id="email-table"
+                    value={emailText}
+                    disabled={pasteLocked}
+                    maxLength={MAX_PASTE_LENGTH}
+                    rows={10}
+                    spellCheck={false}
+                    placeholder={
+                        "Paste the table here, including Date, Sales order, " +
+                        "Qty or Qty(MTR), Invoice No and Supplier."
+                    }
+                    onChange={(event) => setEmailText(event.target.value)}
+                    onPaste={(event) => {
+                        if (pasteLocked) return;
+
+                        event.preventDefault();
+
+                        try {
+                            const pasted = emailClipboardText(
+                                event.clipboardData.getData("text/html"),
+                                event.clipboardData.getData("text/plain"),
+                            );
+
+                            const target = event.currentTarget;
+                            const start = target.selectionStart;
+                            const end = target.selectionEnd;
+
+                            const next =
+                                target.value.slice(0, start) +
+                                pasted +
+                                target.value.slice(end);
+
+                            if (next.length > MAX_PASTE_LENGTH) {
+                                throw new Error(
+                                    "Too much text. Paste a smaller table.",
+                                );
+                            }
+
+                            setEmailText(next);
+                            setMessage("");
+                        } catch (cause) {
+                            setMessage(
+                                cause instanceof Error
+                                    ? cause.message
+                                    : "Unable to read the clipboard.",
+                            );
+                        }
+                    }}
+                    className={
+                        "w-full rounded-lg border border-input bg-background " +
+                        "p-3 font-mono text-xs outline-none focus:ring-2 " +
+                        "focus:ring-ring/25 disabled:opacity-60"
+                    }
+                />
+
+                <div className="flex flex-wrap items-end gap-3">
                     <div>
                         <label
-                            htmlFor="invoice-pdfs"
+                            htmlFor="email-date-format"
                             className="mb-2 block text-sm font-medium"
                         >
-                            Add invoice PDFs
-                        </label>
-
-                        <input
-                            id="invoice-pdfs"
-                            type="file"
-                            multiple
-                            accept=".pdf,application/pdf"
-                            onChange={(event) => {
-                                addFiles(event.target.files);
-                                event.target.value = "";
-                            }}
-                            className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-muted file:px-3 file:py-2 file:text-foreground"
-                        />
-                    </div>
-
-                    <div>
-                        <label
-                            htmlFor="default-date-format"
-                            className="mb-2 block text-sm font-medium"
-                        >
-                            Default date format
+                            Date format in email
                         </label>
 
                         <select
-                            id="default-date-format"
+                            id="email-date-format"
                             value={dateFormat}
+                            disabled={pasteLocked}
                             onChange={(event) => setDateFormat(event.target.value)}
                             className={inputClass}
                         >
-                            <option value="mdy">Month / Day / Year</option>
-                            <option value="dmy">Day / Month / Year</option>
+                            <option value="mdy">MM/DD/YYYY</option>
+                            <option value="dmy">DD/MM/YYYY</option>
                         </select>
                     </div>
 
                     <button
                         type="submit"
-                        disabled={pendingFiles.length === 0}
+                        disabled={pasteLocked || !hasPastedText}
                         className={buttonClass}
                     >
-                        {busy === "extract"
-                            ? "Extracting…"
-                            : `Extract / retry (${pendingFiles.length})`}
+                        {busy === "extract" ? "Extracting…" : "Extract invoices"}
                     </button>
-                </fieldset>
 
-                <p className="mt-3 text-xs text-muted-foreground">
-                    Maximum 10 MB and 50 pages per PDF. Files are extracted one
-                    at a time. You can add more PDFs before saving.
+                    <button
+                        type="button"
+                        disabled={pasteLocked || !hasPastedText}
+                        onClick={() => setEmailText("")}
+                        className={secondaryClass}
+                    >
+                        Clear text
+                    </button>
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                    Sales order: SL → D365 · KP → AX · Both for the same
+                    invoice → AX/D365. Matching invoice rows are grouped.
                 </p>
 
-                {hasSaved && (
-                    <p className="mt-2 text-sm text-muted-foreground">
-                        This batch has saved invoices. Finish the remaining
-                        drafts, then clear the batch to add new PDFs.
+                {(hasSaved || hasUnknown) && (
+                    <p className="text-sm text-muted-foreground">
+                        Clear this batch before extracting another email.
+                        Check any unconfirmed save in the dashboard first.
                     </p>
                 )}
             </form>
 
-            {files.length > 0 && (
-                <section className="rounded-xl border border-border bg-card p-4">
-                    <h2 className="font-semibold">
-                        Selected PDFs ({files.length})
-                    </h2>
-
-                    <ul className="mt-3 divide-y divide-border">
-                        {files.map((item) => (
-                            <li key={item.id} className="py-3">
-                                <div className="flex flex-wrap items-center gap-3">
-                                    <div className="min-w-0 flex-1">
-                                        <p className="break-all text-sm font-medium">
-                                            {item.file.name}
-                                        </p>
-                                        <p className="mt-1 text-xs text-muted-foreground">
-                                            {(item.file.size / 1024 / 1024).toFixed(2)} MB
-                                            {" · "}
-                                            {item.message}
-                                        </p>
-                                    </div>
-
-                                    <select
-                                        aria-label={`Date format for ${item.file.name}`}
-                                        value={item.dateFormat}
-                                        disabled={
-                                            busy !== null ||
-                                            item.status === "done" ||
-                                            hasSaved ||
-                                            hasUnknown
-                                        }
-                                        onChange={(event) =>
-                                            patchFile(item.id, {
-                                                dateFormat: event.target.value,
-                                            })
-                                        }
-                                        className={`${inputClass} max-w-[190px]`}
-                                    >
-                                        <option value="mdy">Month / Day / Year</option>
-                                        <option value="dmy">Day / Month / Year</option>
-                                    </select>
-
-                                    <button
-                                        type="button"
-                                        disabled={busy !== null || hasUnknown}
-                                        onClick={() => removeFile(item.id)}
-                                        className={secondaryClass}
-                                    >
-                                        Remove PDF
-                                    </button>
-                                </div>
-
-                                {item.issues.length > 0 && (
-                                    <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-muted-foreground">
-                                        {item.issues.map((issue, index) => (
-                                            <li key={index}>{issue}</li>
-                                        ))}
-                                    </ul>
-                                )}
-                            </li>
-                        ))}
-                    </ul>
-                </section>
-            )}
-
             {message && (
                 <p
                     role="status"
-                    className="rounded-lg border border-border bg-card p-4 text-sm"
+                    className="rounded-lg border border-border bg-card p-3 text-sm"
                 >
                     {message}
                 </p>
             )}
 
             {hasDuplicates && (
-                <p className="rounded-lg border border-blue-500/40 bg-blue-500/5 p-4 text-sm">
-                    Duplicate invoice numbers found. Use “Combine quantities”
-                    only for separate quantities. Remove repeated copies.
+                <p role="alert" className="text-sm text-amber-700 dark:text-amber-300">
+                    Duplicate invoice numbers exist in this preview. Combine
+                    separate quantities, or remove repeated copies before saving.
                 </p>
             )}
 
             {drafts.length > 0 && (
-                <form onSubmit={save} className="space-y-4">
-                    <h2 className="font-semibold">
-                        Review invoices ({drafts.length})
-                    </h2>
-
-                    <div className="overflow-x-auto rounded-xl border border-border bg-card">
-                        <table className="w-full min-w-[1250px] text-left text-sm">
-                            <caption className="sr-only">
-                                Editable invoices extracted from selected PDFs
-                            </caption>
-
+                <form onSubmit={save} className="space-y-4" aria-busy={busy === "save"}>
+                    <div className="overflow-x-auto rounded-xl border border-border">
+                        <table className="w-full text-left text-sm">
                             <thead className="bg-muted">
                                 <tr>
                                     {[
                                         "Invoice *",
                                         "Supplier *",
-                                        "Roll qty",
+                                        "Roll quantity",
+                                        "Meters",
                                         "System *",
                                         "Document date *",
                                         "Local / Import *",
@@ -875,42 +678,36 @@ export default function ImportForm() {
                                 </tr>
                             </thead>
 
-                            <tbody>
+                            <tbody className="divide-y divide-border bg-card">
                                 {drafts.map((row) => {
                                     const locked =
                                         busy !== null ||
-                                        isProtected(row) ||
-                                        hasUnknown;
+                                        hasUnknown ||
+                                        isProtected(row);
 
-                                    const duplicate =
-                                        (counts.get(invoiceKey(row.invoice)) ?? 0) > 1;
-
-                                    const matchingRows = drafts.filter(
+                                    const matching = drafts.filter(
                                         (item) =>
                                             invoiceKey(item.invoice) ===
                                             invoiceKey(row.invoice),
                                     );
 
-                                    function textInput(
-                                        field: EditableField,
+                                    const duplicate =
+                                        Boolean(invoiceKey(row.invoice)) &&
+                                        matching.length > 1;
+
+                                    function field(
+                                        name: EditableField,
                                         label: string,
-                                        options: {
-                                            type?: string;
-                                            required?: boolean;
-                                            maxLength?: number;
-                                            min?: string | number;
-                                            max?: string | number;
-                                            step?: number;
-                                        } = {},
+                                        options: InputHTMLAttributes<HTMLInputElement> = {},
                                     ) {
                                         return (
                                             <input
                                                 {...options}
                                                 aria-label={`${label}: ${row.invoice}`}
-                                                value={row[field]}
+                                                value={row[name]}
                                                 disabled={locked}
                                                 onChange={(event) =>
-                                                    edit(row.id, field, event.target.value)
+                                                    edit(row.id, name, event.target.value)
                                                 }
                                                 className={inputClass}
                                             />
@@ -918,29 +715,30 @@ export default function ImportForm() {
                                     }
 
                                     return (
-                                        <tr
-                                            key={row.id}
-                                            className="border-t border-border align-top"
-                                        >
-                                            <td className="w-[260px] p-3">
-                                                {textInput("invoice", "Invoice number", {
+                                        <tr key={row.id} className="align-top">
+                                            <td className="min-w-[230px] p-3">
+                                                {field("invoice", "Invoice number", {
                                                     required: true,
                                                     maxLength: 100,
                                                 })}
 
                                                 <details className="mt-2 text-xs">
-                                                    <summary className="cursor-pointer text-blue-700 dark:text-blue-400">
-                                                        Sources ({row.parts.length})
+                                                    <summary className="cursor-pointer text-muted-foreground">
+                                                        {row.parts.reduce(
+                                                            (sum, part) =>
+                                                                sum + part.data.source_row_count,
+                                                            0,
+                                                        )} source rows
                                                     </summary>
 
-                                                    <ul className="mt-2 space-y-2 text-muted-foreground">
-                                                        {row.parts.map((part, index) => (
-                                                            <li key={index} className="break-all">
-                                                                {part.fileName}
-                                                                {" · Qty: "}
-                                                                {part.data.roll_quantity ?? "blank"}
+                                                    <ul className="mt-2 space-y-2">
+                                                        {row.parts.map((part) => (
+                                                            <li key={part.id}>
+                                                                {part.name}
+                                                                <br />
+                                                                Rolls: {part.data.roll_quantity ?? "—"}
                                                                 {" · "}
-                                                                {part.data.source_row_count} row(s)
+                                                                Meters: {part.data.meter_quantity ?? "—"}
                                                             </li>
                                                         ))}
                                                     </ul>
@@ -948,40 +746,51 @@ export default function ImportForm() {
 
                                                 {row.notes.length > 0 && (
                                                     <details className="mt-2 text-xs">
-                                                        <summary className="cursor-pointer">
-                                                            Source / review notes
+                                                        <summary className="cursor-pointer text-amber-700 dark:text-amber-300">
+                                                            Review notes ({row.notes.length})
                                                         </summary>
-                                                        <ul className="mt-2 list-disc space-y-1 pl-4 text-muted-foreground">
-                                                            {row.notes.map((note, index) => (
-                                                                <li key={index}>{note}</li>
+                                                        <ul className="mt-2 list-disc space-y-1 pl-4">
+                                                            {row.notes.map((note) => (
+                                                                <li key={note}>{note}</li>
                                                             ))}
                                                         </ul>
                                                     </details>
                                                 )}
                                             </td>
 
-                                            <td className="min-w-[180px] p-3">
-                                                {textInput("supplier", "Supplier", {
+                                            <td className="min-w-[200px] p-3">
+                                                {field("supplier", "Supplier", {
                                                     required: true,
                                                     maxLength: 250,
                                                 })}
                                             </td>
 
-                                            <td className="w-[125px] p-3">
-                                                {textInput("quantity", "Roll quantity", {
+                                            <td className="min-w-[145px] p-3">
+                                                {field("quantity", "Roll quantity", {
                                                     type: "number",
                                                     min: 0,
-                                                    max: MAX_QUANTITY,
+                                                    max: MAX_ROLLS,
                                                     step: 1,
+                                                    placeholder: "Optional",
                                                 })}
                                             </td>
 
-                                            <td className="w-[150px] p-3">
+                                            <td className="min-w-[160px] p-3">
+                                                {field("meters", "Meters", {
+                                                    type: "number",
+                                                    min: 0,
+                                                    max: MAX_METERS,
+                                                    step: 0.001,
+                                                    placeholder: "Optional",
+                                                })}
+                                            </td>
+
+                                            <td className="min-w-[140px] p-3">
                                                 <select
                                                     aria-label={`System: ${row.invoice}`}
                                                     required
-                                                    value={row.system}
                                                     disabled={locked}
+                                                    value={row.system}
                                                     onChange={(event) =>
                                                         edit(row.id, "system", event.target.value)
                                                     }
@@ -994,8 +803,8 @@ export default function ImportForm() {
                                                 </select>
                                             </td>
 
-                                            <td className="w-[180px] p-3">
-                                                {textInput("date", "Document date", {
+                                            <td className="min-w-[170px] p-3">
+                                                {field("date", "Document date", {
                                                     type: "date",
                                                     required: true,
                                                     min: "0001-01-01",
@@ -1003,12 +812,12 @@ export default function ImportForm() {
                                                 })}
                                             </td>
 
-                                            <td className="w-[155px] p-3">
+                                            <td className="min-w-[150px] p-3">
                                                 <select
-                                                    aria-label={`Shipment: ${row.invoice}`}
+                                                    aria-label={`Local / Import: ${row.invoice}`}
                                                     required
-                                                    value={row.shipment}
                                                     disabled={locked}
+                                                    value={row.shipment}
                                                     onChange={(event) =>
                                                         edit(row.id, "shipment", event.target.value)
                                                     }
@@ -1020,14 +829,14 @@ export default function ImportForm() {
                                                 </select>
                                             </td>
 
-                                            <td className="min-w-[210px] p-3">
+                                            <td className="min-w-[230px] p-3">
                                                 <p className="font-medium">
-                                                    {row.status === "unknown"
-                                                        ? "Check dashboard"
-                                                        : row.status === "saved"
-                                                            ? "Saved"
-                                                            : row.status === "saving"
-                                                                ? "Saving…"
+                                                    {row.status === "saved"
+                                                        ? "Saved"
+                                                        : row.status === "saving"
+                                                            ? "Saving…"
+                                                            : row.status === "unknown"
+                                                                ? "Check dashboard"
                                                                 : duplicate
                                                                     ? "Duplicate invoice"
                                                                     : row.status === "error"
@@ -1046,7 +855,7 @@ export default function ImportForm() {
                                                         type="button"
                                                         disabled={
                                                             locked ||
-                                                            matchingRows.some(isProtected)
+                                                            matching.some(isProtected)
                                                         }
                                                         onClick={() => combine(row)}
                                                         className={`${secondaryClass} mt-3`}
@@ -1074,7 +883,7 @@ export default function ImportForm() {
                     </div>
 
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                        <p className="text-sm text-muted-foreground" role="status">
+                        <p role="status" className="text-sm text-muted-foreground">
                             {savedCount} saved · {remaining} remaining
                         </p>
 
@@ -1084,7 +893,7 @@ export default function ImportForm() {
                                 busy !== null ||
                                 hasUnknown ||
                                 hasDuplicates ||
-                                pendingFiles.length > 0 ||
+                                hasPastedText ||
                                 remaining === 0
                             }
                             className={buttonClass}
@@ -1121,7 +930,7 @@ export default function ImportForm() {
                     Back to dashboard
                 </Link>
 
-                {(files.length > 0 || drafts.length > 0) && (
+                {(drafts.length > 0 || hasPastedText) && (
                     <button
                         type="button"
                         disabled={busy !== null}

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import Form from "next/form";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
@@ -16,10 +17,9 @@ import {
 
 import ThemeToggle from "@/components/theme-toggle";
 import OverviewRefresh from "@/components/overview-refresh";
-import { createClient as createSessionClient } from "@/lib/supabase/server";
-import Form from "next/form";
 import PendingReasonDialog from "@/components/pending-reason-dialog";
 import VehicleLabel from "@/components/vehicle-label";
+import { createClient as createSessionClient } from "@/lib/supabase/server";
 
 type SearchParams = {
   q?: string | string[];
@@ -44,6 +44,7 @@ type PublicInvoice = {
   shipment_type: string;
   document_share_date: string | null;
   roll_quantity: number | null;
+  meter_quantity: number | null;
   status: InvoiceStatus;
   pending_reason: string | null;
   started_at: string | null;
@@ -105,10 +106,15 @@ const statusStyles: Record<InvoiceStatus, string> = {
 };
 
 const inputClass =
-  "h-11 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-blue-600 focus:ring-2 focus:ring-ring/25";
+  "h-11 w-full rounded-lg border border-input bg-background px-3 " +
+  "text-sm text-foreground outline-none focus:border-blue-600 " +
+  "focus:ring-2 focus:ring-ring/25";
 
 const secondaryButtonClass =
-  "inline-flex min-h-11 items-center justify-center rounded-lg border border-input bg-card px-4 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "inline-flex min-h-11 items-center justify-center rounded-lg " +
+  "border border-input bg-card px-4 text-sm font-medium " +
+  "hover:bg-muted focus-visible:outline-none focus-visible:ring-2 " +
+  "focus-visible:ring-ring";
 
 function single(value: string | string[] | undefined) {
   return typeof value === "string" ? value : "";
@@ -137,9 +143,15 @@ function formatDate(value: string | null) {
 
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
 
-  if (!match) return "—";
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : "—";
+}
 
-  return `${match[3]}/${match[2]}/${match[1]}`;
+function formatMeters(value: number | null) {
+  return value == null
+    ? "—"
+    : Number(value).toLocaleString("en-GB", {
+      maximumFractionDigits: 3,
+    });
 }
 
 function DateTime({ value }: { value: string | null }) {
@@ -171,24 +183,14 @@ function DateTime({ value }: { value: string | null }) {
   );
 }
 
-function ProcessingDetails({
-  invoice,
-}: {
-  invoice: PublicInvoice;
-}) {
+function ProcessingDetails({ invoice }: { invoice: PublicInvoice }) {
   const stages = invoice.stages ?? [];
 
   return (
     <details className="group/details min-w-40">
       <summary className="cursor-pointer rounded-lg px-2 py-2 text-xs font-medium text-blue-700 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-blue-400">
-        <span className="group-open/details:hidden">
-          View progress
-        </span>
-
-        <span className="hidden group-open/details:inline">
-          Hide progress
-        </span>
-
+        <span className="group-open/details:hidden">View progress</span>
+        <span className="hidden group-open/details:inline">Hide progress</span>
         <span className="sr-only">
           {" "}for invoice {invoice.invoice_number}
         </span>
@@ -201,15 +203,11 @@ function ProcessingDetails({
           </p>
         ) : (
           stages.map((stage) => (
-            <section
-              key={stage.system_name}
-              className="p-3"
-            >
+            <section key={stage.system_name} className="p-3">
               <div className="flex items-center justify-between gap-2">
                 <h3 className="font-semibold">
                   {stage.system_name} Pre-GRN
                 </h3>
-
                 <span className="text-muted-foreground">
                   {stage.is_done
                     ? "Done"
@@ -220,16 +218,12 @@ function ProcessingDetails({
               </div>
 
               <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
-                <dt className="text-muted-foreground">
-                  Started
-                </dt>
+                <dt className="text-muted-foreground">Started</dt>
                 <dd className="text-right">
                   <DateTime value={stage.started_at} />
                 </dd>
 
-                <dt className="text-muted-foreground">
-                  Ended
-                </dt>
+                <dt className="text-muted-foreground">Ended</dt>
                 <dd className="text-right">
                   <DateTime value={stage.ended_at} />
                 </dd>
@@ -247,10 +241,7 @@ function ProcessingDetails({
 
         <section className="p-3">
           <div className="flex items-center justify-between gap-2">
-            <h3 className="font-semibold">
-              ASN update
-            </h3>
-
+            <h3 className="font-semibold">ASN update</h3>
             <span className="text-muted-foreground">
               {!invoice.asn
                 ? "Unavailable"
@@ -261,21 +252,14 @@ function ProcessingDetails({
           </div>
 
           <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
-            <dt className="text-muted-foreground">
-              Share date
-            </dt>
+            <dt className="text-muted-foreground">Share date</dt>
             <dd className="text-right tabular-nums">
-              {formatDate(
-                invoice.asn?.share_date ?? null,
-              )}
+              {formatDate(invoice.asn?.share_date ?? null)}
             </dd>
 
-            <dt className="text-muted-foreground">
-              ASN user
-            </dt>
+            <dt className="text-muted-foreground">ASN user</dt>
             <dd className="min-w-0 text-right font-medium [overflow-wrap:anywhere]">
-              {invoice.asn?.assigned_user_name?.trim() ||
-                "—"}
+              {invoice.asn?.assigned_user_name?.trim() || "—"}
             </dd>
           </dl>
         </section>
@@ -286,6 +270,7 @@ function ProcessingDetails({
 
 async function PublicOverview({ searchParams }: Props) {
   await connection();
+
   const sessionClient = await createSessionClient();
 
   const {
@@ -308,20 +293,15 @@ async function PublicOverview({ searchParams }: Props) {
   }
 
   const params = await searchParams;
-
   const q = single(params.q).trim().slice(0, 100);
 
   const requestedStatus = single(params.status);
-  const status = ["Pending", "Complete", "Reject"].includes(
-    requestedStatus,
-  )
+  const status = ["Pending", "Complete", "Reject"].includes(requestedStatus)
     ? requestedStatus
     : "";
 
   const requestedSystem = single(params.system);
-  const system = ["AX", "D365", "AX/D365"].includes(
-    requestedSystem,
-  )
+  const system = ["AX", "D365", "AX/D365"].includes(requestedSystem)
     ? requestedSystem
     : "";
 
@@ -340,7 +320,7 @@ async function PublicOverview({ searchParams }: Props) {
     throw new Error("Public overview is not configured.");
   }
 
-  // Public read-only RPCs. No user session or service-role key.
+  // Public read-only client. Do not use an admin secret here.
   const supabase = createClient(url, key, {
     auth: {
       persistSession: false,
@@ -350,7 +330,7 @@ async function PublicOverview({ searchParams }: Props) {
   });
 
   const [overviewResult, summaryResult] = await Promise.all([
-    supabase.rpc("get_public_invoice_overview_v3", {
+    supabase.rpc("get_public_invoice_overview_v4", {
       p_search: q,
       p_status: status,
       p_page: page,
@@ -447,13 +427,11 @@ async function PublicOverview({ searchParams }: Props) {
 
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <ThemeToggle />
-
             <Link
               href={canOpenDashboard ? "/dashboard" : "/login"}
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-semibold text-white hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {canOpenDashboard ? "Back to dashboard" : "Sign in"}
-
               <ArrowRight
                 aria-hidden="true"
                 className="hidden size-4 sm:block"
@@ -476,14 +454,12 @@ async function PublicOverview({ searchParams }: Props) {
             <p className="text-xs font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-400">
               Operations overview
             </p>
-
             <h1
               id="overview-title"
               className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl"
             >
               Unloading Tracker Dashboard Overview
             </h1>
-
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               Find an invoice, check its status and follow
               processing progress in one place.
@@ -496,75 +472,64 @@ async function PublicOverview({ searchParams }: Props) {
           </span>
         </section>
 
-        <section
-          aria-labelledby="summary-title"
-          className="space-y-3"
-        >
+        <section aria-labelledby="summary-title" className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2
-              id="summary-title"
-              className="text-sm font-semibold"
-            >
+            <h2 id="summary-title" className="text-sm font-semibold">
               Invoice summary
             </h2>
-
             <p className="text-xs text-muted-foreground">
               All time · Independent of table filters
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            {summaryCards.map(({ label, value, icon: Icon, filter, iconClass }) => {
-              const active = status === filter;
+            {summaryCards.map(
+              ({ label, value, icon: Icon, filter, iconClass }) => {
+                const active = status === filter;
 
-              return (
-                <Link
-                  key={label}
-                  href={overviewUrl(q, filter, 1, system)}
-                  scroll={false}
-                  aria-current={active ? "true" : undefined}
-                  aria-label={
-                    filter
-                      ? `Filter invoices: ${label}`
-                      : "Show all statuses"
-                  }
-                  className={[
-                    "flex min-h-24 items-center justify-between gap-3",
-                    "rounded-xl border p-4 transition-colors",
-                    "focus-visible:outline-none focus-visible:ring-2",
-                    "focus-visible:ring-ring motion-reduce:transition-none",
-                    active
-                      ? "border-blue-500 bg-blue-50/60 dark:border-blue-400 dark:bg-blue-400/10"
-                      : "border-border bg-card hover:border-blue-400 hover:bg-muted",
-                  ].join(" ")}
-                >
-                  <div className="min-w-0">
-                    <p className="text-xs text-muted-foreground sm:text-sm">
-                      {label}
-                    </p>
-
-                    <p className="mt-1.5 text-2xl font-semibold tracking-tight tabular-nums">
-                      {summaryFailed
-                        ? "—"
-                        : (value ?? 0).toLocaleString("en-GB")}
-                    </p>
-                  </div>
-
-                  <div
-                    className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${iconClass}`}
+                return (
+                  <Link
+                    key={label}
+                    href={overviewUrl(q, filter, 1, system)}
+                    scroll={false}
+                    aria-current={active ? "true" : undefined}
+                    aria-label={
+                      filter
+                        ? `Filter invoices: ${label}`
+                        : "Show all statuses"
+                    }
+                    className={[
+                      "flex min-h-24 items-center justify-between gap-3 rounded-xl border p-4 transition-colors",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none",
+                      active
+                        ? "border-blue-500 bg-blue-50/60 dark:border-blue-400 dark:bg-blue-400/10"
+                        : "border-border bg-card hover:border-blue-400 hover:bg-muted",
+                    ].join(" ")}
                   >
-                    <Icon aria-hidden="true" className="size-4" />
-                  </div>
-                </Link>
-              );
-            })}
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground sm:text-sm">
+                        {label}
+                      </p>
+                      <p className="mt-1.5 text-2xl font-semibold tracking-tight tabular-nums">
+                        {summaryFailed
+                          ? "—"
+                          : (value ?? 0).toLocaleString("en-GB")}
+                      </p>
+                    </div>
+
+                    <div
+                      className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${iconClass}`}
+                    >
+                      <Icon aria-hidden="true" className="size-4" />
+                    </div>
+                  </Link>
+                );
+              },
+            )}
           </div>
 
           {summaryFailed && (
-            <p
-              role="alert"
-              className="text-sm text-muted-foreground"
-            >
+            <p role="alert" className="text-sm text-muted-foreground">
               Summary counts are temporarily unavailable.
             </p>
           )}
@@ -580,16 +545,11 @@ async function PublicOverview({ searchParams }: Props) {
         >
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-4 sm:px-6">
             <div>
-              <h2
-                id="invoice-list-title"
-                className="font-semibold"
-              >
+              <h2 id="invoice-list-title" className="font-semibold">
                 Invoice overview
               </h2>
-
               <p className="mt-1 text-xs text-muted-foreground">
-                Dates and times use Sri Lanka time
-                (UTC+05:30).
+                Dates and times use Sri Lanka time (UTC+05:30).
               </p>
             </div>
 
@@ -612,15 +572,13 @@ async function PublicOverview({ searchParams }: Props) {
                 htmlFor="public-search"
                 className="mb-2 block text-xs font-medium text-muted-foreground"
               >
-                Invoice / Supplier/ Vehicle Number
+                Invoice / Supplier / Vehicle Number
               </label>
-
               <div className="relative">
                 <Search
                   aria-hidden="true"
                   className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
                 />
-
                 <input
                   key={`q-${q}`}
                   id="public-search"
@@ -628,7 +586,7 @@ async function PublicOverview({ searchParams }: Props) {
                   type="search"
                   defaultValue={q}
                   maxLength={100}
-                  placeholder="Search invoice,supplier or Vehicle Number"
+                  placeholder="Search invoice, supplier or vehicle"
                   className={`${inputClass} pl-10`}
                 />
               </div>
@@ -641,7 +599,6 @@ async function PublicOverview({ searchParams }: Props) {
               >
                 Status
               </label>
-
               <select
                 key={`status-${status}`}
                 id="public-status"
@@ -663,7 +620,6 @@ async function PublicOverview({ searchParams }: Props) {
               >
                 System
               </label>
-
               <select
                 key={`system-${system}`}
                 id="public-system"
@@ -712,30 +668,26 @@ async function PublicOverview({ searchParams }: Props) {
               >
                 <table className="w-full min-w-[1450px] border-separate border-spacing-0 text-left text-sm">
                   <caption className="sr-only">
-                    Read-only invoice details and
-                    processing progress in Sri Lanka
-                    time.
+                    Read-only invoice details, quantities and
+                    processing progress in Sri Lanka time.
                   </caption>
 
                   <thead>
                     <tr>
-                      {HEADINGS.map(
-                        (heading, index) => (
-                          <th
-                            key={heading}
-                            scope="col"
-                            className={[
-                              "sticky top-0 whitespace-nowrap border-y border-border",
-                              "bg-background px-4 py-3 text-xs font-medium text-muted-foreground",
-                              index === 0
-                                ? "left-0 z-30 w-44 min-w-44 border-r"
-                                : "z-20",
-                            ].join(" ")}
-                          >
-                            {heading}
-                          </th>
-                        ),
-                      )}
+                      {HEADINGS.map((heading, index) => (
+                        <th
+                          key={heading}
+                          scope="col"
+                          className={[
+                            "sticky top-0 whitespace-nowrap border-y border-border bg-background px-4 py-3 text-xs font-medium text-muted-foreground",
+                            index === 0
+                              ? "left-0 z-30 w-44 min-w-44 border-r"
+                              : "z-20",
+                          ].join(" ")}
+                        >
+                          {heading}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
 
@@ -753,21 +705,15 @@ async function PublicOverview({ searchParams }: Props) {
                               ? { boxShadow: "inset 3px 0 0 #f59e0b" }
                               : undefined
                           }
-                          className="sticky left-0 z-10 w-44 min-w-44 max-w-44
-                                                    border-b border-r border-border bg-card px-4 py-3
-                                                    align-top font-semibold text-foreground
-                                                    group-hover:bg-muted group-focus-within:bg-muted
-                                                    [overflow-wrap:anywhere]"
+                          className="sticky left-0 z-10 w-44 min-w-44 max-w-44 border-b border-r border-border bg-card px-4 py-3 align-top font-semibold text-foreground group-hover:bg-muted group-focus-within:bg-muted [overflow-wrap:anywhere]"
                         >
                           <div>{invoice.invoice_number}</div>
-
-                          <div>
-                            <VehicleLabel
-                              value={invoice.vehicle_number}
-                              receivedDate={invoice.vehicle_received_date}
-                            />
-                          </div>
+                          <VehicleLabel
+                            value={invoice.vehicle_number}
+                            receivedDate={invoice.vehicle_received_date}
+                          />
                         </th>
+
                         <td className="min-w-48 max-w-64 break-words px-4 py-3 align-top">
                           {invoice.supplier}
                         </td>
@@ -777,43 +723,66 @@ async function PublicOverview({ searchParams }: Props) {
                         </td>
 
                         <td className="px-4 py-3 align-top">
-                          {invoice.shipment_type ===
-                            "IMPORT"
+                          {invoice.shipment_type === "IMPORT"
                             ? "Import"
-                            : invoice.shipment_type ===
-                              "LOCAL"
+                            : invoice.shipment_type === "LOCAL"
                               ? "Local"
                               : invoice.shipment_type}
                         </td>
 
+                        {/* Document date */}
                         <td className="whitespace-nowrap px-4 py-3 align-top tabular-nums">
-                          {formatDate(
-                            invoice.document_share_date,
-                          )}
+                          {formatDate(invoice.document_share_date)}
                         </td>
 
-                        <td className="px-4 py-3 align-top tabular-nums">
-                          {invoice.roll_quantity ==
-                            null
-                            ? "—"
-                            : invoice.roll_quantity.toLocaleString(
-                              "en-GB",
+                        {/* Roll quantity and meters: ONE column */}
+                        <td className="whitespace-nowrap px-4 py-3 align-top tabular-nums">
+                          <div className="flex flex-col items-start gap-1.5">
+                            {invoice.roll_quantity != null && (
+                              <span>
+                                {Number(invoice.roll_quantity).toLocaleString("en-GB")}
+                              </span>
                             )}
+
+                            {invoice.meter_quantity != null && (
+                              <div className="inline-flex items-center gap-2">
+                                <span>
+                                  {Number(invoice.meter_quantity).toLocaleString("en-GB", {
+                                    maximumFractionDigits: 3,
+                                  })}
+                                </span>
+
+                                <span
+                                  className="inline-flex items-center rounded-md
+                                              border border-blue-200 bg-blue-50 px-1.5 py-0.5
+                                              text-[10px] font-semibold leading-none text-blue-700
+                                              dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300"
+                                >
+                                  MTR
+                                </span>
+                              </div>
+                            )}
+
+                            {invoice.roll_quantity == null &&
+                              invoice.meter_quantity == null && (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                          </div>
+                        </td>
+
+                        {/* Start date */}
+                        <td className="px-4 py-3 align-top text-muted-foreground">
+                          <DateTime value={invoice.started_at} />
+                        </td>
+
+                        <td className="px-4 py-3 align-top text-muted-foreground">
+                          <DateTime value={invoice.started_at} />
                         </td>
 
                         <td className="px-4 py-3 align-top text-muted-foreground">
                           <DateTime
                             value={
-                              invoice.started_at
-                            }
-                          />
-                        </td>
-
-                        <td className="px-4 py-3 align-top text-muted-foreground">
-                          <DateTime
-                            value={
-                              invoice.status ===
-                                "Complete"
+                              invoice.status === "Complete"
                                 ? invoice.completed_at
                                 : null
                             }
@@ -823,8 +792,7 @@ async function PublicOverview({ searchParams }: Props) {
                         <td className="px-4 py-3 align-top">
                           <div className="flex flex-col items-start">
                             <span
-                              className={`inline-flex whitespace-nowrap rounded-full border
-                                px-2.5 py-1 text-xs font-medium ${statusStyles[invoice.status]}`}
+                              className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-medium ${statusStyles[invoice.status]}`}
                             >
                               {statusLabels[invoice.status]}
                             </span>
@@ -841,9 +809,7 @@ async function PublicOverview({ searchParams }: Props) {
                         </td>
 
                         <td className="px-4 py-3 align-top">
-                          <ProcessingDetails
-                            invoice={invoice}
-                          />
+                          <ProcessingDetails invoice={invoice} />
                         </td>
                       </tr>
                     ))}
@@ -859,7 +825,6 @@ async function PublicOverview({ searchParams }: Props) {
                               ? "No matching invoices"
                               : "No invoices available yet"}
                           </p>
-
                           <p className="mt-2 text-sm text-muted-foreground">
                             {hasFilters
                               ? "Try another invoice number, supplier or filter."
@@ -869,7 +834,7 @@ async function PublicOverview({ searchParams }: Props) {
                           {hasFilters && (
                             <Link
                               href="/"
-                              className="mt-4 inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-blue-700 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-blue-400"
+                              className="mt-4 inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-blue-700 hover:bg-muted dark:text-blue-400"
                             >
                               Clear filters
                             </Link>
@@ -885,8 +850,7 @@ async function PublicOverview({ searchParams }: Props) {
                 <p className="text-xs text-muted-foreground">
                   Showing {total === 0 ? 0 : from + 1}–
                   {Math.min(from + items.length, total)}
-                  {" "}of {total.toLocaleString("en-GB")}
-                  {" "}invoices
+                  {" "}of {total.toLocaleString("en-GB")} invoices
                 </p>
 
                 <nav
@@ -895,12 +859,7 @@ async function PublicOverview({ searchParams }: Props) {
                 >
                   {page > 1 && (
                     <Link
-                      href={overviewUrl(
-                        q,
-                        status,
-                        page - 1,
-                        system,
-                      )}
+                      href={overviewUrl(q, status, page - 1, system)}
                       className={secondaryButtonClass}
                     >
                       Previous
@@ -913,12 +872,7 @@ async function PublicOverview({ searchParams }: Props) {
 
                   {page < totalPages && (
                     <Link
-                      href={overviewUrl(
-                        q,
-                        status,
-                        page + 1,
-                        system,
-                      )}
+                      href={overviewUrl(q, status, page + 1, system)}
                       className={secondaryButtonClass}
                     >
                       Next
