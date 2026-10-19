@@ -841,6 +841,20 @@ export default function ImportForm() {
                                     return (
                                         <tr key={row.id} className="align-top">
                                             <td className="min-w-[230px] p-3">
+                                                <input
+                                                    type="text"
+                                                    aria-label={`Invoice number: ${row.invoice}`}
+                                                    value={row.invoice}
+                                                    required
+                                                    maxLength={100}
+                                                    disabled={locked}
+                                                    onChange={(event) =>
+                                                        edit(row.id, "invoice", event.target.value)
+                                                    }
+                                                    placeholder="Invoice number"
+                                                    className={`${inputClass} min-w-[230px] font-semibold`}
+                                                />
+
                                                 {row.parts.some((part) => part.data.is_foc) && (
                                                     <span
                                                         className="mt-2 inline-flex items-center rounded-md
@@ -959,6 +973,7 @@ export default function ImportForm() {
                                             </td>
 
                                             <td className="min-w-[230px] p-3">
+
                                                 <p className="font-medium">
                                                     {row.status === "saved"
                                                         ? "Saved"
