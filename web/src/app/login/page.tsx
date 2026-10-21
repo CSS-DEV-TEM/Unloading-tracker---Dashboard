@@ -13,7 +13,10 @@ import {
     ArrowRight,
     Eye,
     EyeOff,
+    FileCheck2,
     Loader2,
+    PackageCheck,
+    Truck,
 } from "lucide-react";
 
 import ThemeToggle from "@/components/theme-toggle";
@@ -22,10 +25,10 @@ import { signIn } from "./actions";
 const EMAIL_STORAGE_KEY = "efl-unloading-remembered-email";
 
 const inputClass =
-    "h-11 w-full rounded-lg border border-input bg-background " +
-    "px-3 text-base text-foreground outline-none " +
+    "h-11 w-full rounded-md border border-input bg-card " +
+    "px-3 text-base text-foreground outline-none shadow-xs " +
     "placeholder:text-muted-foreground " +
-    "focus:border-blue-500 focus:ring-2 focus:ring-ring/25 " +
+    "focus:border-ring focus:ring-3 focus:ring-ring/25 " +
     "read-only:opacity-70";
 
 export default function LoginPage() {
@@ -85,14 +88,70 @@ export default function LoginPage() {
         }
     }
 
+    const facts = [
+        { icon: Truck, text: "Vehicle arrivals and unloading status" },
+        { icon: FileCheck2, text: "AX and D365 processing for every invoice" },
+        { icon: PackageCheck, text: "ASN updates, from dock to GRN" },
+    ];
+
     return (
-        <main className="flex min-h-dvh flex-col bg-background px-4 py-4 text-foreground">
-            <section
-                aria-labelledby="login-heading"
-                className="mx-auto my-auto w-full max-w-[400px] shrink-0 rounded-2xl border border-border bg-card p-5 shadow-lg shadow-black/5 sm:p-6"
+        <main className="grid min-h-dvh bg-background text-foreground lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
+            <aside
+                aria-hidden="true"
+                className="relative hidden flex-col justify-between overflow-hidden bg-sidebar p-12 text-sidebar-foreground lg:flex"
             >
-                <div className="flex items-center justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-3">
+                <div
+                    className="pointer-events-none absolute inset-0 opacity-[0.07]"
+                    style={{
+                        backgroundImage:
+                            "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)",
+                        backgroundSize: "44px 44px",
+                    }}
+                />
+
+                <div className="relative flex items-center gap-3">
+                    <Image
+                        src="/efl-logo.png"
+                        alt=""
+                        width={44}
+                        height={44}
+                        priority
+                        unoptimized
+                        className="size-11 shrink-0 rounded-lg bg-white object-contain p-1.5"
+                    />
+                    <div>
+                        <p className="font-heading text-lg font-semibold leading-tight text-white">
+                            Unloading Tracker
+                        </p>
+                        <p className="text-xs text-sidebar-foreground/70">
+                            EFL 3PL · CSS Division
+                        </p>
+                    </div>
+                </div>
+
+                <div className="relative max-w-md">
+                    <h2 className="font-heading text-5xl font-semibold leading-[1.05] tracking-tight text-white">
+                        Every invoice accounted for, from dock to GRN.
+                    </h2>
+
+                    <ul className="mt-9 space-y-4">
+                        {facts.map(({ icon: Icon, text }) => (
+                            <li key={text} className="flex items-center gap-3 text-sm">
+                                <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-sidebar-accent text-sidebar-primary">
+                                    <Icon className="size-[18px]" />
+                                </span>
+                                {text}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+
+                <div className="dock-stripe relative -mx-12 -mb-12 h-3" />
+            </aside>
+
+            <div className="flex min-h-dvh flex-col px-4 py-4 sm:px-8">
+                <div className="flex items-center justify-between gap-3 lg:justify-end">
+                    <div className="flex min-w-0 items-center gap-3 lg:hidden">
                         <Image
                             src="/efl-logo.png"
                             alt="EFL"
@@ -102,40 +161,39 @@ export default function LoginPage() {
                             unoptimized
                             className="size-10 shrink-0 object-contain"
                         />
-
                         <div className="min-w-0">
-                            <p className="text-sm font-semibold tracking-tight">
+                            <p className="font-heading text-base font-semibold leading-tight">
                                 Unloading Tracker
                             </p>
-                            <p className="mt-0.5 text-xs text-muted-foreground">
+                            <p className="text-xs text-muted-foreground">
                                 EFL 3PL · CSS Division
                             </p>
                         </div>
                     </div>
 
-                    <div className="shrink-0">
-                        <ThemeToggle />
-                    </div>
+                    <ThemeToggle />
                 </div>
 
-                <div className="mt-5">
+                <section
+                    aria-labelledby="login-heading"
+                    className="dock-rise mx-auto my-auto w-full max-w-[400px] py-10"
+                >
                     <h1
                         id="login-heading"
-                        className="text-2xl font-semibold tracking-tight"
+                        className="text-3xl font-semibold tracking-tight"
                     >
-                        Welcome back
+                        Sign in
                     </h1>
 
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        Sign in with your workspace account.
+                    <p className="mt-1.5 text-sm text-muted-foreground">
+                        Use your workspace account to continue.
                     </p>
-                </div>
 
                 <form
                     action={formAction}
                     onSubmit={handleSubmit}
                     aria-busy={pending}
-                    className="mt-5 space-y-4"
+                    className="mt-7 space-y-5"
                 >
                     <div>
                         <label
@@ -197,7 +255,7 @@ export default function LoginPage() {
                                         : "Show password"
                                 }
                                 aria-controls="password"
-                                className="absolute right-0 top-0 inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                className="absolute right-0 top-0 inline-flex size-11 items-center justify-center rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             >
                                 {showPassword ? (
                                     <EyeOff
@@ -222,15 +280,15 @@ export default function LoginPage() {
                             onChange={(event) =>
                                 handleRememberChange(event.target.checked)
                             }
-                            className="size-4 shrink-0 accent-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            className="size-4 shrink-0 accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         />
-                        Remember email on this device
+                        Remember my email on this device
                     </label>
 
                     {state.error && (
                         <p
                             role="alert"
-                            className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+                            className="rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
                         >
                             {state.error}
                         </p>
@@ -239,7 +297,7 @@ export default function LoginPage() {
                     <button
                         type="submit"
                         disabled={pending}
-                        className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-semibold text-white hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card disabled:cursor-wait disabled:opacity-60"
+                        className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-60"
                     >
                         {pending ? (
                             <>
@@ -261,23 +319,21 @@ export default function LoginPage() {
                     </button>
                 </form>
 
-                <div className="mt-4 border-t border-border pt-3">
-                    <Link
-                        href="/"
-                        className="flex min-h-11 items-center justify-center gap-2 rounded-lg text-sm text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                        <ArrowLeft
-                            aria-hidden="true"
-                            className="size-4"
-                        />
-                        Back to invoice overview
-                    </Link>
+                    <div className="mt-6 border-t border-border pt-3">
+                        <Link
+                            href="/"
+                            className="flex min-h-11 items-center justify-center gap-2 rounded-md text-sm text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                            <ArrowLeft aria-hidden="true" className="size-4" />
+                            Back to invoice overview
+                        </Link>
 
-                    <p className="mt-1 text-center text-xs leading-5 text-muted-foreground">
-                        Need help? Contact your administrator.
-                    </p>
-                </div>
-            </section>
+                        <p className="mt-1 text-center text-xs leading-5 text-muted-foreground">
+                            Need access? Ask your administrator.
+                        </p>
+                    </div>
+                </section>
+            </div>
         </main>
     );
 }

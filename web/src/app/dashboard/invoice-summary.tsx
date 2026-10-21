@@ -97,6 +97,7 @@ async function SummaryContent() {
             icon: FileText,
             iconClass:
                 "bg-blue-50 text-blue-700 dark:bg-blue-400/10 dark:text-blue-300",
+            bar: "bg-primary",
         },
         {
             label: "Pending",
@@ -105,6 +106,7 @@ async function SummaryContent() {
             icon: Clock3,
             iconClass:
                 "bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-300",
+            bar: "bg-amber-500",
         },
         {
             label: "Completed",
@@ -113,6 +115,7 @@ async function SummaryContent() {
             icon: CheckCircle2,
             iconClass:
                 "bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300",
+            bar: "bg-emerald-500",
         },
         {
             label: "Rejected",
@@ -121,6 +124,7 @@ async function SummaryContent() {
             icon: XCircle,
             iconClass:
                 "bg-rose-50 text-rose-700 dark:bg-rose-400/10 dark:text-rose-300",
+            bar: "bg-rose-500",
         },
     ];
 
@@ -136,23 +140,25 @@ async function SummaryContent() {
             </div>
 
             <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-                {cards.map(({ label, value, href, icon: Icon, iconClass }) => (
+                {cards.map(({ label, value, href, icon: Icon, iconClass, bar }) => (
                     <Link
                         key={label}
                         href={href}
-                        className="group flex min-h-24 items-center justify-between
-              gap-3 rounded-xl border border-border bg-card p-4
-              transition-colors hover:border-blue-400
-              hover:bg-blue-50/50 dark:hover:border-blue-700
-              dark:hover:bg-blue-950/20
+                        className="group relative flex min-h-24 items-center justify-between
+              gap-3 overflow-hidden rounded-xl border border-border bg-card py-4 pl-5 pr-4
+              shadow-card transition-shadow hover:shadow-raised
               focus-visible:outline-none focus-visible:ring-2
               focus-visible:ring-ring motion-reduce:transition-none"
                     >
+                        <span
+                            aria-hidden="true"
+                            className={`absolute inset-y-0 left-0 w-1 ${bar}`}
+                        />
                         <div className="min-w-0">
                             <p className="text-xs font-medium text-muted-foreground">
                                 {label}
                             </p>
-                            <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">
+                            <p className="mt-1 font-heading text-3xl font-semibold tracking-tight tabular-nums">
                                 {value.toLocaleString("en-US")}
                             </p>
                         </div>

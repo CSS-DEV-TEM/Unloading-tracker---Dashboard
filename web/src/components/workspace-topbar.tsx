@@ -173,7 +173,7 @@ export default function WorkspaceTopbar({
                 <div className="hidden items-center gap-3 border-l border-border pl-4 sm:flex">
                     <div
                         aria-hidden="true"
-                        className="flex size-9 items-center justify-center rounded-full bg-blue-50 text-xs font-semibold text-blue-800 dark:bg-blue-400/10 dark:text-blue-300"
+                        className="flex size-9 items-center justify-center rounded-lg bg-primary text-xs font-semibold text-primary-foreground"
                     >
                         {initials}
                     </div>
