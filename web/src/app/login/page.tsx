@@ -131,7 +131,7 @@ export default function LoginPage() {
 
                 <div className="relative max-w-md">
                     <h2 className="font-heading text-5xl font-semibold leading-[1.05] tracking-tight text-white">
-                        Every invoice accounted for, from dock to GRN.
+                        Follow every invoice through unloading, all in one view.
                     </h2>
 
                     <ul className="mt-9 space-y-4">
@@ -189,135 +189,135 @@ export default function LoginPage() {
                         Use your workspace account to continue.
                     </p>
 
-                <form
-                    action={formAction}
-                    onSubmit={handleSubmit}
-                    aria-busy={pending}
-                    className="mt-7 space-y-5"
-                >
-                    <div>
-                        <label
-                            htmlFor="email"
-                            className="mb-1.5 block text-sm font-medium"
-                        >
-                            Email address
-                        </label>
-
-                        <input
-                            id="email"
-                            name="email"
-                            type="email"
-                            inputMode="email"
-                            autoComplete="username"
-                            autoCapitalize="none"
-                            spellCheck={false}
-                            required
-                            maxLength={254}
-                            value={email}
-                            onChange={(event) =>
-                                setEmail(event.target.value)
-                            }
-                            readOnly={pending}
-                            placeholder="you@company.com"
-                            className={inputClass}
-                        />
-                    </div>
-
-                    <div>
-                        <label
-                            htmlFor="password"
-                            className="mb-1.5 block text-sm font-medium"
-                        >
-                            Password
-                        </label>
-
-                        <div className="relative">
-                            <input
-                                id="password"
-                                name="password"
-                                type={showPassword ? "text" : "password"}
-                                autoComplete="current-password"
-                                required
-                                maxLength={1024}
-                                readOnly={pending}
-                                placeholder="Enter your password"
-                                className={`${inputClass} pr-12`}
-                            />
-
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    setShowPassword((current) => !current)
-                                }
-                                aria-label={
-                                    showPassword
-                                        ? "Hide password"
-                                        : "Show password"
-                                }
-                                aria-controls="password"
-                                className="absolute right-0 top-0 inline-flex size-11 items-center justify-center rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            >
-                                {showPassword ? (
-                                    <EyeOff
-                                        aria-hidden="true"
-                                        className="size-[18px]"
-                                    />
-                                ) : (
-                                    <Eye
-                                        aria-hidden="true"
-                                        className="size-[18px]"
-                                    />
-                                )}
-                            </button>
-                        </div>
-                    </div>
-
-                    <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-sm text-muted-foreground">
-                        <input
-                            type="checkbox"
-                            checked={rememberEmail}
-                            disabled={pending}
-                            onChange={(event) =>
-                                handleRememberChange(event.target.checked)
-                            }
-                            className="size-4 shrink-0 accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        />
-                        Remember my email on this device
-                    </label>
-
-                    {state.error && (
-                        <p
-                            role="alert"
-                            className="rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
-                        >
-                            {state.error}
-                        </p>
-                    )}
-
-                    <button
-                        type="submit"
-                        disabled={pending}
-                        className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-60"
+                    <form
+                        action={formAction}
+                        onSubmit={handleSubmit}
+                        aria-busy={pending}
+                        className="mt-7 space-y-5"
                     >
-                        {pending ? (
-                            <>
-                                <Loader2
-                                    aria-hidden="true"
-                                    className="size-4 animate-spin motion-reduce:animate-none"
+                        <div>
+                            <label
+                                htmlFor="email"
+                                className="mb-1.5 block text-sm font-medium"
+                            >
+                                Email address
+                            </label>
+
+                            <input
+                                id="email"
+                                name="email"
+                                type="email"
+                                inputMode="email"
+                                autoComplete="username"
+                                autoCapitalize="none"
+                                spellCheck={false}
+                                required
+                                maxLength={254}
+                                value={email}
+                                onChange={(event) =>
+                                    setEmail(event.target.value)
+                                }
+                                readOnly={pending}
+                                placeholder="you@company.com"
+                                className={inputClass}
+                            />
+                        </div>
+
+                        <div>
+                            <label
+                                htmlFor="password"
+                                className="mb-1.5 block text-sm font-medium"
+                            >
+                                Password
+                            </label>
+
+                            <div className="relative">
+                                <input
+                                    id="password"
+                                    name="password"
+                                    type={showPassword ? "text" : "password"}
+                                    autoComplete="current-password"
+                                    required
+                                    maxLength={1024}
+                                    readOnly={pending}
+                                    placeholder="Enter your password"
+                                    className={`${inputClass} pr-12`}
                                 />
-                                Signing in…
-                            </>
-                        ) : (
-                            <>
-                                Sign in
-                                <ArrowRight
-                                    aria-hidden="true"
-                                    className="size-4"
-                                />
-                            </>
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setShowPassword((current) => !current)
+                                    }
+                                    aria-label={
+                                        showPassword
+                                            ? "Hide password"
+                                            : "Show password"
+                                    }
+                                    aria-controls="password"
+                                    className="absolute right-0 top-0 inline-flex size-11 items-center justify-center rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                >
+                                    {showPassword ? (
+                                        <EyeOff
+                                            aria-hidden="true"
+                                            className="size-[18px]"
+                                        />
+                                    ) : (
+                                        <Eye
+                                            aria-hidden="true"
+                                            className="size-[18px]"
+                                        />
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+
+                        <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-sm text-muted-foreground">
+                            <input
+                                type="checkbox"
+                                checked={rememberEmail}
+                                disabled={pending}
+                                onChange={(event) =>
+                                    handleRememberChange(event.target.checked)
+                                }
+                                className="size-4 shrink-0 accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            />
+                            Remember my email on this device
+                        </label>
+
+                        {state.error && (
+                            <p
+                                role="alert"
+                                className="rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+                            >
+                                {state.error}
+                            </p>
                         )}
-                    </button>
-                </form>
+
+                        <button
+                            type="submit"
+                            disabled={pending}
+                            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-60"
+                        >
+                            {pending ? (
+                                <>
+                                    <Loader2
+                                        aria-hidden="true"
+                                        className="size-4 animate-spin motion-reduce:animate-none"
+                                    />
+                                    Signing in…
+                                </>
+                            ) : (
+                                <>
+                                    Sign in
+                                    <ArrowRight
+                                        aria-hidden="true"
+                                        className="size-4"
+                                    />
+                                </>
+                            )}
+                        </button>
+                    </form>
 
                     <div className="mt-6 border-t border-border pt-3">
                         <Link
