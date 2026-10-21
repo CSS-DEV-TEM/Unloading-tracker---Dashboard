@@ -4,12 +4,18 @@ An invoice and unloading workflow dashboard developed for **EFL 3PL · CSS Divis
 
 The application gives operations teams a shared view of invoice progress, AX/D365 processing stages, ASN updates and vehicle assignments. Authorized users manage records through the internal workspace, while a searchable, read-only overview provides visibility without editing access.
 
+Last updated: **21 October 2026**.
+
 ## Contents
 
 - [Overview](#overview)
 - [Features](#features)
 - [User roles](#user-roles)
 - [Daily workflow](#daily-workflow)
+- [Import invoices from email](#import-invoices-from-email)
+- [Quantities and units](#quantities-and-units)
+- [Dates and completion](#dates-and-completion)
+- [Deployment](#deployment)
 - [Vehicle management](#vehicle-management)
 - [Pending reasons](#pending-reasons)
 - [Export invoices to Excel](#export-invoices-to-excel)
@@ -34,7 +40,7 @@ Each invoice can include:
 - Invoice number and supplier.
 - Applicable system: AX, D365 or AX/D365.
 - Shipment type: Local or Import.
-- Document date and roll quantity.
+- Document date, roll quantity and optional meter quantity.
 - Optional vehicle number.
 - Processing-stage and ASN information.
 - Pending reason and internal remark.
@@ -51,13 +57,25 @@ The application has two entry points:
 
 ## Features
 
+### Latest updates
+
+- Email table copy/paste import replaces the PDF extraction workflow.
+- Import preview supports review, editing, removal, duplicate handling and selective save retries.
+- PO-based AX/D365 detection, including FOC review indicators.
+- Separate roll and meter storage, with up to three decimal places for meters.
+- Combined quantity display with blue MTR badges on the dashboard and public overview.
+- Quantity/unit selection when creating or editing invoices.
+- Vehicle received-date entry and visible received-date labels.
+- Excel export includes a separate numeric METERS QTY column.
+
 ### Invoice workspace
 
 - Search invoices by invoice number, supplier or vehicle number.
 - Filter records by status.
 - Select summary cards to apply a status filter.
 - Open the process page by selecting an invoice number.
-- Create invoices and edit their basic details.
+- Create invoices manually or import them from copied email tables.
+- Edit invoice details and quantity units before saving.
 - Select an existing vehicle or enter a new vehicle number.
 - Display vehicle labels beneath invoice numbers and on the process page.
 - Show pending reasons in the invoice table.
@@ -76,7 +94,120 @@ The application has two entry points:
 - View supplier, shipment, dates, quantities and exposed ASN information.
 - Provide a route back to the dashboard for eligible signed-in users.
 
-### Vehicle management
+### Import invoices from email
+
+Open `/dashboard/invoices/import` with an active USER or ADMIN account.
+
+The current workflow parses copied email tables in the browser. **Do not convert the email to PDF first.** Python, FastAPI, pdfplumber, a PDF extraction service and temporary PDF Storage uploads are not required for this workflow.
+
+### Import steps
+
+1. Copy the complete email table, including column headings and all rows.
+2. Paste it into **Paste email table**.
+3. Select the format to use for ambiguous dates: Month/Day/Year or Day/Month/Year.
+4. Select **Extract invoices**.
+5. If the header only says **Qty** or **Quantity**, select **Rolls** or **MTR**, then extract again. The pasted text is retained while a unit is required.
+6. Review invoice numbers, suppliers, quantities, system, document date, shipment type and review notes.
+7. Correct missing/invalid values and resolve duplicate drafts.
+8. Select **Save invoices**. Successfully saved drafts are retained and are not resubmitted when retrying failed drafts.
+
+### Supported input and limits
+
+- HTML tables copied from email, tab-separated tables, Markdown tables and flattened copies with one cell per line.
+- Required headings: **Date, PO, Invoice No, Supplier**, plus a supported quantity heading.
+- `Qty(MTR)` and supported meter headings identify meters automatically; explicit roll headings identify rolls.
+- A generic `Qty` heading requires a unit choice, including when its values are whole numbers. Decimal values alone do not prove the unit is meters.
+- Maximum pasted text: **1,000,000 characters**; maximum imported source rows: **5,000**.
+- Comma thousands separators are supported, for example `3,419.20`.
+- Values such as `###` are not guessed or converted to zero. They produce review notes and leave the affected total blank.
+- Flattened copies must retain the complete column sequence. Missing cells can make a row incomplete or shifted; copy the complete table again.
+- Recognized final totals are checked against the copied rows and are not imported as invoices. Mismatches stop extraction. A single total covering both rolls and meters requires manual review.
+
+### Invoice grouping and duplicate handling
+
+Rows with the same trimmed, case-insensitive invoice number are grouped within a paste. Quantities are summed separately by unit from the original source rows. An invalid source value prevents presenting a partial total as complete.
+
+Supplier, date and shipment inconsistencies produce review notes. Repeated invoice numbers across separately extracted batches require explicit review: combine only distinct quantities, not repeated copies of the same data. Combining recalculates from original source rows and resets manual draft edits except the invoice number.
+
+The database blocks duplicates by **invoice number**, not by supplier or date. Edit an existing invoice rather than creating another with the same number.
+
+If a save response is lost, the batch stops and marks that invoice as unconfirmed. Check the dashboard before importing it again; a network failure does not prove that the database write failed.
+
+### System selection uses PO
+
+System detection uses the **PO column**, not Sales order.
+
+| PO values for one invoice | Result |
+| --- | --- |
+| SL prefix only | D365 |
+| KP prefix only | AX |
+| Both SL and KP prefixes | AX/D365 |
+| Combined SL/KP prefix | AX/D365 |
+| SL plus FOC | D365; include FOC quantities |
+| KP plus FOC | AX; include FOC quantities |
+| SL and KP plus FOC | AX/D365; include FOC quantities |
+| FOC rows only | Select the system manually |
+| Unknown non-FOC prefix | Review and select the system manually |
+
+FOC rows contribute to quantities. They are highlighted with an **FOC** badge and review notes in the import preview. This badge is preview metadata; do not assume it is stored as a permanent dashboard field.
+
+When both AX and D365 apply, the result is AX/D365 regardless of which prefix occurs more often.
+
+### Supplier mapping
+
+| Normalized supplier | Default shipment |
+| --- | --- |
+| South Asia | Local |
+| Ocean Lanka | Local |
+| Teejay | Local |
+| Hayleys | Local |
+| Other supplier names | Import |
+
+Matching ignores case and normalizes whitespace. These are name matches, not fuzzy company-name recognition. Review variants such as legal suffixes and correct Local/Import before saving when necessary.
+
+## Quantities and units
+
+Rolls and meters remain separate database values:
+
+| Field | Accepted values |
+| --- | --- |
+| `roll_quantity` | Optional non-negative integer, maximum 2,147,483,647 |
+| `meter_quantity` | Optional non-negative number, maximum 999,999,999.999; up to three decimal places |
+
+New Invoice uses one quantity input with a **Rolls / MTR** selector. Edit Invoice loads the saved unit and value. Imported invoices containing both units retain separate editing fields so neither measurement is silently discarded.
+
+Changing the selected unit does **not** convert the number. Rolls and meters cannot be added together or converted without additional business data.
+
+The dashboard and public overview retain their **Roll Qty / Roll quantity** heading and show both measurements within that one column:
+
+- Rolls: plain number, without a unit badge.
+- Meters: number with a blue **MTR** badge.
+- Both measurements: separate lines in the same cell.
+- No quantity: an em dash. Zero remains a valid visible quantity.
+
+The process summary also uses the quantity detail with an MTR badge. Excel keeps separate ROLL QTY and METERS QTY columns for filtering and calculations.
+
+## Dates and completion
+
+The importer accepts day/month or month/day dates separated by `/`, `.` or `-`, and ISO year-month-day dates. Examples include `15.10.2026`, `15/10/2026`, `10/15/2026` and `2026-10-15`.
+
+An unambiguous date is recognized automatically. For example, `15.10.2026` is 15 October. An ambiguous date such as `05/06/2026` uses the selected format. Invalid calendar dates require review.
+
+| Value | Meaning |
+| --- | --- |
+| `document_share_date` | Invoice document date; used by date-range export |
+| `vehicles.received_date` | Shared received date of the assigned vehicle |
+| Stage `started_at` / `ended_at` | AX or D365 processing timestamps |
+| ASN `share_date` | Date entered for ASN sharing |
+| Invoice `completed_at` | Timestamp when the invoice was marked Complete |
+
+**ASN share date and invoice completion timestamp are different fields.** The overview's Completion date displays `completed_at` for Complete invoices. Stage end dates belong in processing details; they do not substitute for invoice completion.
+
+Checking ASN Share and saving completes the invoice under the workflow rules. Unchecking it and saving returns the invoice to Pending, allowing vehicle changes where other linked-record restrictions permit them. Completed/ASN-shared records can lock vehicle assignment or received-date changes.
+
+When editing table layouts, keep one body cell per heading: an extra Start date cell shifts Completion date, Status and Processing into the wrong columns without changing stored data.
+
+## Vehicle management
 
 - Maintain a shared vehicle registry.
 - Search vehicles and view their assigned invoice counts.
@@ -120,6 +251,7 @@ The application has two entry points:
 | View and search the public overview | Yes | Yes | Yes |
 | Access the internal dashboard | No | Yes | Yes |
 | Create and update invoices | No | Yes | Yes |
+| Import invoices from copied email tables | No | Yes | Yes |
 | Add vehicles | No | Yes | Yes |
 | Assign, reassign and unassign invoices | No | Yes | Yes |
 | Edit vehicle numbers | No | No | Yes |
@@ -140,7 +272,7 @@ Permissions are enforced by server-side checks and database functions, not only 
 ## Daily workflow
 
 1. **Find an invoice:** search the overview or sign in to the dashboard.
-2. **Create a record:** enter the invoice and supplier details, optionally selecting or entering a vehicle number.
+2. **Create records:** enter invoice details manually or paste an email table into Invoice Import, extract and review the drafts, then save.
 3. **Manage assignments:** use Vehicle management when several existing invoices need to be assigned to a vehicle.
 4. **Update processing:** open the invoice and record applicable AX/D365 stages and ASN information.
 5. **Maintain status:** set the appropriate Pending, Complete or Reject status and provide a pending reason where applicable.
@@ -207,6 +339,15 @@ When the invoice is saved:
 New vehicle records are created when the invoice is saved, not while typing.
 
 An invoice already linked to an archived vehicle can still have its other details edited while retaining that assignment.
+
+### Vehicle received date
+
+Set the received date from the relevant vehicle or invoice form. It belongs to the vehicle and is shared by its linked invoices. Vehicle labels expose the received-date information on the dashboard and public overview.
+
+- A received date entered on an invoice requires a vehicle number.
+- Leaving the invoice form's received date blank preserves an existing vehicle date; it is not a command to erase it.
+- Editing the date can affect all invoices linked to that vehicle.
+- Version checks and completed/ASN-shared restrictions may require reloading or reopening affected invoices before changing the date.
 
 ### Edit a vehicle number
 
@@ -323,7 +464,8 @@ Both boundary dates are included. Selecting the same date in both fields exports
 
 - Includes matching invoices across all result pages and statuses.
 - Uses the selected Document date range independently of dashboard search and filters.
-- Retains the existing 20-column workbook format.
+- Includes separate **ROLL QTY** and **METERS QTY** numeric columns.
+- Formats meters with up to three decimal places (`0.###`).
 - Includes AX/D365 stages, assigned users, ASN information, remarks and status.
 - Keeps invoice numbers as text.
 - Leaves the workbook editable.
@@ -385,6 +527,8 @@ Administrators can separately clear activity history through the confirmation fl
 | --- | --- |
 | Application framework | Next.js App Router |
 | Interface | React and TypeScript |
+| Email extraction | Browser-side TypeScript table parser |
+| Web hosting | Vercel |
 | Styling | Tailwind CSS and shared theme tokens |
 | UI components and icons | shadcn/ui, Radix UI and Lucide React |
 | Authentication | Supabase Auth |
@@ -447,7 +591,7 @@ For a new environment:
 
 1. Obtain the complete migration history from the maintainer.
 2. Apply migrations in filename order using the team's migration process.
-3. Confirm that the public overview and summary RPCs, pending-reason support and activity-clear function are included.
+3. Confirm that the public overview and summary RPCs, meters support, received-date support, pending-reason support and activity-clear function are included.
 4. Apply the relevant feature migrations before deploying their UI changes.
 5. Configure Realtime for the application's subscriptions.
 6. Have the maintainer provision the first active administrator.
@@ -467,6 +611,10 @@ These are incremental migrations, not the complete database installation.
 For an existing environment with Vehicle Management already installed, apply `202610120004_vehicle_lifecycle.sql` for the lifecycle update. Do not rerun `202610120003_vehicle_management.sql` as part of that update.
 
 Keep all migration files in the repository.
+
+The current quantity-aware application expects `invoices.meter_quantity`, `save_invoice_with_meters`, `get_public_invoice_overview_v4` and `get_public_invoice_summary`. Apply the corresponding schema, grants and function definitions before deploying the updated application. These requirements supplement the earlier migrations above.
+
+The Excel export RPC `prepare_invoice_export_range` includes invoice fields through `to_jsonb(i)` in the supplied migration; the meter column therefore flows into its invoice payload after the schema update.
 
 If SQL reports:
 
@@ -488,6 +636,19 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000), or the address printed by the development server.
 
+## Deployment
+
+The web application is deployed to **Vercel**, with authentication and data hosted by **Supabase**.
+
+1. Apply the required migrations to the intended Supabase project.
+2. Configure the three Supabase environment variables from Local development in the Vercel web project. Use values belonging to the same Supabase project.
+3. Confirm the web application root is `web` and the intended Git branch is connected to the deployment environment.
+4. Run the build and affected workflow checks, then deploy the reviewed changes.
+5. After environment changes, redeploy so the application uses the new values.
+6. Verify sign-in, overview, email import, quantity saving, vehicle dates and administrator export on the live URL.
+
+The email-paste flow does not require `INVOICE_IMPORT_API_URL`, `INVOICE_IMPORT_API_KEY`, a Render Python service, or the old `invoice-imports` PDF bucket. Retired PDF routes/services and credentials should not remain active solely for this workflow. Confirm nothing else depends on a resource before removing it.
+
 ## Application routes
 
 | Route | Purpose |
@@ -495,7 +656,8 @@ Open [http://localhost:3000](http://localhost:3000), or the address printed by t
 | `/` | Read-only invoice overview. |
 | `/login` | Workspace sign-in. |
 | `/dashboard` | Invoice summary, search, filters and records. |
-| `/dashboard/invoices/new` | Create an invoice with an optional vehicle number. |
+| `/dashboard/invoices/new` | Create an invoice with quantity/unit and optional vehicle/received date. |
+| `/dashboard/invoices/import` | Paste email tables, extract, review and save invoice drafts. |
 | `/dashboard/invoices/[id]` | Invoice processing page. |
 | `/dashboard/invoices/[id]/details` | Edit invoice details and vehicle assignment. |
 | `/dashboard/vehicles` | Vehicle registry, assignments and lifecycle actions. |
@@ -515,7 +677,12 @@ web/
       page.tsx                 Read-only overview
       login/                   Sign-in page and actions
       dashboard/               Protected workspace
-        invoices/              Invoice screens and actions
+        invoices/
+          import/
+            email-table.ts     Email parser, date/unit handling and PO rules
+            import-form.tsx    Draft review, grouping, FOC indicators and saving
+          new/                 Manual creation and import save action
+          [id]/                Processing, detail editing and deletion
         export/                Excel download endpoint
         export-button.tsx      Export date-selection dialog
         vehicles/              Vehicle pages, dialogs and server actions
@@ -525,6 +692,7 @@ web/
     components/                Shared interface components
     lib/
       supabase/                Supabase client configuration
+      meter-quantity.ts        Decimal validation and precise meter summation
     proxy.ts                   Authentication session handling
   public/                      Static assets and branding
   package.json                 Dependencies and scripts
@@ -604,6 +772,21 @@ Before submitting changes, verify the affected workflows.
 - Vehicle labels on the dashboard, overview and process page.
 - Read-only behaviour of the public overview.
 
+### Email import and quantities
+
+- HTML, TSV, Markdown and complete flattened table copies.
+- Dot, slash and hyphen dates; ambiguous dates under both selected formats.
+- Explicit MTR/roll headings and generic Qty requiring a unit choice.
+- Decimal thousands-separated values, zero, blank and `###` values.
+- Same-invoice grouping and separate roll/meter totals.
+- SL, KP, combined systems, FOC-only and mixed FOC/non-FOC rows.
+- Unknown PO prefixes requiring manual review.
+- Duplicate draft combination versus repeated-copy removal.
+- Partial save failures and unconfirmed network responses.
+- Quantity/unit selection in create and edit, including invoices with both units.
+- Blue MTR badges without introducing a second quantity table column.
+- Numeric meter values in the downloaded workbook.
+
 ### Vehicle management
 
 - Add a new vehicle and reuse an existing normalized number.
@@ -647,6 +830,14 @@ A successful build does not replace workflow and permission testing against the 
 
 | Symptom | Check |
 | --- | --- |
+| Import asks for a unit | A generic Qty header has no unit; select Rolls or MTR and extract again. |
+| Decimal quantity is blank | Check that MTR was selected for meter values; fractional rolls are invalid. |
+| Import rejects an incomplete/shifted row | Copy the complete table including the final column and empty cells; flattened copies cannot recover missing boundaries reliably. |
+| System is not detected | Check PO, not Sales order; unknown non-FOC prefixes and FOC-only invoices require review. |
+| Invoice quantities look doubled | Check for repeated copies before combining drafts; combine only distinct source quantities. |
+| Save result is unconfirmed | Check the dashboard before retrying; the write may already have succeeded. |
+| Completion date appears under Status | Remove an extra body cell and align headings with cells; do not change database dates to fix layout. |
+| Meters are missing after deployment | Check meter schema/RPC migrations and every invoice query's selected fields. |
 | Sign-in succeeds but workspace access is unavailable | Confirm the matching profile, role and `is_active` value. |
 | Administrator cannot create a user | Check the server-only secret key and account-provisioning migrations. |
 | Overview cannot load invoice data | Check overview RPC definitions, grants and Supabase configuration. |
