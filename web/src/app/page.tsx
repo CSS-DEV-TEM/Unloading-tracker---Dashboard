@@ -363,6 +363,7 @@ async function PublicOverview({ searchParams }: Props) {
       filter: "",
       iconClass:
         "bg-blue-50 text-blue-700 dark:bg-blue-400/10 dark:text-blue-300",
+      bar: "bg-primary",
     },
     {
       label: "Pending",
@@ -371,6 +372,7 @@ async function PublicOverview({ searchParams }: Props) {
       filter: "Pending",
       iconClass:
         "bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-300",
+      bar: "bg-amber-500",
     },
     {
       label: "Completed",
@@ -379,6 +381,7 @@ async function PublicOverview({ searchParams }: Props) {
       filter: "Complete",
       iconClass:
         "bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300",
+      bar: "bg-emerald-500",
     },
     {
       label: "Rejected",
@@ -387,6 +390,7 @@ async function PublicOverview({ searchParams }: Props) {
       filter: "Reject",
       iconClass:
         "bg-rose-50 text-rose-700 dark:bg-rose-400/10 dark:text-rose-300",
+      bar: "bg-rose-500",
     },
   ];
 
@@ -399,7 +403,7 @@ async function PublicOverview({ searchParams }: Props) {
         Skip to invoice overview
       </a>
 
-      <header className="sticky top-0 z-40 border-b border-border bg-card">
+      <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-md supports-[backdrop-filter]:bg-background/75">
         <div className="mx-auto flex h-16 max-w-[1600px] items-center justify-between gap-3 px-4 sm:px-6">
           <Link
             href="/"
@@ -429,7 +433,7 @@ async function PublicOverview({ searchParams }: Props) {
             <ThemeToggle />
             <Link
               href={canOpenDashboard ? "/dashboard" : "/login"}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-semibold text-white hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {canOpenDashboard ? "Back to dashboard" : "Sign in"}
               <ArrowRight
@@ -451,12 +455,9 @@ async function PublicOverview({ searchParams }: Props) {
           className="flex flex-wrap items-start justify-between gap-4"
         >
           <div className="max-w-2xl">
-            <p className="text-xs font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-400">
-              Operations overview
-            </p>
             <h1
               id="overview-title"
-              className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl"
+              className="text-3xl font-semibold tracking-tight sm:text-4xl"
             >
               Unloading Tracker Dashboard Overview
             </h1>
@@ -466,7 +467,7 @@ async function PublicOverview({ searchParams }: Props) {
             </p>
           </div>
 
-          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground">
+          <span className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-card">
             <Eye aria-hidden="true" className="size-4" />
             Read-only access
           </span>
@@ -484,7 +485,7 @@ async function PublicOverview({ searchParams }: Props) {
 
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {summaryCards.map(
-              ({ label, value, icon: Icon, filter, iconClass }) => {
+              ({ label, value, icon: Icon, filter, iconClass, bar }) => {
                 const active = status === filter;
 
                 return (
@@ -499,18 +500,22 @@ async function PublicOverview({ searchParams }: Props) {
                         : "Show all statuses"
                     }
                     className={[
-                      "flex min-h-24 items-center justify-between gap-3 rounded-xl border p-4 transition-colors",
+                      "relative flex min-h-24 items-center justify-between gap-3 overflow-hidden rounded-xl border py-4 pl-5 pr-4 shadow-card transition-shadow hover:shadow-raised",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none",
                       active
-                        ? "border-blue-500 bg-blue-50/60 dark:border-blue-400 dark:bg-blue-400/10"
-                        : "border-border bg-card hover:border-blue-400 hover:bg-muted",
+                        ? "border-primary bg-blue-50/60 ring-1 ring-primary dark:bg-blue-400/10"
+                        : "border-border bg-card",
                     ].join(" ")}
                   >
+                    <span
+                      aria-hidden="true"
+                      className={`absolute inset-y-0 left-0 w-1 ${bar}`}
+                    />
                     <div className="min-w-0">
                       <p className="text-xs text-muted-foreground sm:text-sm">
                         {label}
                       </p>
-                      <p className="mt-1.5 text-2xl font-semibold tracking-tight tabular-nums">
+                      <p className="mt-1.5 font-heading text-3xl font-semibold tracking-tight tabular-nums">
                         {summaryFailed
                           ? "—"
                           : (value ?? 0).toLocaleString("en-GB")}
@@ -541,7 +546,7 @@ async function PublicOverview({ searchParams }: Props) {
 
         <section
           aria-labelledby="invoice-list-title"
-          className="overflow-hidden rounded-xl border border-border bg-card"
+          className="overflow-hidden rounded-xl border border-border bg-card shadow-card"
         >
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-4 sm:px-6">
             <div>
@@ -554,7 +559,7 @@ async function PublicOverview({ searchParams }: Props) {
             </div>
 
             {!failed && (
-              <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium">
+              <span className="rounded-md bg-muted px-2.5 py-1 text-xs font-semibold">
                 {total.toLocaleString("en-GB")} results
               </span>
             )}
@@ -792,7 +797,7 @@ async function PublicOverview({ searchParams }: Props) {
                         <td className="px-4 py-3 align-top">
                           <div className="flex flex-col items-start">
                             <span
-                              className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-medium ${statusStyles[invoice.status]}`}
+                              className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-0.5 text-xs font-semibold before:size-1.5 before:rounded-full before:bg-current before:content-[''] ${statusStyles[invoice.status]}`}
                             >
                               {statusLabels[invoice.status]}
                             </span>

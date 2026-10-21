@@ -7,9 +7,14 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans), Arial, Helvetica, sans-serif;
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  --font-sans: var(--font-plex-sans), "Segoe UI", Arial, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-heading: var(--font-plex-cond), var(--font-plex-sans), "Segoe UI", Arial, sans-serif;
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-signal: var(--signal);
+  --shadow-card: var(--shadow-card-value);
+  --shadow-raised: var(--shadow-raised-value);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -48,75 +53,100 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Brand scale: every existing `blue-*` utility now renders in the steel-blue brand colour. */
+@theme {
+  --color-blue-50: #eef3fb;
+  --color-blue-100: #dde8f7;
+  --color-blue-200: #bdd2ef;
+  --color-blue-300: #93b5e6;
+  --color-blue-400: #6392d8;
+  --color-blue-500: #3f72c4;
+  --color-blue-600: #2d5aa8;
+  --color-blue-700: #1f4688;
+  --color-blue-800: #1b3a70;
+  --color-blue-900: #172f5a;
+  --color-blue-950: #0e1d3a;
+}
+
 :root {
   color-scheme: light;
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #f1f4f8;
+  --foreground: #101826;
   --card: #ffffff;
-  --card-foreground: #0f172a;
+  --card-foreground: #101826;
   --popover: #ffffff;
-  --popover-foreground: #0f172a;
-  --primary: #1d4ed8;
+  --popover-foreground: #101826;
+  --primary: #1f4688;
   --primary-foreground: #ffffff;
-  --secondary: #eff6ff;
-  --secondary-foreground: #1e40af;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --accent: #eff6ff;
-  --accent-foreground: #1d4ed8;
-  --destructive: #dc2626;
-  --border: #e2e8f0;
-  --input: #cbd5e1;
-  --ring: #3b82f6;
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --secondary: #e6edf8;
+  --secondary-foreground: #1b3a70;
+  --muted: #e9eef4;
+  --muted-foreground: #566377;
+  --accent: #e6edf8;
+  --accent-foreground: #1b3a70;
+  --destructive: #c42b3a;
+  --border: #d9e0e9;
+  --input: #c5cedb;
+  --ring: #3f72c4;
+  --success: #0f7b5a;
+  --warning: #b7791f;
+  --signal: #f5a524;
+  --chart-1: #1f4688;
+  --chart-2: #3f72c4;
+  --chart-3: #f5a524;
+  --chart-4: #0f7b5a;
+  --chart-5: #c42b3a;
+  --radius: 0.5rem;
+  --sidebar: #0f1a2b;
+  --sidebar-foreground: #c6d1e2;
+  --sidebar-primary: #f5a524;
+  --sidebar-primary-foreground: #0f1a2b;
+  --sidebar-accent: #1a2a42;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #22334d;
+  --sidebar-ring: #6392d8;
+  --shadow-card-value: 0 1px 0 rgb(16 24 38 / 0.03), 0 1px 3px rgb(16 24 38 / 0.07);
+  --shadow-raised-value: 0 2px 4px rgb(16 24 38 / 0.06), 0 12px 28px -8px rgb(16 24 38 / 0.18);
 }
 
 .dark {
   color-scheme: dark;
-  --background: #0b1220;
-  --foreground: #f1f5f9;
-  --card: #111c30;
-  --card-foreground: #f1f5f9;
-  --popover: #111c30;
-  --popover-foreground: #f1f5f9;
-  --primary: #60a5fa;
-  --primary-foreground: #0b1220;
-  --secondary: #17233d;
-  --secondary-foreground: #dbeafe;
-  --muted: #17233d;
-  --muted-foreground: #94a3b8;
-  --accent: #172b4d;
-  --accent-foreground: #dbeafe;
-  --destructive: #f87171;
-  --border: #263449;
-  --input: #334155;
-  --ring: #60a5fa;
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #0a1019;
+  --foreground: #e8edf5;
+  --card: #121a26;
+  --card-foreground: #e8edf5;
+  --popover: #121a26;
+  --popover-foreground: #e8edf5;
+  --primary: #7fa9e6;
+  --primary-foreground: #0a1019;
+  --secondary: #172338;
+  --secondary-foreground: #d6e3f8;
+  --muted: #1a2433;
+  --muted-foreground: #8fa0b8;
+  --accent: #172a47;
+  --accent-foreground: #d6e3f8;
+  --destructive: #f26b77;
+  --border: #223046;
+  --input: #2c3b52;
+  --ring: #7fa9e6;
+  --success: #3ccf9d;
+  --warning: #f0b54a;
+  --signal: #f5a524;
+  --chart-1: #7fa9e6;
+  --chart-2: #4f86d6;
+  --chart-3: #f5a524;
+  --chart-4: #3ccf9d;
+  --chart-5: #f26b77;
+  --sidebar: #070c14;
+  --sidebar-foreground: #b4c1d6;
+  --sidebar-primary: #f5a524;
+  --sidebar-primary-foreground: #0a1019;
+  --sidebar-accent: #131d2d;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #182436;
+  --sidebar-ring: #7fa9e6;
+  --shadow-card-value: 0 1px 0 rgb(0 0 0 / 0.25), 0 1px 3px rgb(0 0 0 / 0.35);
+  --shadow-raised-value: 0 2px 4px rgb(0 0 0 / 0.3), 0 16px 32px -8px rgb(0 0 0 / 0.55);
 }
 
 @layer base {
@@ -166,6 +196,39 @@
 
   table {
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Condensed signage-style headings; body stays in Plex Sans. */
+  h1,
+  h2 {
+    font-family: var(--font-heading);
+    letter-spacing: -0.005em;
+  }
+
+  /* Invoice, vehicle and ASN references read cleaner in a fixed-width face. */
+  .ref {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    letter-spacing: -0.01em;
+  }
+}
+
+/* Hazard stripe used once, on the sign-in brand panel. */
+.dock-stripe {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--signal) 0 14px,
+    #0f1a2b 14px 28px
+  );
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dock-rise {
+    animation: dock-rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  @keyframes dock-rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
   }
 }
 

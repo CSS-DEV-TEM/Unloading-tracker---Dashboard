@@ -306,7 +306,7 @@ async function DashboardContent({
                 <InvoiceSummary />
                 <OverviewRefresh />
 
-                <section className="overflow-hidden rounded-xl border border-border bg-card">
+                <section className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
                     <div className="border-b border-border px-6 py-5">
                         <h2 className="font-semibold">Invoice records</h2>
                         <p className="mt-1 text-sm text-muted-foreground">
@@ -473,7 +473,7 @@ async function DashboardContent({
                                                     {formatDate(invoice.document_share_date)}
                                                 </td>
 
-                                                <td className="whitespace-nowrap px-4 py-3 align-top tabular-nums">
+                                                <td className="whitespace-nowrap px-4 py-3 align-middle tabular-nums">
                                                     <div className="flex flex-col items-start gap-1.5">
                                                         {invoice.roll_quantity != null && (
                                                             <span>
@@ -486,7 +486,7 @@ async function DashboardContent({
                                                                 <span>{formatMeters(invoice.meter_quantity)}</span>
 
                                                                 <span
-                                                                    className="rounded border border-blue-200 bg-blue-50
+                                                                    className="inline-flex items-center rounded-md border border-blue-200 bg-blue-50
                                                                      px-1.5 py-0.5 text-[10px] font-semibold leading-none
                                                                      text-blue-700 dark:border-blue-800
                                                                      dark:bg-blue-950/40 dark:text-blue-300"
@@ -523,7 +523,7 @@ async function DashboardContent({
 
                                                 <td className="px-4 py-3">
                                                     <span
-                                                        className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${statusStyles[invoice.status]}`}
+                                                        className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-semibold before:size-1.5 before:rounded-full before:bg-current before:content-[''] ${statusStyles[invoice.status]}`}
                                                     >
                                                         {invoice.status}
                                                     </span>

@@ -32,71 +32,114 @@ export default function AdminSidebar({
     const [collapsed, setCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
 
-    const links = [
+    const groups = [
         {
-            href: "/dashboard",
-            label: "Invoices",
-            icon: LayoutDashboard,
-            active:
-                pathname === "/dashboard" ||
-                pathname.startsWith("/dashboard/invoices/"),
+            label: "Operations",
+            links: [
+                {
+                    href: "/dashboard",
+                    label: "Invoices",
+                    icon: LayoutDashboard,
+                    active:
+                        pathname === "/dashboard" ||
+                        pathname.startsWith("/dashboard/invoices/"),
+                },
+                {
+                    href: "/dashboard/vehicles",
+                    label: "Vehicle management",
+                    icon: Truck,
+                    active: pathname.startsWith("/dashboard/vehicles"),
+                },
+            ],
         },
-        { href: "/dashboard/vehicles", label: "Vehicle management", icon: Truck, active: pathname.startsWith("/dashboard/vehicles") },
         ...(isAdmin
             ? [
                 {
-                    href: "/dashboard/users",
-                    label: "User management",
-                    icon: Users,
-                    active: pathname.startsWith("/dashboard/users"),
-                },
-                {
-                    href: "/dashboard/activity",
-                    label: "Activity log",
-                    icon: Activity,
-                    active: pathname.startsWith("/dashboard/activity"),
+                    label: "Administration",
+                    links: [
+                        {
+                            href: "/dashboard/users",
+                            label: "User management",
+                            icon: Users,
+                            active: pathname.startsWith("/dashboard/users"),
+                        },
+                        {
+                            href: "/dashboard/activity",
+                            label: "Activity log",
+                            icon: Activity,
+                            active: pathname.startsWith("/dashboard/activity"),
+                        },
+                    ],
                 },
             ]
             : []),
         {
-            href: "/dashboard/settings",
-            label: "Account settings",
-            icon: Settings2,
-            active: pathname.startsWith("/dashboard/settings"),
+            label: "Account",
+            links: [
+                {
+                    href: "/dashboard/settings",
+                    label: "Account settings",
+                    icon: Settings2,
+                    active: pathname.startsWith("/dashboard/settings"),
+                },
+            ],
         },
     ];
 
-    function navigation(compact = false) {
+    function navigation(compact = false, onDark = true) {
         return (
-            <nav aria-label="Workspace navigation" className="space-y-1">
-                {links.map(({ href, label, icon: Icon, active }) => (
-                    <Link
-                        key={href}
-                        href={href}
-                        aria-current={active ? "page" : undefined}
-                        aria-label={compact ? label : undefined}
-                        title={compact ? label : undefined}
-                        onClick={() => setMobileOpen(false)}
-                        className={[
-                            "flex min-h-11 items-center rounded-lg text-sm font-medium",
-                            "transition-colors motion-reduce:transition-none",
-                            "focus-visible:outline-none focus-visible:ring-2",
-                            "focus-visible:ring-ring focus-visible:ring-inset",
-                            compact ? "justify-center px-2" : "gap-3 px-3",
-                            active
-                                ? "bg-blue-50 text-blue-800 dark:bg-blue-400/10 dark:text-blue-300"
-                                : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                        ].join(" ")}
-                    >
-                        <Icon className="size-[18px] shrink-0" aria-hidden="true" />
-                        {!compact && <span>{label}</span>}
-                        {!compact && active && (
-                            <span
-                                aria-hidden="true"
-                                className="ml-auto size-1.5 rounded-full bg-current"
-                            />
+            <nav aria-label="Workspace navigation" className="space-y-5">
+                {groups.map((group) => (
+                    <div key={group.label} className="space-y-1">
+                        {!compact && (
+                            <p
+                                className={[
+                                    "px-3 pb-1 text-xs font-medium",
+                                    onDark
+                                        ? "text-sidebar-foreground/60"
+                                        : "text-muted-foreground",
+                                ].join(" ")}
+                            >
+                                {group.label}
+                            </p>
                         )}
-                    </Link>
+
+                        {group.links.map(({ href, label, icon: Icon, active }) => (
+                            <Link
+                                key={href}
+                                href={href}
+                                aria-current={active ? "page" : undefined}
+                                aria-label={compact ? label : undefined}
+                                title={compact ? label : undefined}
+                                onClick={() => setMobileOpen(false)}
+                                className={[
+                                    "relative flex min-h-11 items-center rounded-md text-sm font-medium",
+                                    "transition-colors motion-reduce:transition-none",
+                                    "focus-visible:outline-none focus-visible:ring-2",
+                                    "focus-visible:ring-sidebar-ring focus-visible:ring-inset",
+                                    compact ? "justify-center px-2" : "gap-3 px-3",
+                                    active
+                                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                                        : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+                                ].join(" ")}
+                            >
+                                {active && (
+                                    <span
+                                        aria-hidden="true"
+                                        className="absolute inset-y-2 left-0 w-[3px] rounded-r-full bg-sidebar-primary"
+                                    />
+                                )}
+                                <Icon
+                                    className={[
+                                        "size-[18px] shrink-0",
+                                        active ? "text-sidebar-primary" : "",
+                                    ].join(" ")}
+                                    aria-hidden="true"
+                                />
+                                {!compact && <span>{label}</span>}
+                            </Link>
+                        ))}
+                    </div>
                 ))}
             </nav>
         );
@@ -106,7 +149,7 @@ export default function AdminSidebar({
         <div className="min-h-screen bg-background">
             <a
                 href="#workspace-content"
-                className="sr-only fixed left-4 top-4 z-[100] rounded-lg
+                className="sr-only fixed left-4 top-4 z-[100] rounded-md
           bg-primary px-4 py-3 text-primary-foreground
           focus:not-sr-only"
             >
@@ -117,11 +160,11 @@ export default function AdminSidebar({
                 aria-label="Workspace sidebar"
                 className={[
                     "fixed inset-y-0 left-0 z-40 hidden flex-col",
-                    "border-r border-border bg-card lg:flex",
-                    collapsed ? "w-[76px]" : "w-56",
+                    "border-r border-sidebar-border bg-sidebar text-sidebar-foreground lg:flex",
+                    collapsed ? "w-[76px]" : "w-64",
                 ].join(" ")}
             >
-                <div className="flex h-16 shrink-0 items-center border-b border-border px-4">
+                <div className="flex h-16 shrink-0 items-center border-b border-sidebar-border px-4">
                     <Link
                         href="/dashboard"
                         aria-label="EFL 3PL Unloading Tracker"
@@ -134,15 +177,15 @@ export default function AdminSidebar({
                             width={40}
                             height={40}
                             unoptimized
-                            className="size-10 shrink-0 rounded-md object-contain"
+                            className="size-10 shrink-0 rounded-lg bg-white object-contain p-1"
                         />
 
                         {!collapsed && (
                             <span className="min-w-0">
-                                <span className="block text-sm font-semibold tracking-tight">
+                                <span className="block font-heading text-base font-semibold leading-tight tracking-tight text-white">
                                     Unloading Tracker
                                 </span>
-                                <span className="mt-0.5 block text-xs text-muted-foreground">
+                                <span className="mt-0.5 block text-xs text-sidebar-foreground/70">
                                     EFL 3PL · CSS Division
                                 </span>
                             </span>
@@ -151,23 +194,17 @@ export default function AdminSidebar({
                 </div>
 
                 <div className="min-h-0 flex-1 overflow-y-auto px-3 py-5">
-                    {!collapsed && (
-                        <p className="mb-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                            Workspace
-                        </p>
-                    )}
-
                     {navigation(collapsed)}
                 </div>
 
-                <div className="space-y-2 border-t border-border p-3">
+                <div className="space-y-1 border-t border-sidebar-border p-3">
                     <Link
                         href="/"
                         title={collapsed ? "Overview" : undefined}
                         aria-label={collapsed ? "Overview" : undefined}
                         className={[
-                            "flex min-h-11 items-center rounded-lg text-sm",
-                            "text-muted-foreground hover:bg-muted hover:text-foreground",
+                            "flex min-h-11 items-center rounded-md text-sm",
+                            "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
                             collapsed ? "justify-center" : "gap-3 px-3",
                         ].join(" ")}
                     >
@@ -182,8 +219,8 @@ export default function AdminSidebar({
                         aria-expanded={!collapsed}
                         title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
                         className={[
-                            "flex min-h-11 w-full items-center rounded-lg text-sm",
-                            "text-muted-foreground hover:bg-muted hover:text-foreground",
+                            "flex min-h-11 w-full items-center rounded-md text-sm",
+                            "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
                             collapsed ? "justify-center" : "gap-3 px-3",
                         ].join(" ")}
                     >
@@ -202,9 +239,9 @@ export default function AdminSidebar({
                 </div>
             </aside>
 
-            <div className={collapsed ? "lg:pl-[76px]" : "lg:pl-56"}>
+            <div className={collapsed ? "lg:pl-[76px]" : "lg:pl-64"}>
                 <header
-                    className="sticky top-0 z-40 border-b border-border bg-card"
+                    className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-md supports-[backdrop-filter]:bg-background/75"
                     onKeyDown={(event) => {
                         if (event.key === "Escape" && mobileOpen) {
                             setMobileOpen(false);
@@ -228,14 +265,14 @@ export default function AdminSidebar({
                     <div
                         id="mobile-workspace-navigation"
                         hidden={!mobileOpen}
-                        className="max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-border p-3 lg:hidden"
+                        className="max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-sidebar-border bg-sidebar p-3 text-sidebar-foreground lg:hidden"
                     >
                         {navigation()}
 
                         <Link
                             href="/"
                             onClick={() => setMobileOpen(false)}
-                            className="mt-2 flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            className="mt-2 flex min-h-11 items-center gap-3 rounded-md px-3 text-sm text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
                         >
                             <ArrowUpRight
                                 className="size-[18px]"
