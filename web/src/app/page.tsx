@@ -780,10 +780,7 @@ async function PublicOverview({ searchParams }: Props) {
                           <DateTime value={invoice.started_at} />
                         </td>
 
-                        <td className="px-4 py-3 align-top text-muted-foreground">
-                          <DateTime value={invoice.started_at} />
-                        </td>
-
+                        {/* Completion date */}
                         <td className="px-4 py-3 align-top text-muted-foreground">
                           <DateTime
                             value={
