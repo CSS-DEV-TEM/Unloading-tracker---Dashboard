@@ -7,15 +7,19 @@ import {
     ArrowLeft,
     ArrowUpRight,
     CalendarDays,
+    CheckCircle2,
     ChevronRight,
     FileText,
+    Lock,
     Search,
     Truck,
+    X,
 } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import OverviewRefresh from "@/components/overview-refresh";
 import {
+    VehicleNotice,
     AssignDialog,
     RemoveAssignment,
     VehicleEditor,
@@ -33,7 +37,16 @@ type Params = {
 };
 
 const secondaryButton =
-    "inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-input bg-background px-4 text-xs font-medium transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-blue-600";
+    "inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-input bg-card px-3.5 text-sm font-medium shadow-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
+const invoiceStatusStyle: Record<string, string> = {
+    Complete:
+        "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300",
+    Reject:
+        "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300",
+    Pending:
+        "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300",
+};
 
 function pageNumber(value?: string) {
     const number = Number(value || 1);
@@ -134,13 +147,15 @@ async function Content({
             : undefined;
 
     const notice =
-        params.notice === "archive"
-            ? "Vehicle archived. Existing invoice assignments are preserved."
-            : params.notice === "restore"
-                ? "Vehicle restored."
-                : params.notice === "delete"
-                    ? "Vehicle deleted. Invoice records are unchanged."
-                    : "";
+        params.notice === "saved"
+            ? "Vehicle saved successfully."
+            : params.notice === "archive"
+                ? "Vehicle archived. Existing invoice assignments are preserved."
+                : params.notice === "restore"
+                    ? "Vehicle restored."
+                    : params.notice === "delete"
+                        ? "Vehicle deleted. Invoice records are unchanged."
+                        : "";
 
     const link = (
         search: string,
@@ -254,16 +269,24 @@ async function Content({
 
     return (
         <main className="mx-auto w-full max-w-[1600px] space-y-5 px-4 py-5 text-foreground sm:px-6">
-            <header className="flex flex-wrap items-end justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-semibold tracking-tight">
-                        Vehicle management
-                    </h1>
+            <header className="dock-rise flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5">
+                <div className="flex items-start gap-3.5">
+                    <span
+                        aria-hidden="true"
+                        className="mt-1 h-8 w-1 shrink-0 rounded-full bg-signal"
+                    />
 
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        Manage vehicle records, received dates and invoice
-                        assignments.
-                    </p>
+                    <div>
+                        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                            Vehicle management
+                        </h1>
+
+                        <p className="mt-1.5 max-w-2xl text-sm leading-6 text-muted-foreground">
+                            {vehicle
+                                ? "Review this vehicle, then assign or remove the invoices it carried."
+                                : "Find a vehicle, then open it to assign or remove invoices."}
+                        </p>
+                    </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
@@ -272,11 +295,17 @@ async function Content({
                 </div>
             </header>
 
+            <VehicleNotice />
+
             {notice && (
                 <p
                     role="status"
-                    className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-200"
+                    className="flex items-center gap-2.5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200"
                 >
+                    <CheckCircle2
+                        className="size-4 shrink-0"
+                        aria-hidden="true"
+                    />
                     {notice}
                 </p>
             )}
@@ -293,29 +322,70 @@ async function Content({
             {!vehicle ? (
                 <section
                     aria-label="Vehicle records"
-                    className="overflow-hidden rounded-xl border border-border bg-card"
+                    className="overflow-hidden rounded-xl border border-border bg-card shadow-card"
                 >
-                    <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-6 py-5">
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <h2 className="font-semibold">
-                                    Vehicle records
-                                </h2>
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
+                        <Form
+                            action="/dashboard/vehicles"
+                            scroll={false}
+                            role="search"
+                            className="flex min-w-0 w-full flex-wrap items-center gap-2 sm:max-w-xl"
+                        >
+                            <input
+                                type="hidden"
+                                name="state"
+                                value={state}
+                            />
 
-                                <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
-                                    {total}
-                                </span>
+                            <label
+                                htmlFor="vehicle-search"
+                                className="sr-only"
+                            >
+                                Search by vehicle number
+                            </label>
+
+                            <div className="relative min-w-[160px] flex-1">
+                                <Search
+                                    aria-hidden="true"
+                                    className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                                />
+
+                                <input
+                                    id="vehicle-search"
+                                    name="q"
+                                    key={q}
+                                    defaultValue={q}
+                                    maxLength={100}
+                                    placeholder="Search by vehicle number, e.g. KP-10101"
+                                    className="h-10 w-full rounded-md border border-input bg-background pl-10 pr-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/25"
+                                />
                             </div>
 
-                            <p className="mt-1 text-sm text-muted-foreground">
-                                View received dates and manage invoices for
-                                each vehicle.
-                            </p>
-                        </div>
+                            <button
+                                type="submit"
+                                className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
+                            >
+                                Search
+                            </button>
+
+                            {q && (
+                                <Link
+                                    href={link("", 1)}
+                                    scroll={false}
+                                    className={secondaryButton}
+                                >
+                                    <X
+                                        className="size-4"
+                                        aria-hidden="true"
+                                    />
+                                    Clear
+                                </Link>
+                            )}
+                        </Form>
 
                         <nav
                             aria-label="Vehicle status"
-                            className="inline-flex rounded-lg border border-border bg-muted/30 p-1"
+                            className="inline-flex rounded-md border border-border bg-muted/50 p-1"
                         >
                             {(["active", "archived"] as const).map(
                                 (tab) => (
@@ -334,9 +404,9 @@ async function Content({
                                                 ? "page"
                                                 : undefined
                                         }
-                                        className={`rounded-md px-4 py-2 text-xs font-medium transition-colors ${state === tab
-                                                ? "bg-background text-foreground shadow-sm"
-                                                : "text-muted-foreground hover:text-foreground"
+                                        className={`rounded px-4 py-1.5 text-sm font-medium transition-colors ${state === tab
+                                            ? "bg-card text-foreground shadow-sm"
+                                            : "text-muted-foreground hover:text-foreground"
                                             }`}
                                     >
                                         {tab === "active"
@@ -348,101 +418,46 @@ async function Content({
                         </nav>
                     </div>
 
-                    <Form
-                        action="/dashboard/vehicles"
-                        scroll={false}
-                        className="flex flex-wrap items-end gap-3 px-6 py-5"
-                    >
-                        <input
-                            type="hidden"
-                            name="state"
-                            value={state}
-                        />
-
-                        <div className="min-w-[200px] flex-1 sm:max-w-lg">
-                            <label
-                                htmlFor="vehicle-search"
-                                className="mb-2 block text-xs font-medium text-muted-foreground"
-                            >
-                                Vehicle number
-                            </label>
-
-                            <div className="relative">
-                                <Search
-                                    aria-hidden="true"
-                                    className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground"
-                                />
-
-                                <input
-                                    id="vehicle-search"
-                                    name="q"
-                                    key={q}
-                                    defaultValue={q}
-                                    maxLength={100}
-                                    placeholder="Search vehicle number..."
-                                    className="h-10 w-full rounded-lg border border-input bg-background pl-10 pr-3 text-sm outline-none focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/20"
-                                />
-                            </div>
-                        </div>
-
-                        <button
-                            type="submit"
-                            className="inline-flex h-10 items-center justify-center rounded-lg bg-blue-700 px-5 text-sm font-semibold text-white hover:bg-blue-800"
-                        >
-                            Search
-                        </button>
-
-                        {q && (
-                            <Link
-                                href={link("", 1)}
-                                scroll={false}
-                                className={secondaryButton}
-                            >
-                                Clear search
-                            </Link>
-                        )}
-                    </Form>
-
-                    <div className="overflow-x-auto border-t border-border">
-                        <table className="w-full min-w-[720px] border-separate border-spacing-0 text-left text-sm">
+                    <div className="overflow-x-auto">
+                        <table role="table" className="block w-full text-left text-sm md:table md:min-w-[720px] md:border-separate md:border-spacing-0">
                             <caption className="sr-only">
                                 Vehicle numbers, received dates and assigned
                                 invoice counts
                             </caption>
 
-                            <thead className="bg-muted/40 text-xs text-muted-foreground">
+                            <thead role="rowgroup" className="sr-only bg-muted/60 text-xs text-muted-foreground md:not-sr-only md:table-header-group">
                                 <tr>
                                     <th
                                         scope="col"
-                                        className="border-b border-border px-6 py-3 font-medium"
+                                        className="border-b border-border px-5 py-3 text-xs font-semibold"
                                     >
                                         Vehicle number
                                     </th>
 
                                     <th
                                         scope="col"
-                                        className="border-b border-border px-6 py-3 font-medium"
+                                        className="border-b border-border px-5 py-3 text-xs font-semibold"
                                     >
                                         Received date
                                     </th>
 
                                     <th
                                         scope="col"
-                                        className="border-b border-border px-6 py-3 text-center font-medium"
+                                        className="border-b border-border px-5 py-3 text-center text-xs font-semibold"
                                     >
                                         Assigned invoices
                                     </th>
 
                                     <th
                                         scope="col"
-                                        className="border-b border-border px-6 py-3 text-right font-medium"
+                                        className="border-b border-border px-5 py-3 text-right text-xs font-semibold"
                                     >
                                         Actions
                                     </th>
                                 </tr>
                             </thead>
 
-                            <tbody>
+                            <tbody role="rowgroup" className="block space-y-3 bg-muted/20 p-3 md:table-row-group md:space-y-0 md:bg-transparent md:p-0">
                                 {(data ?? []).map((row) => {
                                     const dateLabel = formatDate(
                                         row.received_date,
@@ -452,11 +467,11 @@ async function Content({
                                         row.invoices?.[0]?.count ?? 0;
 
                                     return (
-                                        <tr
+                                        <tr role="row"
                                             key={row.id}
-                                            className="transition-colors hover:bg-muted/40 [&>td]:border-b [&>td]:border-border last:[&>td]:border-b-0"
+                                            className="block rounded-lg border border-border bg-card p-2 transition-colors hover:bg-primary/[0.04] md:table-row md:rounded-none md:border-0 md:p-0 md:[&>td]:border-b md:[&>td]:border-border md:last:[&>td]:border-b-0"
                                         >
-                                            <td className="px-6 py-4">
+                                            <td role="cell" className="block px-5 py-3.5 md:table-cell"><span aria-hidden="true" className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">Vehicle number</span>
                                                 <Link
                                                     href={link(
                                                         q,
@@ -465,7 +480,7 @@ async function Content({
                                                     )}
                                                     className="inline-flex items-center gap-3 rounded font-semibold text-blue-700 hover:underline focus-visible:outline-2 focus-visible:outline-blue-600 dark:text-blue-300"
                                                 >
-                                                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground">
+                                                    <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
                                                         <Truck
                                                             className="size-4"
                                                             aria-hidden="true"
@@ -476,7 +491,7 @@ async function Content({
                                                 </Link>
                                             </td>
 
-                                            <td className="px-6 py-4">
+                                            <td role="cell" className="block px-5 py-3.5 md:table-cell"><span aria-hidden="true" className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">Received date</span>
                                                 {dateLabel ? (
                                                     <span className="inline-flex items-center gap-2">
                                                         <CalendarDays
@@ -503,13 +518,20 @@ async function Content({
                                                 )}
                                             </td>
 
-                                            <td className="px-6 py-4 text-center">
-                                                <span className="inline-flex min-w-9 justify-center rounded-md bg-muted/50 px-2.5 py-1 font-medium tabular-nums">
-                                                    {assignedCount}
+                                            <td role="cell" className="block px-5 py-3.5 md:text-center md:table-cell"><span aria-hidden="true" className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">Assigned invoices</span>
+                                                <span
+                                                    className={`inline-flex items-center justify-center rounded-md px-2.5 py-1 text-xs font-semibold tabular-nums ${assignedCount > 0
+                                                        ? "bg-primary/10 text-primary"
+                                                        : "bg-muted text-muted-foreground"
+                                                        }`}
+                                                >
+                                                    {assignedCount > 0
+                                                        ? `${assignedCount} ${assignedCount === 1 ? "invoice" : "invoices"}`
+                                                        : "No invoices"}
                                                 </span>
                                             </td>
 
-                                            <td className="px-6 py-4 text-right">
+                                            <td role="cell" className="block px-5 py-3.5 md:text-right md:table-cell"><span aria-hidden="true" className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">Actions</span>
                                                 <Link
                                                     href={link(
                                                         q,
@@ -518,7 +540,7 @@ async function Content({
                                                     )}
                                                     className={secondaryButton}
                                                 >
-                                                    View invoices
+                                                    Open
                                                     <ChevronRight
                                                         className="size-4"
                                                         aria-hidden="true"
@@ -538,10 +560,12 @@ async function Content({
 
                     {!data?.length && (
                         <div className="px-6 py-16 text-center">
-                            <Truck
-                                className="mx-auto mb-4 size-8 text-muted-foreground"
-                                aria-hidden="true"
-                            />
+                            <span className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                                <Truck
+                                    className="size-6"
+                                    aria-hidden="true"
+                                />
+                            </span>
 
                             <p className="font-semibold">
                                 {q
@@ -561,8 +585,8 @@ async function Content({
                         </div>
                     )}
 
-                    <footer className="flex flex-wrap items-center justify-between gap-4 border-t border-border px-6 py-4">
-                        <p className="text-xs text-muted-foreground">
+                    <footer className="flex flex-wrap items-center justify-between gap-4 border-t border-border bg-muted/30 px-5 py-3.5">
+                        <p className="text-sm text-muted-foreground">
                             {total > 0
                                 ? `Showing ${(page - 1) * 20 + 1}–${Math.min(page * 20, total)} of ${total} vehicles`
                                 : "0 vehicles"}
@@ -603,7 +627,7 @@ async function Content({
                     >
                         <Link
                             href={link(q, page)}
-                            className="inline-flex min-h-10 items-center gap-2 rounded-lg pr-2 text-muted-foreground hover:text-foreground"
+                            className="inline-flex min-h-10 items-center gap-2 rounded-md pr-2 font-medium text-muted-foreground hover:text-foreground"
                         >
                             <ArrowLeft
                                 className="size-4"
@@ -617,35 +641,36 @@ async function Content({
                             aria-hidden="true"
                         />
 
-                        <span className="font-medium">
+                        <span className="font-semibold">
                             {vehicle.vehicle_number}
                         </span>
                     </nav>
 
                     <section
                         aria-label={`Vehicle ${vehicle.vehicle_number}`}
-                        className="overflow-hidden rounded-xl border border-border bg-card"
+                        className="overflow-hidden rounded-xl border border-border bg-card shadow-card"
                     >
-                        <div className="flex flex-wrap items-center justify-between gap-5 px-6 py-5">
-                            <div className="flex items-center gap-4">
-                                <span className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300">
+                        <div className="flex flex-wrap items-center justify-between gap-5 px-5 py-5">
+                            <div className="flex min-w-0 max-w-full items-center gap-4">
+                                <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
                                     <Truck
                                         className="size-6"
                                         aria-hidden="true"
                                     />
                                 </span>
 
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                        Vehicle details
-                                    </p>
-
-                                    <div className="mt-1 flex flex-wrap items-center gap-3">
-                                        <h2 className="text-2xl font-semibold tracking-tight">
+                                <div className="min-w-0">
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <h2 className="min-w-0 break-words text-2xl font-semibold tracking-tight sm:text-3xl">
                                             {vehicle.vehicle_number}
                                         </h2>
 
-                                        <span className="rounded-full border border-border bg-muted/30 px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                                        <span
+                                            className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-semibold before:size-1.5 before:rounded-full before:bg-current before:content-[''] ${vehicle.is_archived
+                                                ? "border-border bg-muted text-muted-foreground"
+                                                : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300"
+                                                }`}
+                                        >
                                             {vehicle.is_archived
                                                 ? "Archived"
                                                 : "Active"}
@@ -672,13 +697,13 @@ async function Content({
                             </div>
                         </div>
 
-                        <dl className="grid gap-5 border-t border-border bg-muted/20 px-6 py-5 sm:grid-cols-2">
+                        <dl className="grid gap-px border-t border-border bg-border sm:grid-cols-2 [&>div]:bg-muted/30 [&>div]:px-5 [&>div]:py-4">
                             <div>
                                 <dt className="text-xs font-medium text-muted-foreground">
                                     Received date
                                 </dt>
 
-                                <dd className="mt-2 flex items-center gap-2 text-sm font-semibold">
+                                <dd className="mt-1.5 flex items-center gap-2 text-lg font-semibold">
                                     <CalendarDays
                                         className="size-4 text-muted-foreground"
                                         aria-hidden="true"
@@ -708,7 +733,7 @@ async function Content({
                                     Assigned invoices
                                 </dt>
 
-                                <dd className="mt-2 flex items-center gap-2 text-sm font-semibold">
+                                <dd className="mt-1.5 flex items-center gap-2 text-lg font-semibold">
                                     <FileText
                                         className="size-4 text-muted-foreground"
                                         aria-hidden="true"
@@ -725,9 +750,9 @@ async function Content({
                     <section
                         id="vehicle-invoices"
                         aria-label="Assigned invoices"
-                        className="overflow-hidden rounded-xl border border-border bg-card"
+                        className="overflow-hidden rounded-xl border border-border bg-card shadow-card"
                     >
-                        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-6 py-5">
+                        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-5 py-4">
                             <div>
                                 <div className="flex items-center gap-2">
                                     <h2 className="font-semibold">
@@ -740,8 +765,9 @@ async function Content({
                                 </div>
 
                                 <p className="mt-1 text-sm text-muted-foreground">
-                                    Invoices linked to{" "}
-                                    {vehicle.vehicle_number}.
+                                    {vehicle.is_archived
+                                        ? `Invoices linked to ${vehicle.vehicle_number}. Restore the vehicle to change assignments.`
+                                        : `Invoices linked to ${vehicle.vehicle_number}. Completed invoices are locked; others can be unassigned.`}
                                 </p>
                             </div>
 
@@ -754,51 +780,51 @@ async function Content({
                         </div>
 
                         <div className="overflow-x-auto">
-                            <table className="w-full min-w-[800px] border-separate border-spacing-0 text-left text-sm">
+                            <table role="table" className="block w-full text-left text-sm md:table md:min-w-[800px] md:border-separate md:border-spacing-0">
                                 <caption className="sr-only">
                                     Invoices assigned to{" "}
                                     {vehicle.vehicle_number}
                                 </caption>
 
-                                <thead className="bg-muted/40 text-xs text-muted-foreground">
+                                <thead role="rowgroup" className="sr-only bg-muted/60 text-xs text-muted-foreground md:not-sr-only md:table-header-group">
                                     <tr>
                                         <th
                                             scope="col"
-                                            className="border-b border-border px-6 py-3 font-medium"
+                                            className="border-b border-border px-5 py-3 text-xs font-semibold"
                                         >
                                             Invoice number
                                         </th>
 
                                         <th
                                             scope="col"
-                                            className="border-b border-border px-6 py-3 font-medium"
+                                            className="border-b border-border px-5 py-3 text-xs font-semibold"
                                         >
                                             Supplier
                                         </th>
 
                                         <th
                                             scope="col"
-                                            className="border-b border-border px-6 py-3 font-medium"
+                                            className="border-b border-border px-5 py-3 text-xs font-semibold"
                                         >
                                             Status
                                         </th>
 
                                         <th
                                             scope="col"
-                                            className="border-b border-border px-6 py-3 text-right font-medium"
+                                            className="border-b border-border px-5 py-3 text-right text-xs font-semibold"
                                         >
                                             Actions
                                         </th>
                                     </tr>
                                 </thead>
 
-                                <tbody>
+                                <tbody role="rowgroup" className="block space-y-3 bg-muted/20 p-3 md:table-row-group md:space-y-0 md:bg-transparent md:p-0">
                                     {invoices.map((invoice) => (
-                                        <tr
+                                        <tr role="row"
                                             key={`${invoice.id}-${invoice.version}`}
-                                            className="transition-colors hover:bg-muted/40 [&>td]:border-b [&>td]:border-border last:[&>td]:border-b-0"
+                                            className="block rounded-lg border border-border bg-card p-2 transition-colors hover:bg-primary/[0.04] md:table-row md:rounded-none md:border-0 md:p-0 md:[&>td]:border-b md:[&>td]:border-border md:last:[&>td]:border-b-0"
                                         >
-                                            <td className="px-6 py-4">
+                                            <td role="cell" className="block px-5 py-3.5 md:table-cell"><span aria-hidden="true" className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">Invoice number</span>
                                                 <Link
                                                     href={`/dashboard/invoices/${invoice.id}`}
                                                     className="inline-flex items-center gap-2 rounded font-semibold text-blue-700 hover:underline focus-visible:outline-2 focus-visible:outline-blue-600 dark:text-blue-300"
@@ -808,37 +834,28 @@ async function Content({
                                                         aria-hidden="true"
                                                     />
 
-                                                    <span className="break-words">
+                                                    <span className="ref break-words">
                                                         {invoice.invoice_number}
                                                     </span>
                                                 </Link>
                                             </td>
 
-                                            <td className="max-w-md px-6 py-4">
+                                            <td role="cell" className="block max-w-md px-5 py-3.5 md:table-cell"><span aria-hidden="true" className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">Supplier</span>
                                                 <span className="break-words">
                                                     {invoice.supplier}
                                                 </span>
                                             </td>
 
-                                            <td className="px-6 py-4">
+                                            <td role="cell" className="block px-5 py-3.5 md:table-cell"><span aria-hidden="true" className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">Status</span>
                                                 <span
-                                                    className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-medium ${invoice.status ===
-                                                            "Complete"
-                                                            ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300"
-                                                            : "border-border bg-muted/30 text-muted-foreground"
-                                                        }`}
+                                                    className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-0.5 text-xs font-semibold before:size-1.5 before:rounded-full before:bg-current before:content-[''] ${invoiceStatusStyle[invoice.status] ?? invoiceStatusStyle.Pending}`}
                                                 >
-                                                    <span
-                                                        className="size-1.5 rounded-full bg-current"
-                                                        aria-hidden="true"
-                                                    />
-
                                                     {invoice.status}
                                                 </span>
                                             </td>
 
-                                            <td className="px-6 py-4">
-                                                <div className="flex flex-wrap items-center justify-end gap-3">
+                                            <td role="cell" className="block px-5 py-3.5 md:table-cell"><span aria-hidden="true" className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">Actions</span>
+                                                <div className="flex flex-wrap items-center justify-start gap-3 md:justify-end">
                                                     <Link
                                                         href={`/dashboard/invoices/${invoice.id}`}
                                                         className={secondaryButton}
@@ -854,10 +871,17 @@ async function Content({
                                                         </span>
                                                     </Link>
 
-                                                    {invoice.status ===
-                                                        "Complete" ? (
-                                                        <span className="text-xs text-muted-foreground">
-                                                            Assignment locked
+                                                    {(vehicle.is_archived || invoice.status ===
+                                                        "Complete") ? (
+                                                        <span
+                                                            title={vehicle.is_archived ? "Restore this vehicle before changing assignments" : "Completed invoices cannot be unassigned"}
+                                                            className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground"
+                                                        >
+                                                            <Lock
+                                                                className="size-3.5"
+                                                                aria-hidden="true"
+                                                            />
+                                                            {vehicle.is_archived ? "Restore vehicle first" : "Locked"}
                                                         </span>
                                                     ) : (
                                                         <RemoveAssignment
@@ -874,10 +898,12 @@ async function Content({
 
                         {!invoices.length && (
                             <div className="px-6 py-16 text-center">
-                                <FileText
-                                    className="mx-auto mb-4 size-8 text-muted-foreground"
-                                    aria-hidden="true"
-                                />
+                                <span className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                                    <FileText
+                                        className="size-6"
+                                        aria-hidden="true"
+                                    />
+                                </span>
 
                                 <p className="font-semibold">
                                     No invoices assigned
@@ -891,7 +917,7 @@ async function Content({
                             </div>
                         )}
 
-                        <footer className="flex flex-wrap items-center justify-between gap-4 border-t border-border px-6 py-4">
+                        <footer className="flex flex-wrap items-center justify-between gap-4 border-t border-border bg-muted/30 px-5 py-3.5">
                             <p className="text-xs text-muted-foreground">
                                 {invoiceCount > 0
                                     ? `Showing ${(invoicePage - 1) * 20 + 1}–${Math.min(invoicePage * 20, invoiceCount)} of ${invoiceCount} invoices`
@@ -947,12 +973,14 @@ export default function VehiclePage(props: {
     return (
         <Suspense
             fallback={
-                <p
-                    role="status"
-                    className="min-h-screen bg-background p-8 text-sm text-muted-foreground"
-                >
-                    Loading vehicles…
-                </p>
+                <div role="status" aria-label="Loading vehicles" className="mx-auto max-w-[1600px] space-y-5 p-6">
+                    <span className="sr-only">Loading vehicles…</span>
+                    <div aria-hidden="true" className="space-y-5 animate-pulse motion-reduce:animate-none">
+                        <div className="h-9 w-56 rounded bg-muted" />
+                        <div className="h-14 rounded-lg bg-muted" />
+                        {[1, 2, 3, 4].map(item => <div key={item} className="h-20 rounded-lg border border-border bg-muted/60" />)}
+                    </div>
+                </div>
             }
         >
             <Content {...props} />
