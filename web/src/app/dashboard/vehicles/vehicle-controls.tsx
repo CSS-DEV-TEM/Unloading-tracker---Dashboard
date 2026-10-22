@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
     Plus,
@@ -25,21 +25,39 @@ import {
 
 } from "./actions";
 
-const button = "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-input px-4 text-sm font-medium hover:bg-muted disabled:opacity-50";
-const primary = "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-semibold text-white hover:bg-blue-800 disabled:opacity-50";
-const input = "h-11 w-full rounded-lg border border-input bg-background px-3 text-sm";
+const button = "inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-input bg-card px-4 text-sm font-medium shadow-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50";
+const primary = "inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card disabled:opacity-50";
+const input = "h-11 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/25";
 
-function Modal({ title, trigger, children, pending = false, onOpen }: { title: string; trigger: ReactNode; children: (close: () => void) => ReactNode; pending?: boolean; onOpen?: () => void }) {
+function announce(message: string) {
+    window.dispatchEvent(new CustomEvent("vehicle-success", { detail: message }));
+}
+
+export function VehicleNotice() {
+    const [message, setMessage] = useState("");
+    useEffect(() => {
+        const receive = (event: Event) => setMessage((event as CustomEvent<string>).detail);
+        window.addEventListener("vehicle-success", receive);
+        return () => window.removeEventListener("vehicle-success", receive);
+    }, []);
+    return <div role="status" aria-live="polite" aria-atomic="true">
+        {message && <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">
+            <span>{message}</span><button type="button" className={button} aria-label="Dismiss notification" onClick={() => setMessage("")}><X className="size-4" /></button>
+        </div>}
+    </div>;
+}
+
+function Modal({ title, trigger, children, pending = false, onOpen, emphasis = false }: { title: string; trigger: ReactNode; children: (close: () => void) => ReactNode; pending?: boolean; onOpen?: () => void; emphasis?: boolean }) {
     const dialog = useRef<HTMLDialogElement>(null);
     const opener = useRef<HTMLButtonElement>(null);
     const id = useId();
     return <>
-        <button type="button" ref={opener} className={button} onClick={() => { onOpen?.(); dialog.current?.showModal(); }}>{trigger}</button>
+        <button type="button" ref={opener} className={emphasis ? primary : button} onClick={() => { onOpen?.(); dialog.current?.showModal(); }}>{trigger}</button>
         <dialog ref={dialog} aria-labelledby={id} onCancel={e => { if (pending) e.preventDefault(); }} onClose={() => opener.current?.focus()}
             style={{ position: "fixed", inset: 0, margin: "auto", width: "calc(100vw - 2rem)", maxWidth: "44rem", maxHeight: "calc(100dvh - 2rem)", overflowY: "auto", backgroundColor: "var(--card)", color: "var(--foreground)" }}
-            className="rounded-2xl border border-border p-0 shadow-2xl backdrop:bg-black/60">
-            <div className="flex items-center justify-between gap-4 border-b border-border p-5">
-                <h2 id={id} className="text-lg font-semibold">{title}</h2>
+            className="rounded-xl border border-border p-0 shadow-raised backdrop:bg-black/60 backdrop:backdrop-blur-[2px]">
+            <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-border bg-card p-5">
+                <h2 id={id} className="min-w-0 break-words text-lg font-semibold tracking-tight sm:text-xl">{title}</h2>
                 <button type="button" aria-label="Close dialog" disabled={pending} className={button} onClick={() => dialog.current?.close()}><X className="size-4" /></button>
             </div>
             <div className="p-5">{children(() => dialog.current?.close())}</div>
@@ -72,6 +90,7 @@ export function VehicleEditor({
     return (
         <Modal
             title={editing ? "Edit vehicle" : "Add vehicle"}
+            emphasis={!editing}
             pending={pending}
             onOpen={() => {
                 setNumber(vehicle?.vehicle_number ?? "");
@@ -122,6 +141,7 @@ export function VehicleEditor({
                                         }
 
                                         close();
+                                        announce("Vehicle details saved successfully.");
                                         router.refresh();
                                         return;
                                     }
@@ -140,7 +160,7 @@ export function VehicleEditor({
 
                                         close();
 
-                                        router.push("/dashboard/vehicles", { scroll: false });
+                                        router.push("/dashboard/vehicles?notice=saved", { scroll: false });
                                         router.refresh();
                                         return;
                                     }
@@ -157,7 +177,7 @@ export function VehicleEditor({
                                     }
 
                                     close();
-                                    router.push("/dashboard/vehicles", { scroll: false });
+                                    router.push("/dashboard/vehicles?notice=saved", { scroll: false });
                                     router.refresh();
                                 } catch {
                                     setError(
@@ -278,20 +298,25 @@ export function AssignDialog({ vehicle }: { vehicle: VehicleRow }) {
     const [page, setPage] = useState(1);
     const [more, setMore] = useState(false);
     const [review, setReview] = useState(false);
+    const requestId = useRef(0);
+    const [appliedQuery, setAppliedQuery] = useState("");
     const [error, setError] = useState("");
     const [pending, start] = useTransition();
     const [loading, load] = useTransition();
     const busy = pending || loading;
     const id = useId();
     function search(text: string, next: number) {
+        const currentRequest = ++requestId.current;
         load(async () => {
             try {
                 const result = await searchAssignable(text, next);
+                if (currentRequest !== requestId.current) return;
+                setAppliedQuery(text);
                 setRows(result.items); setMore(result.more); setPage(next); setError(result.error);
-            } catch { setRows([]); setError("Unable to load invoices. Try again."); }
+            } catch { if (currentRequest === requestId.current) { setRows([]); setError("Unable to load invoices. Try again."); } }
         });
     }
-    return <Modal title={`Assign invoices · ${vehicle.vehicle_number}`} pending={busy}
+    return <Modal title={`Assign invoices · ${vehicle.vehicle_number}`} pending={pending} emphasis
         onOpen={() => { setQuery(""); setSelected([]); setReview(false); setError(""); search("", 1); }}
         trigger={<><Plus className="size-4" />Assign invoices</>}>
         {close => <div className="space-y-4">
@@ -302,33 +327,37 @@ export function AssignDialog({ vehicle }: { vehicle: VehicleRow }) {
                     <button disabled={busy} className={button}><Search className="size-4" /><span className="sr-only">Search</span></button>
                 </form>
                 <p className="text-xs text-muted-foreground">Select up to 50 invoices. Your selection is kept when searching or changing pages.</p>
-                <div className="divide-y divide-border rounded-lg border border-border" aria-busy={loading}>
+                <div className="max-h-[35dvh] divide-y divide-border overflow-y-auto rounded-lg border border-border" aria-busy={loading}>
                     {loading ? <p role="status" className="p-4 text-sm">Loading invoices…</p> : rows.length === 0 ? <p className="p-4 text-sm text-muted-foreground">No matching invoices.</p> : rows.map(row => {
                         const checked = selected.some(item => item.id === row.id);
                         const assigned = row.vehicle_id === vehicle.id;
                         const locked = row.status === "Complete";
-                        return <label key={row.id} className="flex items-start gap-3 p-3 text-sm">
-                            <input type="checkbox" className="mt-1 size-4" checked={checked} disabled={busy || locked || assigned || (!checked && selected.length >= 50)} onChange={() => setSelected(old => checked ? old.filter(item => item.id !== row.id) : [...old, row])} />
+                        return <label key={row.id} className={`flex items-start gap-3 p-3 text-sm transition-colors ${checked ? "bg-primary/[0.06]" : locked || assigned ? "bg-muted/40 text-muted-foreground" : "cursor-pointer hover:bg-muted/50"}`}>
+                            <input type="checkbox" className="mt-1 size-4 accent-primary" checked={checked} disabled={busy || locked || assigned || (!checked && selected.length >= 50)} onChange={() => setSelected(old => checked ? old.filter(item => item.id !== row.id) : [...old, row])} />
                             <span className="min-w-0"><span className="block break-words font-semibold">{row.invoice_number}</span><span className="block break-words text-muted-foreground">{row.supplier}</span><span className="mt-1 block text-xs text-muted-foreground">{locked ? "Complete · Reopen as Pending to change vehicle" : assigned ? "Already assigned to this vehicle" : `Current vehicle: ${row.vehicle_number || "Unassigned"}`}</span></span>
                         </label>;
                     })}
                 </div>
-                <div className="flex items-center justify-between gap-2"><button type="button" className={button} disabled={busy || page === 1} onClick={() => search(query, page - 1)}>Previous</button><span className="text-xs">Page {page}</span><button type="button" className={button} disabled={busy || !more} onClick={() => search(query, page + 1)}>Next</button></div>
+                <div className="flex items-center justify-between gap-2"><button type="button" className={button} disabled={busy || page === 1} onClick={() => search(appliedQuery, page - 1)}>Previous</button><span className="text-xs">Page {page}</span><button type="button" className={button} disabled={busy || !more} onClick={() => search(appliedQuery, page + 1)}>Next</button></div>
             </> : <>
                 <p className="text-sm">Review {selected.length} assignment(s). Invoices currently on another vehicle will move to <strong>{vehicle.vehicle_number}</strong>.</p>
-                <ul className="divide-y divide-border rounded-lg border border-border">{selected.map(row => <li key={row.id} className="p-3 text-sm"><p className="break-words font-semibold">{row.invoice_number}</p><p className="mt-1 break-words text-muted-foreground">{row.vehicle_number || "Unassigned"} → {vehicle.vehicle_number}</p></li>)}</ul>
+                <ul className="max-h-[35dvh] overflow-y-auto divide-y divide-border rounded-lg border border-border">{selected.map(row => <li key={row.id} className="p-3 text-sm"><p className="break-words font-semibold">{row.invoice_number}</p><p className="mt-1 break-words text-muted-foreground">{row.vehicle_number || "Unassigned"} → {vehicle.vehicle_number}</p></li>)}</ul>
             </>}
             {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-                <span className="text-xs text-muted-foreground">{selected.length} selected</span>
-                <div className="flex gap-2"><button type="button" disabled={busy} className={button} onClick={() => review ? setReview(false) : close()}>{review ? "Back" : "Cancel"}</button>
+            <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 border-t border-border bg-card py-4">
+                <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs text-muted-foreground">{selected.length} selected</span>
+                    {!review && selected.length > 0 && <button type="button" className={button} disabled={pending} onClick={() => { setReview(true); setError(""); }}>View selected</button>}
+                    {selected.length > 0 && <button type="button" className={button} disabled={pending} onClick={() => { setSelected([]); setReview(false); }}>Clear selection</button>}
+                </div>
+                <div className="flex gap-2"><button type="button" disabled={pending} className={button} onClick={() => review ? setReview(false) : close()}>{review ? "Back" : "Cancel"}</button>
                     <button type="button" disabled={busy || !selected.length} className={primary} onClick={() => {
                         if (!review) { setReview(true); setError(""); return; }
                         start(async () => {
                             try {
                                 const result = await assignInvoices(vehicle.id, selected.map(({ id, version }) => ({ id, version })));
                                 setError(result.error);
-                                if (!result.error) { close(); setSelected([]); router.refresh(); }
+                                if (!result.error) { close(); announce(`${selected.length} invoice(s) assigned successfully.`); setSelected([]); router.refresh(); }
                             } catch { setError("Unable to save. Try again."); }
                         });
                     }}>{pending ? "Assigning…" : review ? "Confirm assignment" : "Review selection"}</button>
@@ -347,7 +376,7 @@ export function RemoveAssignment({ invoice }: { invoice: InvoiceChoice }) {
         {close => <div className="space-y-4"><p className="text-sm">Remove invoice <strong>{invoice.invoice_number}</strong> from <strong>{invoice.vehicle_number}</strong>? The invoice will remain in the dashboard.</p>
             {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
             <div className="flex justify-end gap-3"><button autoFocus type="button" disabled={pending} className={button} onClick={close}>Cancel</button><button type="button" disabled={pending} className={primary} onClick={() => start(async () => {
-                try { const result = await assignInvoices(null, [{ id: invoice.id, version: invoice.version }]); setError(result.error); if (!result.error) { close(); router.refresh(); } }
+                try { const result = await assignInvoices(null, [{ id: invoice.id, version: invoice.version }]); setError(result.error); if (!result.error) { close(); announce("Invoice unassigned successfully."); router.refresh(); } }
                 catch { setError("Unable to save. Try again."); }
             })}>{pending ? "Removing…" : "Remove assignment"}</button></div>
         </div>}
@@ -405,7 +434,7 @@ function VehicleStateDialog({ vehicle, action, invoiceCount }: {
             {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
             <div className="flex flex-wrap justify-end gap-3 border-t border-border pt-4">
                 <button autoFocus type="button" className={button} disabled={pending} onClick={close}>Cancel</button>
-                <button className={deleting ? "inline-flex min-h-11 items-center justify-center rounded-lg bg-red-700 px-4 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-50" : primary}
+                <button className={deleting ? "inline-flex min-h-10 items-center justify-center rounded-md bg-red-700 px-4 text-sm font-semibold text-white shadow-sm hover:bg-red-800 disabled:opacity-50" : primary}
                     disabled={pending || (deleting && confirmation !== vehicle.vehicle_number)}>{pending ? "Saving…" : title}</button>
             </div>
         </form>}

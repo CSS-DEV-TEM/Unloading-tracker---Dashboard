@@ -28,7 +28,13 @@ async function access(admin = false) {
 function message(error: { code?: string }) {
     if (error.code === "PVC01") return "A selected invoice is completed or ASN shared. Reopen it as Pending and reload before changing its vehicle.";
     if (error.code === "40001" || error.code === "40P01") return "A record changed while saving. Reload, review your selection and try again.";
-    if (error.code === "PVA01") return "This vehicle is archived. Ask an administrator to restore it before assigning invoices.";
+    if (error.code === "PVA01") {
+        return (
+            "The current or selected vehicle is archived. " +
+            "Ask an administrator to restore it before assigning, " +
+            "moving or unassigning invoices."
+        );
+    }
     if (error.code === "23503") {
         return "This vehicle has invoices or arrival history. Archive it to preserve those records.";
     }
