@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Fragment, useState } from "react";
-import { ChevronDown, ClipboardList } from "lucide-react";
+import { ArrowRight, ChevronDown, ClipboardList } from "lucide-react";
 
 export type ActivityRow = {
     id: string;
@@ -121,36 +121,70 @@ function formatValue(value: unknown): string {
     return String(value);
 }
 
+const TONES = {
+    create:
+        "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300",
+    caution:
+        "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300",
+    danger:
+        "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300",
+    update:
+        "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300",
+};
+
 function actionClass(action: string) {
     if (
-        action === "USER_DEACTIVATED" ||
+        action === "INVOICE_DELETED" ||
+        action === "VEHICLE_DELETED" ||
         action === "ACTIVITY_LOGS_CLEARED"
     ) {
-        return "bg-amber-50 text-amber-800 dark:bg-amber-400/10 dark:text-amber-300";
+        return TONES.danger;
+    }
+
+    if (
+        action === "USER_DEACTIVATED" ||
+        action === "VEHICLE_ARCHIVED"
+    ) {
+        return TONES.caution;
     }
 
     if (
         action === "INVOICE_CREATED" ||
+        action === "VEHICLE_CREATED" ||
+        action === "VEHICLE_RESTORED" ||
         action === "USER_CREATED" ||
-        action === "USER_ACTIVATED"
+        action === "USER_ACTIVATED" ||
+        action === "ADMIN_BOOTSTRAPPED"
     ) {
-        return "bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300";
+        return TONES.create;
     }
 
-    return "bg-blue-50 text-blue-700 dark:bg-blue-400/10 dark:text-blue-300";
+    return TONES.update;
+}
+
+function initials(name: string | null) {
+    const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
+
+    if (parts.length === 0) return "?";
+
+    return parts
+        .slice(0, 2)
+        .map((part) => part[0])
+        .join("")
+        .toUpperCase();
 }
 
 function ChangeDetails({ changes }: { changes: unknown }) {
     if (!isObject(changes) || Object.keys(changes).length === 0) {
         return (
             <p className="text-sm text-muted-foreground">
-                No field details recorded for this activity.
+                No field details were recorded for this activity.
             </p>
         );
     }
 
     return (
-        <div className="space-y-4">
+        <div className="divide-y divide-border">
             {Object.entries(changes).map(([field, change]) => {
                 const label =
                     FIELD_LABELS[field] ??
@@ -164,27 +198,32 @@ function ChangeDetails({ changes }: { changes: unknown }) {
                 return (
                     <div
                         key={field}
-                        className="grid gap-3 border-b border-border pb-4 last:border-0 last:pb-0 md:grid-cols-4"
+                        className="grid gap-3 py-4 first:pt-0 last:pb-0 md:grid-cols-[11rem_minmax(0,1fr)]"
                     >
-                        <h3 className="break-words text-xs font-semibold text-foreground">
+                        <h3 className="break-words text-sm font-semibold text-foreground">
                             {label}
                         </h3>
 
-                        <div className="min-w-0 md:col-span-3">
+                        <div className="min-w-0">
                             {hasComparison ? (
-                                <div className="grid gap-3 sm:grid-cols-2">
-                                    <div className="min-w-0 rounded-lg border border-border bg-background p-3">
-                                        <p className="mb-2 text-xs font-medium text-muted-foreground">
-                                            Previous value
+                                <div className="grid items-stretch gap-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+                                    <div className="min-w-0 rounded-md border border-border bg-card p-3">
+                                        <p className="mb-1.5 text-xs font-semibold text-muted-foreground">
+                                            Before
                                         </p>
                                         <pre className="whitespace-pre-wrap break-words font-sans text-sm text-foreground">
                                             {formatValue(change.old)}
                                         </pre>
                                     </div>
 
-                                    <div className="min-w-0 rounded-lg border border-blue-200 bg-blue-50/50 p-3 dark:border-blue-900 dark:bg-blue-400/5">
-                                        <p className="mb-2 text-xs font-medium text-blue-700 dark:text-blue-300">
-                                            New value
+                                    <ArrowRight
+                                        aria-hidden="true"
+                                        className="hidden size-4 self-center text-muted-foreground sm:block"
+                                    />
+
+                                    <div className="min-w-0 rounded-md border border-emerald-200 bg-emerald-50/60 p-3 dark:border-emerald-900 dark:bg-emerald-950/20">
+                                        <p className="mb-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                                            After
                                         </p>
                                         <pre className="whitespace-pre-wrap break-words font-sans text-sm text-foreground">
                                             {formatValue(change.new)}
@@ -192,7 +231,7 @@ function ChangeDetails({ changes }: { changes: unknown }) {
                                     </div>
                                 </div>
                             ) : (
-                                <pre className="whitespace-pre-wrap break-words rounded-lg border border-border bg-background p-3 font-sans text-sm text-foreground">
+                                <pre className="whitespace-pre-wrap break-words rounded-md border border-border bg-card p-3 font-sans text-sm text-foreground">
                                     {formatValue(change)}
                                 </pre>
                             )}
@@ -213,18 +252,18 @@ export default function ActivityTable({
 
     if (rows.length === 0) {
         return (
-            <div className="flex flex-col items-center px-6 py-14 text-center">
-                <span className="mb-3 flex size-11 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-                    <ClipboardList className="size-5" aria-hidden="true" />
+            <div className="flex flex-col items-center px-6 py-16 text-center">
+                <span className="mb-4 flex size-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                    <ClipboardList className="size-6" aria-hidden="true" />
                 </span>
 
-                <h3 className="text-sm font-semibold text-foreground">
+                <h3 className="font-semibold text-foreground">
                     No matching activity
                 </h3>
 
                 <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
-                    Try another invoice, user or date range, or reset
-                    the filters to view all records.
+                    Try a different invoice, user or date range, or reset
+                    the filters to see every record.
                 </p>
             </div>
         );
@@ -237,27 +276,27 @@ export default function ActivityTable({
             tabIndex={0}
             className="overflow-x-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
         >
-            <table className="w-full min-w-[850px] table-fixed text-left text-sm">
+            <table className="w-full min-w-[900px] table-fixed text-left text-sm">
                 <caption className="sr-only">
                     Workspace activity, newest first. Times use Asia/Colombo.
                 </caption>
 
                 <thead className="border-b border-border bg-muted/60 text-xs text-muted-foreground">
                     <tr>
-                        <th scope="col" className="w-44 px-5 py-3 font-medium">
-                            Date & time
+                        <th scope="col" className="w-44 px-5 py-3 text-xs font-semibold">
+                            Date and time
                         </th>
-                        <th scope="col" className="w-1/5 px-4 py-3 font-medium">
-                            User
+                        <th scope="col" className="w-[22%] px-4 py-3 text-xs font-semibold">
+                            Performed by
                         </th>
-                        <th scope="col" className="px-4 py-3 font-medium">
+                        <th scope="col" className="px-4 py-3 text-xs font-semibold">
                             Activity
                         </th>
-                        <th scope="col" className="w-44 px-4 py-3 font-medium">
-                            Invoice / scope
+                        <th scope="col" className="w-48 px-4 py-3 text-xs font-semibold">
+                            Related to
                         </th>
-                        <th scope="col" className="w-28 px-4 py-3 text-right font-medium">
-                            Details
+                        <th scope="col" className="w-36 px-4 py-3 text-right text-xs font-semibold">
+                            <span className="sr-only">Details</span>
                         </th>
                     </tr>
                 </thead>
@@ -275,38 +314,57 @@ export default function ActivityTable({
                                 <tr
                                     className={
                                         expanded
-                                            ? "bg-muted/40"
-                                            : "hover:bg-muted/30"
+                                            ? "bg-primary/[0.05]"
+                                            : "transition-colors hover:bg-primary/[0.03]"
                                     }
                                 >
-                                    <td className="px-5 py-4 align-top">
+                                    <td className="px-5 py-3.5 align-middle">
                                         <time dateTime={row.occurred_at}>
                                             <span className="block whitespace-nowrap font-medium text-foreground">
                                                 {formatDateTime(row.occurred_at)}
                                             </span>
-                                            <span className="mt-1 block text-xs tabular-nums text-muted-foreground">
-                                                {formatDateTime(row.occurred_at, true)}
+                                            <span className="mt-0.5 block text-xs tabular-nums text-muted-foreground">
+                                                {formatDateTime(row.occurred_at, true)} · SLST
                                             </span>
                                         </time>
                                     </td>
 
-                                    <td className="break-words px-4 py-4 align-top font-medium text-foreground">
-                                        {row.actor_name || "Not recorded"}
+                                    <td className="px-4 py-3.5 align-middle">
+                                        <div className="flex items-center gap-2.5">
+                                            <span
+                                                aria-hidden="true"
+                                                className={`flex size-8 shrink-0 items-center justify-center rounded-md text-xs font-semibold ${row.actor_name
+                                                    ? "bg-primary/10 text-primary"
+                                                    : "bg-muted text-muted-foreground"
+                                                    }`}
+                                            >
+                                                {initials(row.actor_name)}
+                                            </span>
+
+                                            <span
+                                                className={`min-w-0 break-words font-medium ${row.actor_name
+                                                    ? "text-foreground"
+                                                    : "text-muted-foreground"
+                                                    }`}
+                                            >
+                                                {row.actor_name || "Not recorded"}
+                                            </span>
+                                        </div>
                                     </td>
 
-                                    <td className="px-4 py-4 align-top">
+                                    <td className="px-4 py-3.5 align-middle">
                                         <span
-                                            className={`inline-flex rounded-md px-2 py-1 text-xs font-medium leading-5 ${actionClass(row.action)}`}
+                                            className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-semibold before:size-1.5 before:rounded-full before:bg-current before:content-[''] ${actionClass(row.action)}`}
                                         >
                                             {actionLabel}
                                         </span>
                                     </td>
 
-                                    <td className="break-words px-4 py-4 align-top">
+                                    <td className="break-words px-4 py-3.5 align-middle">
                                         {row.invoice_id ? (
                                             <Link
                                                 href={`/dashboard/invoices/${row.invoice_id}`}
-                                                className="rounded font-medium text-blue-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-blue-300"
+                                                className="ref rounded font-medium text-blue-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-blue-300"
                                             >
                                                 {row.invoices?.invoice_number ??
                                                     row.invoice_number_snapshot ??
@@ -314,15 +372,15 @@ export default function ActivityTable({
                                             </Link>
                                         ) : row.invoice_number_snapshot ? (
                                             <div>
-                                                <span className="break-words text-sm font-medium text-foreground">
+                                                <span className="ref break-words font-medium text-foreground">
                                                     {row.invoice_number_snapshot}
                                                 </span>
-                                                <span className="mt-1 block text-xs text-muted-foreground">
-                                                    Deleted invoice
+                                                <span className="mt-0.5 block text-xs text-muted-foreground">
+                                                    Invoice deleted
                                                 </span>
                                             </div>
                                         ) : (
-                                            <span className="text-xs text-muted-foreground">
+                                            <span className="text-sm text-muted-foreground">
                                                 {row.action === "ACTIVITY_LOGS_CLEARED"
                                                     ? "Activity history"
                                                     : row.entity_type === "invoice_export"
@@ -334,7 +392,7 @@ export default function ActivityTable({
                                         )}
                                     </td>
 
-                                    <td className="px-3 py-2 text-right align-top">
+                                    <td className="px-4 py-2 text-right align-middle">
                                         <button
                                             type="button"
                                             aria-expanded={expanded}
@@ -345,12 +403,12 @@ export default function ActivityTable({
                                                     expanded ? null : row.id,
                                                 )
                                             }
-                                            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                            className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-input bg-card px-3 text-sm font-medium text-foreground shadow-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                         >
-                                            {expanded ? "Hide" : "View"}
+                                            {expanded ? "Hide" : "Details"}
                                             <ChevronDown
                                                 aria-hidden="true"
-                                                className={`size-4 transition-transform motion-reduce:transition-none ${expanded ? "rotate-180" : ""
+                                                className={`size-4 text-muted-foreground transition-transform motion-reduce:transition-none ${expanded ? "rotate-180" : ""
                                                     }`}
                                             />
                                         </button>
@@ -360,11 +418,11 @@ export default function ActivityTable({
                                 <tr id={detailsId} hidden={!expanded}>
                                     <td
                                         colSpan={5}
-                                        className="bg-muted/20 px-5 py-5"
+                                        className="border-l-[3px] border-l-primary bg-muted/30 px-5 py-5"
                                     >
                                         {expanded && (
                                             <div className="max-w-5xl">
-                                                <h2 className="mb-4 text-sm font-semibold text-foreground">
+                                                <h2 className="mb-4 font-heading text-lg font-semibold text-foreground">
                                                     Recorded changes
                                                 </h2>
                                                 <ChangeDetails changes={row.changes} />

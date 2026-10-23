@@ -2,7 +2,15 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
-import { Clock3, Search } from "lucide-react";
+import {
+    AlertCircle,
+    ChevronDown,
+    ChevronLeft,
+    ChevronRight,
+    Clock3,
+    Search,
+    SlidersHorizontal,
+} from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import ClearActivityButton from "./clear-activity-button";
@@ -53,17 +61,17 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 const inputClass =
-    "block h-10 w-full min-w-0 rounded-lg border border-input " +
+    "block h-10 w-full min-w-0 rounded-md border border-input " +
     "bg-background px-3 text-sm text-foreground outline-none " +
     "placeholder:text-muted-foreground focus-visible:border-ring " +
-    "focus-visible:ring-2 focus-visible:ring-ring/25";
+    "focus-visible:ring-3 focus-visible:ring-ring/25";
 
 const labelClass =
-    "mb-1.5 block text-xs font-medium text-muted-foreground";
+    "mb-1.5 block text-xs font-semibold text-muted-foreground";
 
 const secondaryButton =
-    "inline-flex min-h-11 items-center justify-center rounded-lg " +
-    "border border-input bg-card px-4 text-sm font-medium " +
+    "inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md " +
+    "border border-input bg-card px-3.5 text-sm font-medium shadow-sm " +
     "text-foreground hover:bg-muted focus-visible:outline-none " +
     "focus-visible:ring-2 focus-visible:ring-ring";
 
@@ -249,40 +257,40 @@ async function ActivityContent({ searchParams }: PageProps) {
     return (
         <main className="min-w-0 px-4 py-5 sm:px-6 lg:px-8">
             <div className="mx-auto w-full max-w-7xl space-y-5">
-                <header className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="min-w-0">
-                        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-                            Activity log
-                        </h1>
+                <header className="dock-rise flex flex-wrap items-start justify-between gap-4 border-b border-border pb-5">
+                    <div className="flex min-w-0 items-start gap-3.5">
+                        <span
+                            aria-hidden="true"
+                            className="mt-1 h-8 w-1 shrink-0 rounded-full bg-signal"
+                        />
 
-                        <p className="mt-1 text-sm text-muted-foreground">
-                            Track workspace changes and review recorded details.
-                        </p>
+                        <div className="min-w-0">
+                            <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+                                Activity log
+                            </h1>
+
+                            <p className="mt-1.5 max-w-2xl text-sm leading-6 text-muted-foreground">
+                                See who changed what, and when. Open any entry
+                                to review the exact fields that were updated.
+                            </p>
+                        </div>
                     </div>
 
                     <details className="group w-full sm:w-auto sm:max-w-md">
-                        <summary className="ml-auto flex min-h-10 w-fit cursor-pointer list-none items-center gap-2 rounded-lg border border-input bg-card px-3 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+                        <summary className="ml-auto flex min-h-10 w-fit cursor-pointer list-none items-center gap-2 rounded-md border border-input bg-card px-3.5 text-sm font-medium text-foreground shadow-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
                             Log management
 
-                            <span
+                            <ChevronDown
                                 aria-hidden="true"
-                                className="text-base leading-none group-open:hidden"
-                            >
-                                +
-                            </span>
-
-                            <span
-                                aria-hidden="true"
-                                className="hidden text-base leading-none group-open:inline"
-                            >
-                                −
-                            </span>
+                                className="size-4 text-muted-foreground transition-transform group-open:rotate-180 motion-reduce:transition-none"
+                            />
                         </summary>
 
-                        <div className="mt-2 rounded-xl border border-border bg-card p-4 [&_section]:mb-0">
-                            <p className="mb-3 text-xs leading-5 text-muted-foreground">
-                                Manage stored activity history. Clearing logs requires
-                                confirmation.
+                        <div className="mt-2 rounded-xl border border-border bg-card p-4 shadow-raised [&_section]:mb-0">
+                            <p className="mb-3 text-sm leading-6 text-muted-foreground">
+                                Clearing removes all stored activity history.
+                                You will be asked to confirm before anything is
+                                deleted.
                             </p>
 
                             <ClearActivityButton />
@@ -292,15 +300,42 @@ async function ActivityContent({ searchParams }: PageProps) {
 
                 <section
                     aria-label="Activity filters"
-                    className="overflow-hidden rounded-xl border border-border bg-card"
+                    className="overflow-hidden rounded-xl border border-border bg-card shadow-card"
                 >
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-5 py-3.5">
+                        <div className="flex items-center gap-2">
+                            <SlidersHorizontal
+                                className="size-4 text-muted-foreground"
+                                aria-hidden="true"
+                            />
+
+                            <h2 className="text-sm font-semibold text-foreground">
+                                Filter activity
+                            </h2>
+
+                            {activeFilters > 0 && (
+                                <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                                    {activeFilters} active
+                                </span>
+                            )}
+                        </div>
+
+                        <p className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Clock3
+                                className="size-3.5"
+                                aria-hidden="true"
+                            />
+                            Dates use Sri Lanka time
+                        </p>
+                    </div>
+
                     <Form
                         key={JSON.stringify(filters)}
                         action="/dashboard/activity"
                         scroll={false}
                     >
                         <div
-                            className="grid gap-3 p-4"
+                            className="grid gap-4 p-5"
                             style={{
                                 gridTemplateColumns:
                                     "repeat(auto-fit, minmax(min(100%, 180px), 1fr))",
@@ -336,7 +371,7 @@ async function ActivityContent({ searchParams }: PageProps) {
                                     id="user-filter"
                                     name="user"
                                     defaultValue={filters.user}
-                                    placeholder="Search user name"
+                                    placeholder="Search by name"
                                     maxLength={150}
                                     className={inputClass}
                                 />
@@ -407,75 +442,60 @@ async function ActivityContent({ searchParams }: PageProps) {
                             </div>
                         </div>
 
-                        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3">
-                            <div className="flex flex-wrap items-center gap-3">
-                                <p className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                                    <Clock3
-                                        className="size-3.5"
-                                        aria-hidden="true"
-                                    />
-                                    Sri Lanka time
-                                </p>
+                        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border bg-muted/30 px-5 py-3.5">
+                            <Link
+                                href="/dashboard/activity"
+                                className="inline-flex min-h-10 items-center justify-center rounded-md px-3.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                                Reset
+                            </Link>
 
-                                {activeFilters > 0 && (
-                                    <span className="rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 dark:bg-blue-400/10 dark:text-blue-300">
-                                        {activeFilters} active{" "}
-                                        {activeFilters === 1 ? "filter" : "filters"}
-                                    </span>
-                                )}
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                <Link
-                                    href="/dashboard/activity"
-                                    className="inline-flex min-h-10 items-center justify-center rounded-lg px-3 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                >
-                                    Reset
-                                </Link>
-
-                                <button
-                                    type="submit"
-                                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-semibold text-white hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                >
-                                    <Search
-                                        className="size-4"
-                                        aria-hidden="true"
-                                    />
-                                    Apply filters
-                                </button>
-                            </div>
+                            <button
+                                type="submit"
+                                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+                            >
+                                <Search
+                                    className="size-4"
+                                    aria-hidden="true"
+                                />
+                                Apply filters
+                            </button>
                         </div>
                     </Form>
                 </section>
                 {filterError || loadError ? (
                     <div
                         role="alert"
-                        className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300"
+                        className="flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300"
                     >
+                        <AlertCircle
+                            className="size-4 shrink-0"
+                            aria-hidden="true"
+                        />
                         {filterError ||
                             "Unable to load activity. Refresh the page and try again."}
                     </div>
                 ) : (
                     <section
                         aria-labelledby="records-heading"
-                        className="overflow-hidden rounded-xl border border-border bg-card"
+                        className="overflow-hidden rounded-xl border border-border bg-card shadow-card"
                     >
                         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-5 py-4">
                             <div className="flex items-center gap-2">
                                 <h2
                                     id="records-heading"
-                                    className="text-sm font-semibold text-foreground"
+                                    className="font-heading text-lg font-semibold text-foreground"
                                 >
                                     Activity records
                                 </h2>
 
-                                <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
+                                <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-semibold tabular-nums text-muted-foreground">
                                     {total.toLocaleString("en-US")}
                                 </span>
                             </div>
 
-                            <p className="text-xs text-muted-foreground">
-                                Newest first
+                            <p className="text-sm text-muted-foreground">
+                                Showing the newest activity first
                             </p>
                         </div>
 
@@ -484,8 +504,8 @@ async function ActivityContent({ searchParams }: PageProps) {
                             rows={rows}
                         />
 
-                        <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-4">
-                            <p className="text-xs tabular-nums text-muted-foreground">
+                        <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-muted/30 px-5 py-3.5">
+                            <p className="text-sm tabular-nums text-muted-foreground">
                                 {total === 0
                                     ? "0 records"
                                     : `${firstRecord.toLocaleString("en-US")}–${lastRecord.toLocaleString("en-US")} of ${total.toLocaleString("en-US")} records`}
@@ -495,7 +515,7 @@ async function ActivityContent({ searchParams }: PageProps) {
                                 aria-label="Activity pagination"
                                 className="flex flex-wrap items-center gap-2"
                             >
-                                <span className="mr-2 text-xs tabular-nums text-muted-foreground">
+                                <span className="mr-2 text-sm tabular-nums text-muted-foreground">
                                     Page {page} of {totalPages}
                                 </span>
 
@@ -504,6 +524,10 @@ async function ActivityContent({ searchParams }: PageProps) {
                                         href={activityUrl(filters, page - 1)}
                                         className={secondaryButton}
                                     >
+                                        <ChevronLeft
+                                            className="size-4"
+                                            aria-hidden="true"
+                                        />
                                         Previous
                                     </Link>
                                 ) : (
@@ -512,6 +536,10 @@ async function ActivityContent({ searchParams }: PageProps) {
                                         disabled
                                         className={`${secondaryButton} opacity-40`}
                                     >
+                                        <ChevronLeft
+                                            className="size-4"
+                                            aria-hidden="true"
+                                        />
                                         Previous
                                     </button>
                                 )}
@@ -522,6 +550,10 @@ async function ActivityContent({ searchParams }: PageProps) {
                                         className={secondaryButton}
                                     >
                                         Next
+                                        <ChevronRight
+                                            className="size-4"
+                                            aria-hidden="true"
+                                        />
                                     </Link>
                                 ) : (
                                     <button
@@ -530,6 +562,10 @@ async function ActivityContent({ searchParams }: PageProps) {
                                         className={`${secondaryButton} opacity-40`}
                                     >
                                         Next
+                                        <ChevronRight
+                                            className="size-4"
+                                            aria-hidden="true"
+                                        />
                                     </button>
                                 )}
                             </nav>
