@@ -56,50 +56,56 @@ export default function ProcessForm({ initial, userNames, }: {
         <fieldset disabled={pending} className="min-w-0 space-y-3">
             <legend className="sr-only">Invoice process updates</legend>
 
-            <div className={`grid min-w-0 items-stretch gap-3 ${form.stages.length === 2 ? "lg:grid-cols-3" : "md:grid-cols-2"}`}>
-                {form.stages.map((stage) => {
-                    const system = stage.system_name;
-                    return (<section key={system} aria-labelledby={`${system}-heading`} className="rounded-xl border border-border bg-card p-4">
-                        <div className="flex flex-wrap items-center justify-between gap-4">
-                            <div>
-                                <h2 id={`${system}-heading`} className="font-semibold">
-                                    {system} Pre GRN
-                                </h2>
+            <div className="grid min-w-0 items-stretch gap-3 md:grid-cols-2">
+                <div className={form.stages.length === 2
+                    ? "grid min-w-0 grid-cols-1 divide-y divide-border rounded-xl border border-border bg-card xl:grid-cols-2 xl:divide-x xl:divide-y-0"
+                    : "min-w-0"}>
+                    {form.stages.map((stage) => {
+                        const system = stage.system_name;
+                        return (<section key={system} aria-labelledby={`${system}-heading`} className={form.stages.length === 2
+                            ? "min-w-0 p-4"
+                            : "min-w-0 rounded-xl border border-border bg-card p-4"}>
+                            <div className="flex flex-wrap items-center justify-between gap-4">
+                                <div>
+                                    <h2 id={`${system}-heading`} className="font-semibold">
+                                        {system} Pre GRN
+                                    </h2>
 
-                            </div>
+                                </div>
 
-                            <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
-                                <input name={`${system}.done`} type="checkbox" checked={stage.is_done} onChange={(event) => updateStage(system, { is_done: event.target.checked })} className="size-4 accent-blue-700" />
-                                Done
-                            </label>
-                        </div>
-
-                        <div className="mt-3 grid min-w-0 gap-3">
-                            <div>
-                                <label htmlFor={`${system}-start`} className="text-sm font-medium">
-                                    Start date &amp; time
+                                <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
+                                    <input name={`${system}.done`} type="checkbox" checked={stage.is_done} onChange={(event) => updateStage(system, { is_done: event.target.checked })} className="size-4 accent-blue-700" />
+                                    Done
                                 </label>
-                                <input id={`${system}-start`} name={`${system}.start`} type="datetime-local" step="1" value={stage.started_at} onChange={(event) => updateStage(system, { started_at: event.target.value })} className={inputClass} />
                             </div>
 
-                            <div>
-                                <label htmlFor={`${system}-end`} className="text-sm font-medium">
-                                    End date &amp; time
-                                </label>
-                                <input id={`${system}-end`} name={`${system}.end`} type="datetime-local" step="1" min={stage.started_at || undefined} value={stage.ended_at} onChange={(event) => updateStage(system, { ended_at: event.target.value })} className={inputClass} />
-                            </div>
+                            <div className="mt-3 grid min-w-0 gap-3">
+                                <div>
+                                    <label htmlFor={`${system}-start`} className="text-sm font-medium">
+                                        Start date &amp; time
+                                    </label>
+                                    <input id={`${system}-start`} name={`${system}.start`} type="datetime-local" step="1" value={stage.started_at} onChange={(event) => updateStage(system, { started_at: event.target.value })} className={inputClass} />
+                                </div>
 
-                            <div className="min-w-0">
-                                <label htmlFor={`${system}-user`} className="text-sm font-medium">
-                                    {system} Pre GRN user
-                                </label>
-                                <input id={`${system}-user`} name={`${system}.user`} list="dashboard-users" autoComplete="off" maxLength={150} value={stage.assigned_user_name} onChange={(event) => updateStage(system, {
-                                    assigned_user_name: event.target.value,
-                                })} placeholder="Type a name or choose a suggestion" className={inputClass} />
+                                <div>
+                                    <label htmlFor={`${system}-end`} className="text-sm font-medium">
+                                        End date &amp; time
+                                    </label>
+                                    <input id={`${system}-end`} name={`${system}.end`} type="datetime-local" step="1" min={stage.started_at || undefined} value={stage.ended_at} onChange={(event) => updateStage(system, { ended_at: event.target.value })} className={inputClass} />
+                                </div>
+
+                                <div className="min-w-0">
+                                    <label htmlFor={`${system}-user`} className="text-sm font-medium">
+                                        {system} Pre GRN user
+                                    </label>
+                                    <input id={`${system}-user`} name={`${system}.user`} list="dashboard-users" autoComplete="off" maxLength={150} value={stage.assigned_user_name} onChange={(event) => updateStage(system, {
+                                        assigned_user_name: event.target.value,
+                                    })} placeholder="Type a name or choose a suggestion" className={inputClass} />
+                                </div>
                             </div>
-                        </div>
-                    </section>);
-                })}
+                        </section>);
+                    })}
+                </div>
 
                 <section className="rounded-xl border border-border bg-card p-4">
                     <div className="flex flex-wrap items-center justify-between gap-4">
