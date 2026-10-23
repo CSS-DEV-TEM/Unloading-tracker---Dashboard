@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Trash2 } from "lucide-react";
+import { CheckCircle2, Trash2, TriangleAlert } from "lucide-react";
 import { clearActivityLogs } from "./actions";
 
 function ConfirmationForm({ onClose }: { onClose: () => void }) {
@@ -13,15 +13,22 @@ function ConfirmationForm({ onClose }: { onClose: () => void }) {
 
     if (state.success) {
         return (
-            <div className="mt-3 rounded-xl border border-border bg-card p-4">
-                <p role="status" className="text-sm text-foreground">
+            <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900 dark:bg-emerald-950/30">
+                <p
+                    role="status"
+                    className="flex items-start gap-2.5 text-sm font-medium text-emerald-800 dark:text-emerald-200"
+                >
+                    <CheckCircle2
+                        className="mt-0.5 size-4 shrink-0"
+                        aria-hidden="true"
+                    />
                     {state.success}
                 </p>
                 <button
                     type="button"
                     onClick={onClose}
-                    className="mt-3 rounded-lg border border-input px-4 py-2
-            text-sm font-medium hover:bg-muted"
+                    className="mt-3 min-h-10 rounded-md border border-input bg-card px-4
+            text-sm font-medium shadow-sm hover:bg-muted"
                 >
                     Done
                 </button>
@@ -33,10 +40,14 @@ function ConfirmationForm({ onClose }: { onClose: () => void }) {
         <form
             action={formAction}
             aria-label="Confirm clearing activity history"
-            className="mt-3 rounded-xl border border-red-300 bg-card
-        p-4 dark:border-red-900"
+            className="mt-3 rounded-xl border border-red-300 bg-red-50/40
+        p-4 dark:border-red-900 dark:bg-red-950/10"
         >
-            <h2 className="text-sm font-semibold text-foreground">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-red-700 dark:text-red-300">
+                <TriangleAlert
+                    className="size-4 shrink-0"
+                    aria-hidden="true"
+                />
                 Clear all activity history?
             </h2>
 
@@ -44,10 +55,10 @@ function ConfirmationForm({ onClose }: { onClose: () => void }) {
                 id="clear-activity-description"
                 className="mt-2 text-sm text-muted-foreground"
             >
-                This permanently deletes all activity records, including records
-                outside the current filters. Invoice and user data remain.
-                A new record will identify who cleared the history and how many
-                records were deleted.
+                This permanently deletes every activity record, including those
+                hidden by the current filters. Invoices and users are not
+                affected. A new entry will record who cleared the history and
+                how many records were removed.
             </p>
 
             <label
@@ -69,8 +80,8 @@ function ConfirmationForm({ onClose }: { onClose: () => void }) {
                 pattern="CLEAR"
                 maxLength={5}
                 disabled={pending}
-                className="h-10 w-full max-w-xs rounded-lg border
-          border-input bg-card px-3 text-sm"
+                className="h-10 w-full max-w-xs rounded-md border
+          border-input bg-card px-3 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/25"
             />
 
             {state.error && (
@@ -86,8 +97,8 @@ function ConfirmationForm({ onClose }: { onClose: () => void }) {
                 <button
                     type="submit"
                     disabled={confirmation !== "CLEAR" || pending}
-                    className="min-h-10 rounded-lg bg-red-700 px-4 py-2
-            text-sm font-medium text-white hover:bg-red-800
+                    className="min-h-10 rounded-md bg-red-700 px-4 py-2
+            text-sm font-semibold text-white shadow-sm hover:bg-red-800
             disabled:cursor-not-allowed disabled:opacity-50"
                 >
                     {pending ? "Clearing…" : "Permanently clear logs"}
@@ -97,8 +108,8 @@ function ConfirmationForm({ onClose }: { onClose: () => void }) {
                     type="button"
                     onClick={onClose}
                     disabled={pending}
-                    className="min-h-10 rounded-lg border border-input px-4
-            py-2 text-sm font-medium hover:bg-muted
+                    className="min-h-10 rounded-md border border-input bg-card px-4
+            py-2 text-sm font-medium shadow-sm hover:bg-muted
             disabled:opacity-50"
                 >
                     Cancel
@@ -119,9 +130,9 @@ export default function ClearActivityButton() {
                 disabled={open}
                 aria-expanded={open}
                 aria-controls="clear-activity-panel"
-                className="inline-flex min-h-10 items-center gap-2 rounded-lg
-          border border-red-300 px-4 py-2 text-sm font-medium
-          text-red-700 hover:bg-red-50 disabled:opacity-50
+                className="inline-flex min-h-10 items-center gap-2 rounded-md
+          border border-red-300 bg-card px-4 py-2 text-sm font-medium
+          text-red-700 shadow-sm hover:bg-red-50 disabled:opacity-50
           dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/30"
             >
                 <Trash2 className="size-4" aria-hidden="true" />
