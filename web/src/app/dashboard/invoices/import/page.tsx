@@ -33,21 +33,8 @@ async function ImportContent() {
     }
 
     return (
-        <main className="min-h-screen bg-background px-4 py-6 text-foreground sm:px-6">
-            <div className="mx-auto max-w-7xl">
-                <p className="text-xs font-semibold tracking-widest text-blue-700 dark:text-blue-400">
-                    EFL · 3PL
-                </p>
-
-                <h1 className="mt-2 text-2xl font-semibold tracking-tight">
-                    Import invoices from email
-                </h1>
-
-                <p className="mt-2 text-sm text-muted-foreground">
-                    Paste an email table, review the extracted details, then save
-                    the invoices to your dashboard.
-                </p>
-
+        <main className="bg-background px-4 py-4 text-foreground sm:px-6">
+            <div className="mx-auto max-w-[1600px]">
                 <ImportForm />
             </div>
         </main>

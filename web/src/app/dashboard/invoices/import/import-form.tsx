@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowLeft, ClipboardPaste } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent, InputHTMLAttributes } from "react";
 import { saveImportedInvoice } from "../new/actions";
@@ -561,191 +562,212 @@ export default function ImportForm() {
     const pasteLocked = busy !== null || hasSaved || hasUnknown;
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4">
+            <header className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"><ClipboardPaste className="size-5" aria-hidden="true" /></span>
+                    <div>
+                        <h1 className="text-xl font-semibold tracking-tight">Import invoices from email</h1>
+                        <p className="mt-1 text-xs text-muted-foreground">Paste the table, review the details, then save.</p>
+                    </div>
+                </div>
+                <Link href="/dashboard/invoices/new" aria-disabled={busy !== null}
+                    onClick={(event) => {
+                        if (operation.current || (hasWork && !window.confirm("Return to new invoice? Unsaved drafts and pasted text will be discarded. Saved invoices remain in the dashboard."))) event.preventDefault();
+                    }}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-input bg-card px-3 text-sm font-medium hover:bg-muted">
+                    <ArrowLeft className="size-4" aria-hidden="true" /> Back to new invoice
+                </Link>
+            </header>
             <form
                 onSubmit={extractEmail}
-                className="space-y-4 rounded-xl border border-border bg-card p-4 sm:p-6"
+                className="grid min-w-0 gap-4 rounded-xl border border-border bg-card p-4 lg:grid-cols-[minmax(0,1fr)_320px]"
             >
-                <div>
-                    <h2 className="font-semibold">Paste email table</h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        Copy the complete table, including headers.
-                        Explicit MTR and roll headers are recognized automatically.
-                    </p>
-                </div>
-
-                <label
-                    htmlFor="email-table"
-                    className="block text-sm font-medium"
-                >
-                    Email table
-                </label>
-
-                <textarea
-                    id="email-table"
-                    value={emailText}
-                    disabled={pasteLocked}
-                    maxLength={MAX_PASTE_LENGTH}
-                    rows={10}
-                    spellCheck={false}
-                    placeholder="Paste Date, PO, Qty or Qty(MTR), Invoice No and Supplier."
-                    onChange={(event) => changeText(event.target.value)}
-                    onPaste={(event) => {
-                        if (pasteLocked) return;
-
-                        event.preventDefault();
-
-                        try {
-                            const pasted = emailClipboardText(
-                                event.clipboardData.getData("text/html"),
-                                event.clipboardData.getData("text/plain"),
-                            );
-
-                            const target = event.currentTarget;
-
-                            const next =
-                                target.value.slice(0, target.selectionStart) +
-                                pasted +
-                                target.value.slice(target.selectionEnd);
-
-                            if (next.length > MAX_PASTE_LENGTH) {
-                                throw new Error(
-                                    "Too much text. Paste a smaller table.",
-                                );
-                            }
-
-                            changeText(next);
-                        } catch (cause) {
-                            setMessage(
-                                cause instanceof Error
-                                    ? cause.message
-                                    : "Unable to read the clipboard.",
-                            );
-                        }
-                    }}
-                    className="w-full rounded-lg border border-input bg-background p-3 font-mono text-xs outline-none focus:ring-2 focus:ring-ring/25 disabled:opacity-60"
-                />
-
-                <div className="flex flex-wrap items-end gap-3">
+                <div className="min-w-0 space-y-3">
                     <div>
-                        <label
-                            htmlFor="email-date-format"
-                            className="mb-2 block text-sm font-medium"
-                        >
-                            Ambiguous date format
-                        </label>
-
-                        <select
-                            id="email-date-format"
-                            value={dateFormat}
-                            disabled={pasteLocked}
-                            onChange={(event) =>
-                                setDateFormat(event.target.value)
-                            }
-                            className={inputClass}
-                        >
-                            <option value="mdy">Month / Day / Year</option>
-                            <option value="dmy">Day / Month / Year</option>
-                        </select>
+                        <h2 className="text-sm font-semibold">Paste email table</h2>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                            Copy the complete email table, including column headers.
+                        </p>
                     </div>
 
-                    <button
-                        type="submit"
-                        disabled={
-                            pasteLocked ||
-                            !hasPastedText ||
-                            (needsUnit && !qtyUnit)
-                        }
-                        className={buttonClass}
+                    <label
+                        htmlFor="email-table"
+                        className="sr-only"
                     >
-                        {busy === "extract" ? "Extracting…" : "Extract invoices"}
-                    </button>
+                        Email table
+                    </label>
 
-                    <button
-                        type="button"
-                        disabled={pasteLocked || !hasPastedText}
-                        onClick={() => changeText("")}
-                        className={secondaryClass}
-                    >
-                        Clear text
-                    </button>
+                    <textarea
+                        id="email-table"
+                        value={emailText}
+                        disabled={pasteLocked}
+                        maxLength={MAX_PASTE_LENGTH}
+                        rows={8}
+                        spellCheck={false}
+                        placeholder="Paste Date, PO, Qty or Qty(MTR), Invoice No and Supplier."
+                        onChange={(event) => changeText(event.target.value)}
+                        onPaste={(event) => {
+                            if (pasteLocked) return;
+
+                            event.preventDefault();
+
+                            try {
+                                const pasted = emailClipboardText(
+                                    event.clipboardData.getData("text/html"),
+                                    event.clipboardData.getData("text/plain"),
+                                );
+
+                                const target = event.currentTarget;
+
+                                const next =
+                                    target.value.slice(0, target.selectionStart) +
+                                    pasted +
+                                    target.value.slice(target.selectionEnd);
+
+                                if (next.length > MAX_PASTE_LENGTH) {
+                                    throw new Error(
+                                        "Too much text. Paste a smaller table.",
+                                    );
+                                }
+
+                                changeText(next);
+                            } catch (cause) {
+                                setMessage(
+                                    cause instanceof Error
+                                        ? cause.message
+                                        : "Unable to read the clipboard.",
+                                );
+                            }
+                        }}
+                        className="h-52 min-h-40 w-full resize-y rounded-lg border border-input bg-background p-3 font-mono text-xs leading-6 outline-none focus:border-blue-600 focus:ring-2 focus:ring-ring/25 disabled:opacity-60 lg:h-64"
+                    />
+
+                    <p className="text-xs text-muted-foreground">Qty(MTR) and roll headers are recognized automatically.</p>
                 </div>
+                <div className="min-w-0 space-y-3 border-t border-border pt-4 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
+                    <div className="flex flex-wrap items-end gap-3">
 
-                <p className="text-xs text-muted-foreground">
-                    Dates accept /, . and - separators. Unambiguous dates are
-                    recognized automatically. For dates such as 05/06/2026,
-                    the selected format is used.
-                </p>
-
-                {needsUnit && (
-                    <div
-                        role="group"
-                        aria-labelledby="quantity-unit-title"
-                        className="space-y-3 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/30"
-                    >
                         <div>
-                            <h3
-                                id="quantity-unit-title"
-                                className="text-sm font-semibold"
-                            >
-                                What does Qty represent in this email?
-                            </h3>
-
-                            <p className="mt-1 text-sm text-muted-foreground">
-                                The header has no unit. Your pasted data is
-                                retained. Select the unit, then click Extract
-                                invoices again.
-                            </p>
-                        </div>
-
-                        <div className="max-w-xs">
                             <label
-                                htmlFor="generic-quantity-unit"
+                                htmlFor="email-date-format"
                                 className="mb-2 block text-sm font-medium"
                             >
-                                Qty column unit
+                                Date format
                             </label>
 
                             <select
-                                id="generic-quantity-unit"
-                                value={qtyUnit}
+                                id="email-date-format"
+                                value={dateFormat}
                                 disabled={pasteLocked}
-                                onChange={(event) => {
-                                    const value = event.target.value;
-
-                                    setQtyUnit(
-                                        value === "ROLLS" || value === "MTR"
-                                            ? value
-                                            : "",
-                                    );
-                                }}
+                                onChange={(event) =>
+                                    setDateFormat(event.target.value)
+                                }
                                 className={inputClass}
                             >
-                                <option value="">Select unit</option>
-                                <option value="ROLLS">Rolls</option>
-                                <option value="MTR">MTR — meters</option>
+                                <option value="mdy">Month / Day / Year</option>
+                                <option value="dmy">Day / Month / Year</option>
                             </select>
                         </div>
 
-                        <p className="text-xs text-muted-foreground">
-                            This applies only to headers named Qty or Quantity.
-                            If separate tables use different units, paste them
-                            separately.
-                        </p>
+                        <button
+                            type="submit"
+                            disabled={
+                                pasteLocked ||
+                                !hasPastedText ||
+                                (needsUnit && !qtyUnit)
+                            }
+                            className={buttonClass}
+                        >
+                            {busy === "extract" ? "Extracting…" : "Extract invoices"}
+                        </button>
+
+                        <button
+                            type="button"
+                            disabled={pasteLocked || !hasPastedText}
+                            onClick={() => changeText("")}
+                            className={secondaryClass}
+                        >
+                            Clear text
+                        </button>
                     </div>
-                )}
 
-                <p className="text-xs text-muted-foreground">
-                    PO: SL → D365 · KP → AX · Both for the same
-                    invoice → AX/D365. Matching invoice rows are grouped.
-                </p>
-
-                {(hasSaved || hasUnknown) && (
-                    <p className="text-sm text-muted-foreground">
-                        Clear this batch before extracting another email.
-                        Check any unconfirmed save in the dashboard first.
+                    <p className="text-xs text-muted-foreground">
+                        Dates accept /, . and - separators. Unambiguous dates are
+                        recognized automatically. For dates such as 05/06/2026,
+                        the selected format is used.
                     </p>
-                )}
+
+                    {needsUnit && (
+                        <div
+                            role="group"
+                            aria-labelledby="quantity-unit-title"
+                            className="space-y-3 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/30"
+                        >
+                            <div>
+                                <h3
+                                    id="quantity-unit-title"
+                                    className="text-sm font-semibold"
+                                >
+                                    What does Qty represent in this email?
+                                </h3>
+
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                    The header has no unit. Your pasted data is
+                                    retained. Select the unit, then click Extract
+                                    invoices again.
+                                </p>
+                            </div>
+
+                            <div className="max-w-xs">
+                                <label
+                                    htmlFor="generic-quantity-unit"
+                                    className="mb-2 block text-sm font-medium"
+                                >
+                                    Qty column unit
+                                </label>
+
+                                <select
+                                    id="generic-quantity-unit"
+                                    value={qtyUnit}
+                                    disabled={pasteLocked}
+                                    onChange={(event) => {
+                                        const value = event.target.value;
+
+                                        setQtyUnit(
+                                            value === "ROLLS" || value === "MTR"
+                                                ? value
+                                                : "",
+                                        );
+                                    }}
+                                    className={inputClass}
+                                >
+                                    <option value="">Select unit</option>
+                                    <option value="ROLLS">Rolls</option>
+                                    <option value="MTR">MTR — meters</option>
+                                </select>
+                            </div>
+
+                            <p className="text-xs text-muted-foreground">
+                                This applies only to headers named Qty or Quantity.
+                                If separate tables use different units, paste them
+                                separately.
+                            </p>
+                        </div>
+                    )}
+
+                    <p className="text-xs text-muted-foreground">
+                        PO: SL → D365 · KP → AX · Both for the same
+                        invoice → AX/D365. Matching invoice rows are grouped.
+                    </p>
+
+                    {(hasSaved || hasUnknown) && (
+                        <p className="text-sm text-muted-foreground">
+                            Clear this batch before extracting another email.
+                            Check any unconfirmed save in the dashboard first.
+                        </p>
+                    )}
+                </div>
             </form>
 
             {message && (
@@ -773,6 +795,10 @@ export default function ImportForm() {
                     className="space-y-4"
                     aria-busy={busy === "save"}
                 >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h2 className="text-sm font-semibold">Review invoices <span className="ml-2 rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">{drafts.length}</span></h2>
+                        <p className="text-xs text-muted-foreground">Check invoice numbers, quantities and dates before saving.</p>
+                    </div>
                     <div className="overflow-x-auto rounded-xl border border-border">
                         <table className="w-full text-left text-sm">
                             <thead className="bg-muted">
