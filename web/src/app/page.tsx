@@ -49,6 +49,7 @@ type PublicInvoice = {
   pending_reason: string | null;
   started_at: string | null;
   completed_at: string | null;
+  asn_share_at: string | null;
   stages: {
     system_name: string;
     started_at: string | null;
@@ -330,7 +331,7 @@ async function PublicOverview({ searchParams }: Props) {
   });
 
   const [overviewResult, summaryResult] = await Promise.all([
-    supabase.rpc("get_public_invoice_overview_v4", {
+    supabase.rpc("get_public_invoice_overview_v5", {
       p_search: q,
       p_status: status,
       p_page: page,
@@ -782,13 +783,7 @@ async function PublicOverview({ searchParams }: Props) {
 
                         {/* Completion date */}
                         <td className="px-4 py-3 align-top text-muted-foreground">
-                          <DateTime
-                            value={
-                              invoice.status === "Complete"
-                                ? invoice.completed_at
-                                : null
-                            }
-                          />
+                          <DateTime value={invoice.asn_share_at} />
                         </td>
 
                         <td className="px-4 py-3 align-top">

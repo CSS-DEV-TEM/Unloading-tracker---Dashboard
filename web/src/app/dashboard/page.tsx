@@ -23,7 +23,7 @@ type SearchParams = Promise<{
 type Invoice = {
     id: string;
     version: number;
-    asn_updates: { is_shared: boolean } | { is_shared: boolean }[] | null;
+    asn_updates: { is_shared: boolean; share_at: string | null } | { is_shared: boolean; share_at: string | null }[] | null;
     invoice_number: string;
     vehicle_number: string | null;
     vehicle: {
@@ -229,7 +229,7 @@ async function DashboardContent({
         `
             id,
             version,
-            asn_updates (is_shared),
+            asn_updates (is_shared, share_at),
             invoice_number,
             vehicle_number,
             vehicle:vehicles!invoices_vehicle_id_fkey (
@@ -524,9 +524,9 @@ async function DashboardContent({
                                                 <td className="px-4 py-3">
                                                     <DateTimeCell
                                                         value={
-                                                            invoice.status === "Complete"
-                                                                ? invoice.completed_at
-                                                                : null
+                                                            (Array.isArray(invoice.asn_updates)
+                                                                ? invoice.asn_updates[0]?.share_at
+                                                                : invoice.asn_updates?.share_at) ?? null
                                                         }
                                                     />
                                                 </td>
