@@ -6,6 +6,15 @@ import type { ProcessFormData, ProcessStage } from "./types";
 import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
 const inputClass = "mt-2 h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-blue-600 focus:ring-2 focus:ring-ring/25";
 const textareaClass = "mt-2 min-h-16 w-full resize-y rounded-lg border border-input bg-background p-3 text-sm text-foreground outline-none focus:border-blue-600 focus:ring-2 focus:ring-ring/25";
+function sriLankaNow() {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Asia/Colombo", year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
+    }).formatToParts(new Date());
+    const part = (type: string) => parts.find(item => item.type === type)?.value ?? "";
+    return `${part("year")}-${part("month")}-${part("day")}T${part("hour")}:${part("minute")}:${part("second")}`;
+}
+
 export default function ProcessForm({ initial, userNames, }: {
     initial: ProcessFormData;
     userNames: string[];
@@ -112,7 +121,14 @@ export default function ProcessForm({ initial, userNames, }: {
                         <h2 className="font-semibold">ASN details</h2>
 
                         <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
-                            <input type="checkbox" name="asnShared" checked={form.asn_shared} onChange={(event) => setForm({ ...form, asn_shared: event.target.checked, status: event.target.checked ? "Complete" : "Pending" })} className="size-4 accent-blue-700" />
+                            <input type="checkbox" name="asnShared" checked={form.asn_shared} onChange={(event) => {
+                                const checked = event.target.checked;
+                                setForm(previous => ({
+                                    ...previous, asn_shared: checked,
+                                    asn_share_date: checked && !previous.asn_share_date ? sriLankaNow() : previous.asn_share_date,
+                                    status: checked ? "Complete" : "Pending"
+                                }));
+                            }} className="size-4 accent-blue-700" />
                             ASN SHARE
                         </label>
                     </div>
@@ -120,9 +136,9 @@ export default function ProcessForm({ initial, userNames, }: {
                     <div className="mt-3 grid min-w-0 gap-3">
                         <div>
                             <label htmlFor="asn-date" className="text-sm font-medium">
-                                ASN share date
+                                ASN share date &amp; time
                             </label>
-                            <input id="asn-date" name="asnDate" type="date" value={form.asn_share_date} onChange={(event) => setForm({ ...form, asn_share_date: event.target.value })} className={inputClass} />
+                            <input id="asn-date" name="asnDate" type="datetime-local" step="1" value={form.asn_share_date} onChange={(event) => setForm({ ...form, asn_share_date: event.target.value })} className={inputClass} />
                         </div>
 
                         <div>
