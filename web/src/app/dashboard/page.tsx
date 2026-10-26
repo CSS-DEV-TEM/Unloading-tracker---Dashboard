@@ -1,3 +1,5 @@
+import QuickProgressCell from "./quick-progress-cell";
+import PendingReasonDialog from "@/components/pending-reason-dialog";
 import Link from "next/link";
 import Form from "next/form";
 import { Suspense } from "react";
@@ -20,6 +22,8 @@ type SearchParams = Promise<{
 
 type Invoice = {
     id: string;
+    version: number;
+    asn_updates: { is_shared: boolean } | { is_shared: boolean }[] | null;
     invoice_number: string;
     vehicle_number: string | null;
     vehicle: {
@@ -35,6 +39,8 @@ type Invoice = {
     pending_reason: string | null;
     completed_at: string | null;
     pre_grn_stages: {
+        system_name: "AX" | "D365";
+        is_done: boolean;
         started_at: string | null;
     }[];
 };
@@ -51,7 +57,7 @@ const HEADINGS = [
     "Start Date",
     "Completion Date",
     "Status",
-    "Pending reason",
+    "Progress",
 ];
 
 const statusStyles = {
@@ -222,6 +228,8 @@ async function DashboardContent({
     let query = supabase.from("invoices").select(
         `
             id,
+            version,
+            asn_updates (is_shared),
             invoice_number,
             vehicle_number,
             vehicle:vehicles!invoices_vehicle_id_fkey (
@@ -237,6 +245,8 @@ async function DashboardContent({
             pending_reason,
             completed_at,
             pre_grn_stages (
+                system_name,
+                is_done,
                 started_at
             )
         `,
@@ -527,23 +537,31 @@ async function DashboardContent({
                                                     >
                                                         {invoice.status}
                                                     </span>
+                                                    {invoice.status === "Pending" && invoice.pending_reason?.trim() && (
+                                                        <div>
+                                                            <PendingReasonDialog
+                                                                invoiceNumber={invoice.invoice_number}
+                                                                supplier={invoice.supplier}
+                                                                reason={invoice.pending_reason.trim()}
+                                                            />
+                                                        </div>
+                                                    )}
                                                 </td>
 
                                                 <td className="px-4 py-3">
-                                                    {invoice.pending_reason?.trim() ? (
-                                                        <details className="min-w-40 max-w-64 rounded-lg border border-amber-200 bg-amber-50 p-2 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-                                                            <summary className="cursor-pointer text-xs font-semibold">
-                                                                View pending reason
-                                                            </summary>
-                                                            <p className="mt-2 whitespace-pre-wrap break-words text-xs leading-5">
-                                                                {invoice.pending_reason}
-                                                            </p>
-                                                        </details>
-                                                    ) : (
-                                                        <span className="text-muted-foreground">
-                                                            —
-                                                        </span>
-                                                    )}
+                                                    <QuickProgressCell
+                                                        key={`${invoice.id}-${invoice.version}`}
+                                                        invoiceId={invoice.id}
+                                                        invoiceNumber={invoice.invoice_number}
+                                                        initial={{
+                                                            version: invoice.version,
+                                                            status: invoice.status,
+                                                            asn_shared: (Array.isArray(invoice.asn_updates)
+                                                                ? invoice.asn_updates[0]?.is_shared
+                                                                : invoice.asn_updates?.is_shared) ?? false,
+                                                            stages: invoice.pre_grn_stages ?? [],
+                                                        }}
+                                                    />
                                                 </td>
                                             </tr>
                                         ))}
