@@ -15,7 +15,6 @@ type ExportRecord = {
         invoice_number: string;
         supplier: string;
         roll_quantity: number | null;
-        meter_quantity: number | null;
         system_type: "AX" | "D365" | "AX/D365";
         document_share_date: string;
         shipment_type: string;
@@ -215,7 +214,6 @@ export async function POST(request: Request) {
             { header: "Invoice", key: "invoice", width: 24 },
             { header: "SUPPLIER", key: "supplier", width: 32 },
             { header: "ROLL QTY", key: "roll", width: 14 },
-            { header: "METERS QTY", key: "meters", width: 18 },
             { header: "System", key: "system", width: 16 },
             {
                 header: "DOCUMENT SHARE DATE",
@@ -262,7 +260,6 @@ export async function POST(request: Request) {
         sheet.getColumn("vehicleNumber").numFmt = "@";
         sheet.getColumn("invoice").numFmt = "@";
         sheet.getColumn("roll").numFmt = "0";
-        sheet.getColumn("meters").numFmt = "0.###";
 
         for (const key of ["documentDate"]) {
             sheet.getColumn(key).numFmt = "dd/mm/yyyy";
@@ -307,25 +304,6 @@ export async function POST(request: Request) {
                 );
             }
 
-            const meters = invoice.meter_quantity == null
-                ? null
-                : Number(invoice.meter_quantity);
-
-            if (
-                meters !== null &&
-                (
-                    !Number.isFinite(meters) ||
-                    meters < 0 ||
-                    meters > 999999999.999
-                )
-            ) {
-                return failure(
-                    "An invoice has an invalid meter quantity. " +
-                    "Correct it before exporting.",
-                    409,
-                );
-            }
-
             // Keep strings as strings, including leading-zero invoice numbers.
             // User-entered values are never assigned as Excel formulas.
             sheet.addRow({
@@ -333,7 +311,6 @@ export async function POST(request: Request) {
                 invoice: invoice.invoice_number,
                 supplier: invoice.supplier,
                 roll: invoice.roll_quantity,
-                meters,
                 system: invoice.system_type,
                 documentDate: excelDate(invoice.document_share_date),
                 shipment: invoice.shipment_type,

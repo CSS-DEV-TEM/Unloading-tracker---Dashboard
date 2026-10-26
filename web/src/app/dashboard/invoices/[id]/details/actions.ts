@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { meterText, meterUnits } from "@/lib/meter-quantity";
 
 export type DetailsState = {
     error: string;
@@ -40,7 +39,6 @@ export async function saveInvoiceDetails(
     const invoiceNumber = text("invoiceNumber");
     const supplier = text("supplier");
     const rollText = text("rollQuantity");
-    const metersRaw = text("meterQuantity");
     const documentDate = text("documentDate");
     const shipmentType = text("shipmentType");
     const vehicleNumber = text("vehicleNumber");
@@ -107,22 +105,6 @@ export async function saveInvoiceDetails(
         );
     }
 
-    // Require this field so an outdated form cannot accidentally clear meters.
-    if (!formData.has("meterQuantity")) {
-        return fail("Reload the page to use the latest invoice form.", true);
-    }
-
-    const units = metersRaw === "" ? null : meterUnits(metersRaw);
-
-    if (metersRaw !== "" && units === null) {
-        return fail(
-            "Meters must be between 0 and 999999999.999, " +
-            "with no more than 3 decimal places.",
-        );
-    }
-
-    const meters = units === null ? null : Number(meterText(units));
-
     const vehicleKey = (value: string) =>
         value.replace(/[\s-]+/g, "").toUpperCase();
 
@@ -144,6 +126,11 @@ export async function saveInvoiceDetails(
         return fail("Your session has expired. Please sign in again.");
     }
 
+    const { data: existing, error: readError } = await supabase
+        .from("invoices").select("meter_quantity, version").eq("id", id).maybeSingle();
+    if (readError || !existing) return fail("Unable to load the invoice. Refresh and try again.");
+    if (existing.version !== version) return fail("This invoice changed. Reload before saving.", true);
+
     const { error } = await supabase.rpc("save_invoice_with_meters", {
         p_invoice_id: id,
         p_expected_version: version,
@@ -158,7 +145,7 @@ export async function saveInvoiceDetails(
         p_expected_received_date: receivedDateChanged
             ? originalReceivedDate || null
             : null,
-        p_meter_quantity: meters,
+        p_meter_quantity: existing.meter_quantity,
     });
 
     if (error) {

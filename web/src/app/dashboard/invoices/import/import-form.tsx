@@ -9,13 +9,10 @@ import {
     emailClipboardText,
     MAX_PASTE_LENGTH,
     parseEmailTable,
-    QuantityUnitRequiredError,
 } from "./email-table";
 import type {
     ExtractedInvoice,
-    QuantityUnit,
 } from "./email-table";
-import { MAX_METERS, sumMeters } from "@/lib/meter-quantity";
 
 type SourcePart = {
     id: string;
@@ -29,7 +26,6 @@ type Draft = {
     invoice: string;
     supplier: string;
     quantity: string;
-    meters: string;
     system: string;
     date: string;
     shipment: string;
@@ -42,7 +38,6 @@ type EditableField =
     | "invoice"
     | "supplier"
     | "quantity"
-    | "meters"
     | "system"
     | "date"
     | "shipment";
@@ -162,64 +157,14 @@ function buildDraft(
 
     if (focParts.length > 0) {
         notes.push(
-            `${focParts.length} FOC row(s) included in the quantities. ` +
+            `${focParts.length} FOC row(s) found. ` +
             (system
                 ? `System ${system} was determined from the other PO rows.`
                 : "System requires manual selection."),
         );
     }
 
-    const rollValues = parts
-        .map((part) => part.data.roll_quantity)
-        .filter((value): value is number => value !== null);
-
-    let quantity = "";
-
-    if (parts.some((part) => part.data.roll_quantity_invalid)) {
-        notes.push(
-            "Roll total left blank because a source quantity is invalid.",
-        );
-    } else if (rollValues.length > 0) {
-        const valid = rollValues.every(
-            (value) => Number.isSafeInteger(value) && value >= 0,
-        );
-
-        const total = rollValues.reduce(
-            (sum, value) => sum + value,
-            0,
-        );
-
-        if (
-            valid &&
-            Number.isSafeInteger(total) &&
-            total <= MAX_ROLLS
-        ) {
-            quantity = String(total);
-        } else {
-            notes.push("Roll total exceeds the supported limit.");
-        }
-    }
-
-    const meterValues = parts.map(
-        (part) => part.data.meter_quantity,
-    );
-
-    let meters = "";
-
-    if (parts.some((part) => part.data.meter_quantity_invalid)) {
-        notes.push(
-            "Meter total left blank because a source quantity is invalid.",
-        );
-    } else {
-        meters = sumMeters(meterValues);
-
-        if (
-            meterValues.some((value) => value !== null) &&
-            meters === ""
-        ) {
-            notes.push("Meter total exceeds the supported limit.");
-        }
-    }
+    const quantity = "";
 
     return {
         id,
@@ -227,7 +172,6 @@ function buildDraft(
         invoice,
         supplier,
         quantity,
-        meters,
         system,
         date,
         shipment,
@@ -241,12 +185,11 @@ export default function ImportForm() {
     const [drafts, setDrafts] = useState<Draft[]>([]);
     const [emailText, setEmailText] = useState("");
     const [dateFormat, setDateFormat] = useState("mdy");
-    const [qtyUnit, setQtyUnit] = useState<QuantityUnit | "">("");
-    const [needsUnit, setNeedsUnit] = useState(false);
     const [busy, setBusy] = useState<"extract" | "save" | null>(null);
     const [message, setMessage] = useState("");
 
     const operation = useRef(false);
+    const pasteRef = useRef<HTMLTextAreaElement>(null);
 
     const hasUnknown = drafts.some(
         (row) => row.status === "unknown",
@@ -297,9 +240,7 @@ export default function ImportForm() {
     function changeText(text: string) {
         setEmailText(text);
 
-        // A new or edited paste needs its own unit confirmation.
-        setQtyUnit("");
-        setNeedsUnit(false);
+
         setMessage("");
     }
 
@@ -341,7 +282,6 @@ export default function ImportForm() {
             const extracted = parseEmailTable(
                 emailText,
                 dateFormat,
-                qtyUnit || undefined,
             );
 
             const batchId = crypto.randomUUID().slice(0, 8);
@@ -366,18 +306,13 @@ export default function ImportForm() {
 
             setDrafts((current) => [...current, ...additions]);
             setEmailText("");
-            setQtyUnit("");
-            setNeedsUnit(false);
 
             setMessage(
                 `${extracted.length} source rows extracted into ` +
                 `${additions.length} invoice drafts. ` +
-                "Review quantities and dates before saving.",
+                "Enter roll quantities if known and review dates before saving.",
             );
         } catch (cause) {
-            if (cause instanceof QuantityUnitRequiredError) {
-                setNeedsUnit(true);
-            }
 
             setMessage(
                 cause instanceof Error
@@ -403,8 +338,8 @@ export default function ImportForm() {
         if (
             !window.confirm(
                 `Combine ${matches.length} drafts for "${row.invoice}"? ` +
-                "Only combine separate quantities, not repeated copies. " +
-                "Totals use the original rows. Manual edits will reset " +
+                "Only combine rows belonging to the same invoice. " +
+                "Roll quantity will be cleared for manual entry. Other edits will reset " +
                 "except the invoice number.",
             )
         ) {
@@ -451,7 +386,7 @@ export default function ImportForm() {
 
         if (hasDuplicates) {
             setMessage(
-                "Combine separate quantities or remove duplicate drafts first.",
+                "Combine matching drafts or remove duplicate drafts first.",
             );
             return;
         }
@@ -476,7 +411,7 @@ export default function ImportForm() {
                 form.set("invoice", row.invoice);
                 form.set("supplier", row.supplier);
                 form.set("rollQuantity", row.quantity);
-                form.set("meterQuantity", row.meters);
+                form.set("meterQuantity", "");
                 form.set("system", row.system);
                 form.set("documentDate", row.date);
                 form.set("shipment", row.shipment);
@@ -554,9 +489,8 @@ export default function ImportForm() {
 
         setDrafts([]);
         setEmailText("");
-        setQtyUnit("");
-        setNeedsUnit(false);
         setMessage("");
+        requestAnimationFrame(() => pasteRef.current?.focus());
     }
 
     const pasteLocked = busy !== null || hasSaved || hasUnknown;
@@ -571,13 +505,20 @@ export default function ImportForm() {
                         <p className="mt-1 text-xs text-muted-foreground">Paste the table, review the details, then save.</p>
                     </div>
                 </div>
-                <Link href="/dashboard/invoices/new" aria-disabled={busy !== null}
-                    onClick={(event) => {
-                        if (operation.current || (hasWork && !window.confirm("Return to new invoice? Unsaved drafts and pasted text will be discarded. Saved invoices remain in the dashboard."))) event.preventDefault();
-                    }}
-                    className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-input bg-card px-3 text-sm font-medium hover:bg-muted">
-                    <ArrowLeft className="size-4" aria-hidden="true" /> Back to new invoice
-                </Link>
+                <div className="flex flex-wrap items-center gap-2">
+                    <button type="button" onClick={clearBatch}
+                        disabled={busy !== null || (drafts.length === 0 && !hasPastedText)}
+                        className={buttonClass}>
+                        New batch
+                    </button>
+                    <Link href="/dashboard/invoices/new" aria-disabled={busy !== null}
+                        onClick={(event) => {
+                            if (operation.current || (hasWork && !window.confirm("Return to new invoice? Unsaved drafts and pasted text will be discarded. Saved invoices remain in the dashboard."))) event.preventDefault();
+                        }}
+                        className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-input bg-card px-3 text-sm font-medium hover:bg-muted">
+                        <ArrowLeft className="size-4" aria-hidden="true" /> Back to new invoice
+                    </Link>
+                </div>
             </header>
             <form
                 onSubmit={extractEmail}
@@ -600,12 +541,13 @@ export default function ImportForm() {
 
                     <textarea
                         id="email-table"
+                        ref={pasteRef}
                         value={emailText}
                         disabled={pasteLocked}
                         maxLength={MAX_PASTE_LENGTH}
                         rows={8}
                         spellCheck={false}
-                        placeholder="Paste Date, PO, Qty or Qty(MTR), Invoice No and Supplier."
+                        placeholder="Paste Date, PO, Invoice No and Supplier."
                         onChange={(event) => changeText(event.target.value)}
                         onPaste={(event) => {
                             if (pasteLocked) return;
@@ -643,7 +585,7 @@ export default function ImportForm() {
                         className="h-52 min-h-40 w-full resize-y rounded-lg border border-input bg-background p-3 font-mono text-xs leading-6 outline-none focus:border-blue-600 focus:ring-2 focus:ring-ring/25 disabled:opacity-60 lg:h-64"
                     />
 
-                    <p className="text-xs text-muted-foreground">Qty(MTR) and roll headers are recognized automatically.</p>
+                    <p className="text-xs text-muted-foreground">Roll quantity is entered manually after extraction.</p>
                 </div>
                 <div className="min-w-0 space-y-3 border-t border-border pt-4 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
                     <div className="flex flex-wrap items-end gap-3">
@@ -674,8 +616,7 @@ export default function ImportForm() {
                             type="submit"
                             disabled={
                                 pasteLocked ||
-                                !hasPastedText ||
-                                (needsUnit && !qtyUnit)
+                                !hasPastedText
                             }
                             className={buttonClass}
                         >
@@ -698,64 +639,6 @@ export default function ImportForm() {
                         the selected format is used.
                     </p>
 
-                    {needsUnit && (
-                        <div
-                            role="group"
-                            aria-labelledby="quantity-unit-title"
-                            className="space-y-3 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/30"
-                        >
-                            <div>
-                                <h3
-                                    id="quantity-unit-title"
-                                    className="text-sm font-semibold"
-                                >
-                                    What does Qty represent in this email?
-                                </h3>
-
-                                <p className="mt-1 text-sm text-muted-foreground">
-                                    The header has no unit. Your pasted data is
-                                    retained. Select the unit, then click Extract
-                                    invoices again.
-                                </p>
-                            </div>
-
-                            <div className="max-w-xs">
-                                <label
-                                    htmlFor="generic-quantity-unit"
-                                    className="mb-2 block text-sm font-medium"
-                                >
-                                    Qty column unit
-                                </label>
-
-                                <select
-                                    id="generic-quantity-unit"
-                                    value={qtyUnit}
-                                    disabled={pasteLocked}
-                                    onChange={(event) => {
-                                        const value = event.target.value;
-
-                                        setQtyUnit(
-                                            value === "ROLLS" || value === "MTR"
-                                                ? value
-                                                : "",
-                                        );
-                                    }}
-                                    className={inputClass}
-                                >
-                                    <option value="">Select unit</option>
-                                    <option value="ROLLS">Rolls</option>
-                                    <option value="MTR">MTR — meters</option>
-                                </select>
-                            </div>
-
-                            <p className="text-xs text-muted-foreground">
-                                This applies only to headers named Qty or Quantity.
-                                If separate tables use different units, paste them
-                                separately.
-                            </p>
-                        </div>
-                    )}
-
                     <p className="text-xs text-muted-foreground">
                         PO: SL → D365 · KP → AX · Both for the same
                         invoice → AX/D365. Matching invoice rows are grouped.
@@ -763,8 +646,11 @@ export default function ImportForm() {
 
                     {(hasSaved || hasUnknown) && (
                         <p className="text-sm text-muted-foreground">
-                            Clear this batch before extracting another email.
-                            Check any unconfirmed save in the dashboard first.
+                            {hasUnknown
+                                ? "Check the unconfirmed save in the dashboard, then select New batch above."
+                                : remaining === 0
+                                    ? "All invoices saved. Select New batch above to paste your next email."
+                                    : "Some invoices are saved. Correct and retry the remaining drafts, or select New batch to discard them."}
                         </p>
                     )}
                 </div>
@@ -785,7 +671,7 @@ export default function ImportForm() {
                     className="text-sm text-amber-700 dark:text-amber-300"
                 >
                     Duplicate invoice numbers exist in this preview.
-                    Combine separate quantities or remove repeated copies.
+                    Combine matching drafts or remove repeated copies.
                 </p>
             )}
 
@@ -807,7 +693,6 @@ export default function ImportForm() {
                                         "Invoice *",
                                         "Supplier *",
                                         "Roll quantity",
-                                        "Meters",
                                         "System *",
                                         "Document date *",
                                         "Local / Import *",
@@ -888,7 +773,7 @@ export default function ImportForm() {
                                                             text-[10px] font-semibold text-amber-800
                                                             dark:border-amber-900 dark:bg-amber-950/40
                                                             dark:text-amber-300"
-                                                        title="Contains FOC PO rows. Their quantities are included."
+                                                        title="Contains FOC PO rows. Review the PO details."
                                                     >
                                                         FOC · Review
                                                     </span>
@@ -903,10 +788,7 @@ export default function ImportForm() {
                                                         {row.parts.map((part) => (
                                                             <li key={part.id}>
                                                                 {part.name}
-                                                                <br />
-                                                                Rolls: {part.data.roll_quantity ?? "—"}
-                                                                {" · "}
-                                                                Meters: {part.data.meter_quantity ?? "—"}
+
                                                             </li>
                                                         ))}
                                                     </ul>
@@ -940,16 +822,6 @@ export default function ImportForm() {
                                                     min: 0,
                                                     max: MAX_ROLLS,
                                                     step: 1,
-                                                    placeholder: "Optional",
-                                                })}
-                                            </td>
-
-                                            <td className="min-w-[160px] p-3">
-                                                {field("meters", "Meters", {
-                                                    type: "number",
-                                                    min: 0,
-                                                    max: MAX_METERS,
-                                                    step: 0.001,
                                                     placeholder: "Optional",
                                                 })}
                                             </td>
@@ -1030,7 +902,7 @@ export default function ImportForm() {
                                                         onClick={() => combine(row)}
                                                         className={`${secondaryClass} mt-3`}
                                                     >
-                                                        Combine quantities
+                                                        Combine drafts
                                                     </button>
                                                 )}
 
@@ -1110,7 +982,7 @@ export default function ImportForm() {
                         onClick={clearBatch}
                         className={secondaryClass}
                     >
-                        Clear batch
+                        New batch
                     </button>
                 )}
             </div>

@@ -18,10 +18,8 @@ import {
 } from "lucide-react";
 
 import VehicleInput from "@/components/vehicle-input";
-import { MAX_METERS } from "@/lib/meter-quantity";
 import { createInvoice } from "./actions";
 
-type QuantityUnit = "ROLLS" | "MTR";
 type FieldErrors = Record<string, string>;
 
 const MAX_ROLLS = 2147483647;
@@ -116,13 +114,9 @@ export default function InvoiceForm({ today }: { today: string }) {
     });
 
     const [quantity, setQuantity] = useState("");
-    const [quantityUnit, setQuantityUnit] =
-        useState<QuantityUnit>("ROLLS");
-
     const [errors, setErrors] = useState<FieldErrors>({});
     const errorSummary = useRef<HTMLDivElement>(null);
 
-    const isMeters = quantityUnit === "MTR";
 
     useEffect(() => {
         if (state.error && !pending) {
@@ -246,13 +240,13 @@ export default function InvoiceForm({ today }: { today: string }) {
             <input
                 type="hidden"
                 name="rollQuantity"
-                value={isMeters ? "" : quantity}
+                value={quantity}
             />
 
             <input
                 type="hidden"
                 name="meterQuantity"
-                value={isMeters ? quantity : ""}
+                value=""
             />
 
             <fieldset
@@ -375,23 +369,23 @@ export default function InvoiceForm({ today }: { today: string }) {
 
                 <FormSection
                     title="Quantity & date"
-                    description="Choose the quantity unit and confirm the document share date."
+                    description="Enter the roll quantity and confirm the document share date."
                     icon={<CalendarDays className="size-4" />}
                 >
                     <div>
-                        <div className="grid grid-cols-[minmax(0,1fr)_100px] gap-2">
+                        <div className="grid grid-cols-1 gap-2">
                             <div>
                                 <label htmlFor="quantity" className={labelClass}>
-                                    Quantity
+                                    Roll quantity
                                 </label>
 
                                 <input
                                     id="quantity"
                                     type="number"
                                     min={0}
-                                    max={isMeters ? MAX_METERS : MAX_ROLLS}
-                                    step={isMeters ? 0.001 : 1}
-                                    inputMode={isMeters ? "decimal" : "numeric"}
+                                    max={MAX_ROLLS}
+                                    step={1}
+                                    inputMode="numeric"
                                     placeholder="Optional"
                                     value={quantity}
                                     onChange={(event) => {
@@ -408,42 +402,13 @@ export default function InvoiceForm({ today }: { today: string }) {
                                 />
                             </div>
 
-                            <div>
-                                <label
-                                    htmlFor="quantity-unit"
-                                    className={labelClass}
-                                >
-                                    Unit
-                                </label>
-
-                                <select
-                                    id="quantity-unit"
-                                    value={quantityUnit}
-                                    onChange={(event) => {
-                                        setQuantityUnit(
-                                            event.target.value === "MTR"
-                                                ? "MTR"
-                                                : "ROLLS",
-                                        );
-
-                                        clearError("quantity");
-                                    }}
-                                    className={inputClass}
-                                >
-                                    <option value="ROLLS">Rolls</option>
-                                    <option value="MTR">MTR</option>
-                                </select>
-                            </div>
                         </div>
 
                         <p
                             id="quantity-help"
                             className="mt-2 text-xs leading-5 text-muted-foreground"
                         >
-                            {isMeters
-                                ? "Meters: up to 3 decimal places."
-                                : "Rolls: whole numbers only."}
-                            {" "}Changing the unit does not convert the value.
+                            Enter rolls as a whole number, or leave blank.
                         </p>
 
                         {fieldError("quantity")}
