@@ -1,18 +1,5 @@
-import { meterUnits } from "@/lib/meter-quantity";
 
 export const MAX_PASTE_LENGTH = 1_000_000;
-
-export type QuantityUnit = "ROLLS" | "MTR";
-
-export class QuantityUnitRequiredError extends Error {
-    constructor() {
-        super(
-            'The "Qty" header does not specify a unit. ' +
-            "Select Rolls or MTR, then extract again.",
-        );
-        this.name = "QuantityUnitRequiredError";
-    }
-}
 
 export type ExtractedInvoice = {
     invoice_number: string;
@@ -36,8 +23,6 @@ const BASE_HEADERS = [
     "supplier",
 ];
 
-const QUANTITY_HEADERS = ["qty", "rolls", "meters"];
-const MAX_ROLLS = 2147483647;
 
 function clean(value: string) {
     return value
@@ -87,8 +72,7 @@ function isHeader(cells: string[]) {
     const names = cells.map(header);
 
     return (
-        BASE_HEADERS.every((name) => names.includes(name)) &&
-        QUANTITY_HEADERS.some((name) => names.includes(name))
+        BASE_HEADERS.every((name) => names.includes(name))
     );
 }
 
@@ -178,29 +162,7 @@ function parseDate(value: string, format: string): string | null {
     );
 }
 
-function parseRolls(value: string): number | null {
-    const text = clean(value);
-
-    // Accept whole numbers such as 100, 1,000 and 100.00.
-    // Never round a fractional roll quantity.
-    if (
-        !/^(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.0{1,3})?$/.test(text)
-    ) {
-        return null;
-    }
-
-    const number = Number(text.replace(/,/g, ""));
-
-    return (
-        Number.isSafeInteger(number) &&
-        number >= 0 &&
-        number <= MAX_ROLLS
-    )
-        ? number
-        : null;
-}
-
-// Used only to validate copied totals, which may exceed one invoice's limit.
+// Recognize total rows so they are skipped, without importing their quantity.
 function totalUnits(value: string): number | null {
     const text = clean(value);
 
@@ -452,7 +414,6 @@ export function emailClipboardText(
 export function parseEmailTable(
     text: string,
     dateFormat: string,
-    genericUnit?: QuantityUnit,
 ): ExtractedInvoice[] {
     if (!text.trim()) {
         throw new Error("Paste an invoice table first.");
@@ -466,29 +427,9 @@ export function parseEmailTable(
         throw new Error("Select the date format.");
     }
 
-    if (
-        genericUnit !== undefined &&
-        genericUnit !== "ROLLS" &&
-        genericUnit !== "MTR"
-    ) {
-        throw new Error("Select Rolls or MTR.");
-    }
-
     const rows = readRows(text);
 
-    const needsUnit = rows.some(
-        (cells) =>
-            isHeader(cells) &&
-            cells.map(header).includes("qty"),
-    );
-
-    if (needsUnit && !genericUnit) {
-        throw new QuantityUnitRequiredError();
-    }
-
     let headings: string[] | null = null;
-    let sectionTotal = 0;
-    let sectionValid = true;
     let sectionRows = 0;
     let totalSeen = false;
 
@@ -507,15 +448,8 @@ export function parseEmailTable(
         }
 
         if (isHeader(cells)) {
-            const next = cells.map((cell) => {
-                const name = header(cell);
-
-                if (name !== "qty") return name;
-
-                return genericUnit === "MTR" ? "meters" : "rolls";
-            });
-
-            const required = [...BASE_HEADERS, "rolls", "meters"];
+            const next = cells.map(header);
+            const required = BASE_HEADERS;
 
             if (
                 required.some(
@@ -524,14 +458,12 @@ export function parseEmailTable(
                 )
             ) {
                 throw new Error(
-                    "Duplicate quantity or required headers found. " +
-                    "Import tables with different quantity layouts separately.",
+                    "Duplicate required headers found. " +
+                    "Review the copied table headers.",
                 );
             }
 
             if (!headings || totalSeen) {
-                sectionTotal = 0;
-                sectionValid = true;
                 sectionRows = 0;
             } else if (next.join("|") !== headings.join("|")) {
                 throw new Error(
@@ -566,25 +498,6 @@ export function parseEmailTable(
                 );
             }
 
-            if (
-                headings.includes("rolls") &&
-                headings.includes("meters")
-            ) {
-                throw new Error(
-                    "A total covering both rolls and meters needs manual review.",
-                );
-            }
-
-            const supplied = totalUnits(numbers[0]);
-
-            if (!sectionValid || supplied !== sectionTotal) {
-                throw new Error(
-                    "The total does not match the copied rows, or a " +
-                    "quantity is invalid. Check the selected unit and " +
-                    "confirm that all rows were copied.",
-                );
-            }
-
             totalSeen = true;
             continue;
         }
@@ -615,15 +528,6 @@ export function parseEmailTable(
 
         const date = parseDate(get("date"), dateFormat);
 
-        const hasRolls = headings.includes("rolls");
-        const hasMeters = headings.includes("meters");
-
-        const rolls = hasRolls ? parseRolls(get("rolls")) : null;
-        const units = hasMeters ? meterUnits(get("meters")) : null;
-
-        const invalidRolls = hasRolls && rolls === null;
-        const invalidMeters = hasMeters && units === null;
-
         const notes: string[] = [];
 
         if (!invoice) {
@@ -640,20 +544,6 @@ export function parseEmailTable(
                     ? "AX"
                     : null;
 
-        if (invalidRolls) {
-            notes.push(
-                `Roll quantity "${get("rolls")}" is invalid. ` +
-                "Rolls require a whole number. Check the selected unit.",
-            );
-        }
-
-        if (invalidMeters) {
-            notes.push(
-                `Meters quantity "${get("meters")}" is invalid. ` +
-                "Use up to 3 decimal places.",
-            );
-        }
-
         if (!date) {
             notes.push(`Document date "${get("date")}" needs review.`);
         }
@@ -661,7 +551,7 @@ export function parseEmailTable(
         if (!supplier) notes.push("Supplier is missing.");
         if (po === "FOC") {
             notes.push(
-                "FOC PO row found. Its quantity is included. " +
+                "FOC PO row found. " +
                 "System is determined from the other PO rows of this invoice.",
             );
         } else if (!system) {
@@ -674,22 +564,6 @@ export function parseEmailTable(
 
         if (supplier.length > 250) {
             notes.push("Supplier exceeds 250 characters.");
-        }
-
-        const quantityUnits = hasMeters
-            ? units
-            : rolls === null
-                ? null
-                : rolls * 1000;
-
-        if (quantityUnits === null) {
-            sectionValid = false;
-        } else {
-            sectionTotal += quantityUnits;
-        }
-
-        if (!Number.isSafeInteger(sectionTotal)) {
-            sectionValid = false;
         }
 
         sectionRows++;
@@ -705,10 +579,10 @@ export function parseEmailTable(
             invoice_number: invoice,
             is_foc: po === "FOC",
             supplier: supplier || null,
-            roll_quantity: rolls,
-            meter_quantity: units === null ? null : units / 1000,
-            roll_quantity_invalid: invalidRolls,
-            meter_quantity_invalid: invalidMeters,
+            roll_quantity: null,
+            meter_quantity: null,
+            roll_quantity_invalid: false,
+            meter_quantity_invalid: false,
             system_type: system,
             document_share_date: date,
             shipment_type: supplier
@@ -727,7 +601,7 @@ export function parseEmailTable(
 
     if (result.length === 0) {
         throw new Error(
-            "Include Date, PO, Qty or Qty(MTR), Invoice No and Supplier.",
+            "Include Date, PO, Invoice No and Supplier.",
         );
     }
 

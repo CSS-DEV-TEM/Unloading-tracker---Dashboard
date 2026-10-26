@@ -3,7 +3,6 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { meterText, meterUnits } from "@/lib/meter-quantity";
 
 type CreateState = {
     error: string;
@@ -36,7 +35,6 @@ export async function saveImportedInvoice(
     const shipment = text("shipment");
     const date = text("documentDate");
     const quantityText = text("rollQuantity");
-    const metersRaw = text("meterQuantity");
     const vehicleNumber = text("vehicleNumber");
     const receivedDate = text("receivedDate");
 
@@ -98,18 +96,6 @@ export async function saveImportedInvoice(
         };
     }
 
-    const units = metersRaw === "" ? null : meterUnits(metersRaw);
-
-    if (metersRaw !== "" && units === null) {
-        return {
-            error:
-                "Meters must be between 0 and 999999999.999, " +
-                "with no more than 3 decimal places.",
-        };
-    }
-
-    const meters = units === null ? null : Number(meterText(units));
-
     const supabase = await createClient();
 
     const {
@@ -135,7 +121,7 @@ export async function saveImportedInvoice(
         p_vehicle_number: vehicleNumber || null,
         p_received_date: receivedDate || null,
         p_expected_received_date: null,
-        p_meter_quantity: meters,
+        p_meter_quantity: null,
     });
 
     if (error) {

@@ -741,39 +741,10 @@ async function PublicOverview({ searchParams }: Props) {
                           {formatDate(invoice.document_share_date)}
                         </td>
 
-                        {/* Roll quantity and meters: ONE column */}
                         <td className="whitespace-nowrap px-4 py-3 align-top tabular-nums">
-                          <div className="flex flex-col items-start gap-1.5">
-                            {invoice.roll_quantity != null && (
-                              <span>
-                                {Number(invoice.roll_quantity).toLocaleString("en-GB")}
-                              </span>
-                            )}
-
-                            {invoice.meter_quantity != null && (
-                              <div className="inline-flex items-center gap-2">
-                                <span>
-                                  {Number(invoice.meter_quantity).toLocaleString("en-GB", {
-                                    maximumFractionDigits: 3,
-                                  })}
-                                </span>
-
-                                <span
-                                  className="inline-flex items-center rounded-md
-                                              border border-blue-200 bg-blue-50 px-1.5 py-0.5
-                                              text-[10px] font-semibold leading-none text-blue-700
-                                              dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300"
-                                >
-                                  MTR
-                                </span>
-                              </div>
-                            )}
-
-                            {invoice.roll_quantity == null &&
-                              invoice.meter_quantity == null && (
-                                <span className="text-muted-foreground">—</span>
-                              )}
-                          </div>
+                          {invoice.roll_quantity == null
+                            ? "—"
+                            : Number(invoice.roll_quantity).toLocaleString("en-GB")}
                         </td>
 
                         {/* Start date */}
