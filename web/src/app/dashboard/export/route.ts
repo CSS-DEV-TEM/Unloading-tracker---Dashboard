@@ -26,6 +26,7 @@ type ExportRecord = {
     stages: Stage[];
     asn: {
         share_date: string | null;
+        share_at: string | null;
         is_shared: boolean;
         assigned_user_name: string | null;
     } | null;
@@ -251,7 +252,7 @@ export async function POST(request: Request) {
             { header: "AX Pre GRN Status", key: "axStatus", width: 21 },
             { header: "AX Pre GRN User", key: "axUser", width: 25 },
             { header: "Pending Reason", key: "pendingReason", width: 40 },
-            { header: "ASN Share Date", key: "asnDate", width: 21 },
+            { header: "ASN Share Date / Time", key: "asnDate", width: 21 },
             { header: "ASN Update", key: "asnUpdate", width: 18 },
             { header: "ASN USER", key: "asnUser", width: 25 },
             { header: "REMARK", key: "remark", width: 45 },
@@ -263,11 +264,12 @@ export async function POST(request: Request) {
         sheet.getColumn("roll").numFmt = "0";
         sheet.getColumn("meters").numFmt = "0.###";
 
-        for (const key of ["documentDate", "asnDate"]) {
+        for (const key of ["documentDate"]) {
             sheet.getColumn(key).numFmt = "dd/mm/yyyy";
         }
 
         for (const key of [
+            "asnDate",
             "d365Start",
             "d365End",
             "axStart",
@@ -347,7 +349,7 @@ export async function POST(request: Request) {
                 axUser: ax?.assigned_user_name ?? "",
 
                 pendingReason: invoice.pending_reason ?? "",
-                asnDate: excelDate(record.asn.share_date),
+                asnDate: record.asn.share_at ? excelDateTime(record.asn.share_at) : excelDate(record.asn.share_date),
                 asnUpdate: record.asn.is_shared ? "ASN SHARE" : "",
                 asnUser: record.asn.assigned_user_name ?? "",
                 remark: invoice.remark ?? "",

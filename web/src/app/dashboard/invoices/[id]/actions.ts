@@ -9,25 +9,6 @@ type UpdateState = {
     conflict: boolean;
 };
 
-function parseDate(value: string): string | null {
-    if (!value) return null;
-
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-        throw new Error("Select a valid ASN share date.");
-    }
-
-    const date = new Date(`${value}T00:00:00Z`);
-
-    if (
-        Number.isNaN(date.getTime()) ||
-        date.toISOString().slice(0, 10) !== value
-    ) {
-        throw new Error("Select a valid ASN share date.");
-    }
-
-    return value;
-}
-
 function toTimestamp(value: string): string | null {
     if (!value) return null;
 
@@ -123,7 +104,7 @@ export async function updateInvoiceProcess(
     }[];
 
     try {
-        asnDate = parseDate(text("asnDate"));
+        asnDate = toTimestamp(text("asnDate"));
 
         stages = systems.map((system) => {
             const start = toTimestamp(text(`${system}.start`));
@@ -165,12 +146,12 @@ export async function updateInvoiceProcess(
         return fail("Your session has expired. Sign in again before saving.");
     }
 
-    const { error } = await supabase.rpc("update_invoice_process", {
+    const { error } = await supabase.rpc("update_invoice_process_v2", {
         p_invoice_id: invoiceId,
         p_expected_version: version,
         p_stages: stages,
         p_pending_reason: pendingReason || null,
-        p_asn_share_date: asnDate,
+        p_asn_share_at: asnDate,
         p_asn_shared: formData.get("asnShared") === "on",
         p_asn_user_name: asnUser || null,
         p_remark: remark || null,

@@ -77,7 +77,7 @@ async function InvoiceContent({ params }: PageProps) {
             .order("system_name"),
         supabase
             .from("asn_updates")
-            .select("share_date, is_shared, assigned_user_name")
+            .select("share_date, share_at, is_shared, assigned_user_name")
             .eq("invoice_id", id)
             .maybeSingle(),
         supabase
@@ -116,7 +116,7 @@ async function InvoiceContent({ params }: PageProps) {
             assigned_user_name: stage.assigned_user_name ?? "",
         })),
         pending_reason: invoice.pending_reason ?? "",
-        asn_share_date: asn.share_date ?? "",
+        asn_share_date: toSriLankaInput(asn.share_at),
         asn_shared: asn.is_shared,
         asn_user_name: asn.assigned_user_name ?? "",
         remark: invoice.remark ?? "",
@@ -244,6 +244,11 @@ async function InvoiceContent({ params }: PageProps) {
                 </dl>
             </section>
 
+            {!asn.share_at && asn.share_date && (
+                <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+                    Previous ASN date: {asn.share_date}. No share time was recorded. Enter the actual date and time below to show the completion time.
+                </p>
+            )}
             <ProcessForm key={`${invoice.id}-${invoice.version}`} initial={initial} userNames={userNames} />
         </div>
     </main>);
