@@ -37,6 +37,7 @@ type Invoice = {
     meter_quantity: number | null;
     status: "Pending" | "Complete" | "Reject";
     pending_reason: string | null;
+    remark: string | null;
     completed_at: string | null;
     pre_grn_stages: {
         system_name: "AX" | "D365";
@@ -114,7 +115,7 @@ function DateTimeCell({ value }: { value: string | null }) {
     const dateLabel = new Intl.DateTimeFormat("en-GB", {
         timeZone: "Asia/Colombo",
         day: "2-digit",
-        month: "short",
+        month: "2-digit",
         year: "numeric",
     }).format(date);
 
@@ -133,7 +134,7 @@ function DateTimeCell({ value }: { value: string | null }) {
             className="inline-flex flex-col gap-1 whitespace-nowrap"
         >
             <span className="text-foreground">{dateLabel}</span>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-[10px] text-muted-foreground">
                 {timeLabel} · SLST
             </span>
         </time>
@@ -236,6 +237,7 @@ async function DashboardContent({
             meter_quantity,
             status,
             pending_reason,
+            remark,
             completed_at,
             pre_grn_stages (
                 system_name,
@@ -406,26 +408,39 @@ async function DashboardContent({
                         <>
                             <div
                                 role="region"
-                                aria-label="Invoice records — scroll to view more rows and columns"
+                                aria-label="Invoice records — scroll to view more rows"
                                 tabIndex={0}
                                 className="relative isolate max-h-[65vh] overflow-auto scroll-pt-14 scroll-pl-44 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                             >
-                                <table className="w-full min-w-[1300px] border-separate border-spacing-0 text-left text-sm">
+                                <table className="w-full min-w-[960px] table-fixed border-separate border-spacing-0 text-left text-[11px] leading-4">
                                     <caption className="sr-only">
                                         Invoice records with quantities, start and
                                         completion dates in Sri Lanka time.
                                     </caption>
+                                    <colgroup>
+                                        <col style={{ width: "17%" }} />
+                                        <col style={{ width: "12%" }} />
+                                        <col style={{ width: "7%" }} />
+                                        <col style={{ width: "6%" }} />
+                                        <col style={{ width: "9%" }} />
+                                        <col style={{ width: "6%" }} />
+                                        <col style={{ width: "10%" }} />
+                                        <col style={{ width: "10%" }} />
+                                        <col style={{ width: "11%" }} />
+                                        <col style={{ width: "12%" }} />
+                                    </colgroup>
 
-                                    <thead className="text-xs text-muted-foreground">
+
+                                    <thead className="text-[11px] text-muted-foreground">
                                         <tr>
                                             {HEADINGS.map((heading, index) => (
                                                 <th
                                                     key={heading}
                                                     scope="col"
                                                     className={[
-                                                        "sticky top-0 whitespace-nowrap border-b border-border bg-background px-4 py-3 font-medium",
+                                                        "sticky top-0 whitespace-normal break-words border-b border-border bg-background px-1.5 py-2.5 font-medium",
                                                         index === 0
-                                                            ? "left-0 z-30 w-44 min-w-44 border-r"
+                                                            ? "left-0 z-30 min-w-0 border-r"
                                                             : "z-20",
                                                     ].join(" ")}
                                                 >
@@ -435,7 +450,7 @@ async function DashboardContent({
                                         </tr>
                                     </thead>
 
-                                    <tbody className="[&>tr:not(:last-child)>td]:border-b [&>tr:not(:last-child)>th]:border-b [&>tr>td]:border-border [&>tr>th]:border-border">
+                                    <tbody className="[&>tr>td]:align-top [&>tr>td]:[overflow-wrap:anywhere] [&>tr:not(:last-child)>td]:border-b [&>tr:not(:last-child)>th]:border-b [&>tr>td]:border-border [&>tr>th]:border-border">
                                         {invoices.map((invoice) => (
                                             <tr
                                                 key={invoice.id}
@@ -443,7 +458,7 @@ async function DashboardContent({
                                             >
                                                 <th
                                                     scope="row"
-                                                    className="sticky left-0 z-10 w-44 min-w-44 max-w-44 border-r border-border bg-card px-4 py-3 font-semibold text-blue-700 group-hover:bg-muted group-focus-within:bg-muted dark:text-blue-400 [overflow-wrap:anywhere]"
+                                                    className="sticky left-0 z-10 min-w-0 border-r border-border bg-card px-1.5 py-2.5 font-semibold text-blue-700 group-hover:bg-muted group-focus-within:bg-muted dark:text-blue-400 [overflow-wrap:anywhere]"
                                                 >
                                                     <div className="flex flex-col items-start gap-1">
                                                         <Link
@@ -460,27 +475,27 @@ async function DashboardContent({
                                                     </div>
                                                 </th>
 
-                                                <td className="px-4 py-3">
+                                                <td className="px-1.5 py-2.5">
                                                     {invoice.supplier}
                                                 </td>
 
-                                                <td className="whitespace-nowrap px-4 py-3">
+                                                <td className="whitespace-nowrap px-1.5 py-2.5">
                                                     {invoice.system_type}
                                                 </td>
 
-                                                <td className="px-4 py-3">
+                                                <td className="px-1.5 py-2.5">
                                                     {invoice.shipment_type}
                                                 </td>
 
-                                                <td className="whitespace-nowrap px-4 py-3">
+                                                <td className="whitespace-nowrap px-1.5 py-2.5">
                                                     {formatDate(invoice.document_share_date)}
                                                 </td>
 
-                                                <td className="whitespace-nowrap px-4 py-3 align-middle tabular-nums">
+                                                <td className="whitespace-normal break-all px-1.5 py-2.5 align-middle tabular-nums">
                                                     {invoice.roll_quantity == null ? "—" : Number(invoice.roll_quantity).toLocaleString("en-GB")}
                                                 </td>
 
-                                                <td className="px-4 py-3">
+                                                <td className="px-1.5 py-2.5">
                                                     <DateTimeCell
                                                         value={earliestStart(
                                                             invoice.pre_grn_stages ?? [],
@@ -488,7 +503,7 @@ async function DashboardContent({
                                                     />
                                                 </td>
 
-                                                <td className="px-4 py-3">
+                                                <td className="px-1.5 py-2.5">
                                                     <DateTimeCell
                                                         value={
                                                             (Array.isArray(invoice.asn_updates)
@@ -498,25 +513,39 @@ async function DashboardContent({
                                                     />
                                                 </td>
 
-                                                <td className="px-4 py-3">
+                                                <td className="px-1.5 py-2.5">
                                                     <span
-                                                        className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-semibold before:size-1.5 before:rounded-full before:bg-current before:content-[''] ${statusStyles[invoice.status]}`}
+                                                        className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-semibold before:size-1.5 before:rounded-full before:bg-current before:content-[''] ${statusStyles[invoice.status]}`}
                                                     >
                                                         {invoice.status}
                                                     </span>
                                                     {invoice.status === "Pending" && invoice.pending_reason?.trim() && (
                                                         <div>
                                                             <PendingReasonDialog
+                                                                compact
                                                                 invoiceNumber={invoice.invoice_number}
                                                                 supplier={invoice.supplier}
                                                                 reason={invoice.pending_reason.trim()}
                                                             />
                                                         </div>
                                                     )}
+
+                                                    {invoice.remark?.trim() && (
+                                                        <div>
+                                                            <PendingReasonDialog
+                                                                compact
+                                                                kind="remark"
+                                                                invoiceNumber={invoice.invoice_number}
+                                                                supplier={invoice.supplier}
+                                                                reason={invoice.remark.trim()}
+                                                            />
+                                                        </div>
+                                                    )}
                                                 </td>
 
-                                                <td className="px-4 py-3">
+                                                <td className="px-1.5 py-2.5">
                                                     <QuickProgressCell
+                                                        compact
                                                         key={`${invoice.id}-${invoice.version}`}
                                                         invoiceId={invoice.id}
                                                         invoiceNumber={invoice.invoice_number}
