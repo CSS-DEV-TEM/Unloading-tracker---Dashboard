@@ -29,6 +29,7 @@ type Draft = {
     system: string;
     date: string;
     shipment: string;
+    remark: string;
     notes: string[];
     status: "draft" | "saving" | "saved" | "error" | "unknown";
     message: string;
@@ -40,13 +41,20 @@ type EditableField =
     | "quantity"
     | "system"
     | "date"
-    | "shipment";
+    | "shipment"
+    | "remark";
 
 const MAX_ROLLS = 2147483647;
 
 const inputClass =
     "h-10 w-full rounded-lg border border-input bg-background px-3 " +
     "text-sm text-foreground outline-none focus:border-blue-600 " +
+    "focus:ring-2 focus:ring-ring/25 disabled:opacity-60";
+
+// Compact controls apply only to the invoice review table.
+const tableInputClass =
+    "h-9 w-full min-w-0 rounded-md border border-input bg-background px-1.5 " +
+    "text-[11px] leading-4 text-foreground outline-none focus:border-blue-600 " +
     "focus:ring-2 focus:ring-ring/25 disabled:opacity-60";
 
 const buttonClass =
@@ -175,6 +183,7 @@ function buildDraft(
         system,
         date,
         shipment,
+        remark: "",
         notes: [...new Set(notes)],
         status: "draft",
         message: "",
@@ -335,12 +344,21 @@ export default function ImportForm() {
 
         if (matches.length < 2 || matches.some(isProtected)) return;
 
+        const mergedRemark = [...new Set(
+            matches.map((item) => item.remark.trim()).filter(Boolean),
+        )].join("\n\n");
+
+        if (mergedRemark.length > 5000) {
+            setMessage("Combined remarks exceed 5000 characters. Shorten the remarks before combining drafts.");
+            return;
+        }
+
         if (
             !window.confirm(
                 `Combine ${matches.length} drafts for "${row.invoice}"? ` +
                 "Only combine rows belonging to the same invoice. " +
                 "Roll quantity will be cleared for manual entry. Other edits will reset " +
-                "except the invoice number.",
+                "except the invoice number. Remarks will be kept together.",
             )
         ) {
             return;
@@ -351,6 +369,8 @@ export default function ImportForm() {
             matches[0].id,
             row.invoice.trim(),
         );
+
+        merged.remark = mergedRemark;
 
         const ids = new Set(matches.map((item) => item.id));
 
@@ -410,6 +430,7 @@ export default function ImportForm() {
                 const form = new FormData();
                 form.set("invoice", row.invoice);
                 form.set("supplier", row.supplier);
+                form.set("remark", row.remark);
                 form.set("rollQuantity", row.quantity);
                 form.set("meterQuantity", "");
                 form.set("system", row.system);
@@ -686,7 +707,17 @@ export default function ImportForm() {
                         <p className="text-xs text-muted-foreground">Check invoice numbers, quantities and dates before saving.</p>
                     </div>
                     <div className="overflow-x-auto rounded-xl border border-border">
-                        <table className="w-full text-left text-sm">
+                        <table className="w-full min-w-[960px] table-fixed text-left text-[11px] leading-4">
+                            <colgroup>
+                                <col style={{ width: "19%" }} />
+                                <col style={{ width: "14%" }} />
+                                <col style={{ width: "7%" }} />
+                                <col style={{ width: "10%" }} />
+                                <col style={{ width: "13%" }} />
+                                <col style={{ width: "9%" }} />
+                                <col style={{ width: "17%" }} />
+                                <col style={{ width: "11%" }} />
+                            </colgroup>
                             <thead className="bg-muted">
                                 <tr>
                                     {[
@@ -696,12 +727,13 @@ export default function ImportForm() {
                                         "System *",
                                         "Document date *",
                                         "Local / Import *",
+                                        "Remark (optional)",
                                         "Status / Actions",
                                     ].map((heading) => (
                                         <th
                                             key={heading}
                                             scope="col"
-                                            className="p-3 font-medium"
+                                            className="break-words px-1.5 py-2.5 font-semibold"
                                         >
                                             {heading}
                                         </th>
@@ -735,6 +767,7 @@ export default function ImportForm() {
                                             <input
                                                 {...options}
                                                 aria-label={`${label}: ${row.invoice}`}
+                                                title={row[name]}
                                                 value={row[name]}
                                                 disabled={locked}
                                                 onChange={(event) =>
@@ -744,17 +777,18 @@ export default function ImportForm() {
                                                         event.target.value,
                                                     )
                                                 }
-                                                className={inputClass}
+                                                className={tableInputClass}
                                             />
                                         );
                                     }
 
                                     return (
                                         <tr key={row.id} className="align-top">
-                                            <td className="min-w-[230px] p-3">
+                                            <td className="min-w-0 break-words px-1.5 py-2 [overflow-wrap:anywhere]">
                                                 <input
                                                     type="text"
                                                     aria-label={`Invoice number: ${row.invoice}`}
+                                                    title={row.invoice}
                                                     value={row.invoice}
                                                     required
                                                     maxLength={100}
@@ -763,7 +797,7 @@ export default function ImportForm() {
                                                         edit(row.id, "invoice", event.target.value)
                                                     }
                                                     placeholder="Invoice number"
-                                                    className={`${inputClass} min-w-[230px] font-semibold`}
+                                                    className={`${tableInputClass} font-semibold`}
                                                 />
 
                                                 {row.parts.some((part) => part.data.is_foc) && (
@@ -779,7 +813,7 @@ export default function ImportForm() {
                                                     </span>
                                                 )}
 
-                                                <details className="mt-2 text-xs">
+                                                <details className="mt-2 text-[11px]">
                                                     <summary className="cursor-pointer text-muted-foreground">
                                                         {row.parts.length} source rows
                                                     </summary>
@@ -795,7 +829,7 @@ export default function ImportForm() {
                                                 </details>
 
                                                 {row.notes.length > 0 && (
-                                                    <details className="mt-2 text-xs">
+                                                    <details className="mt-2 text-[11px]">
                                                         <summary className="cursor-pointer text-amber-700 dark:text-amber-300">
                                                             Review notes ({row.notes.length})
                                                         </summary>
@@ -809,14 +843,14 @@ export default function ImportForm() {
                                                 )}
                                             </td>
 
-                                            <td className="min-w-[200px] p-3">
+                                            <td className="min-w-0 break-words px-1.5 py-2 [overflow-wrap:anywhere]">
                                                 {field("supplier", "Supplier", {
                                                     required: true,
                                                     maxLength: 250,
                                                 })}
                                             </td>
 
-                                            <td className="min-w-[145px] p-3">
+                                            <td className="min-w-0 break-words px-1.5 py-2 [overflow-wrap:anywhere]">
                                                 {field("quantity", "Roll quantity", {
                                                     type: "number",
                                                     min: 0,
@@ -826,7 +860,7 @@ export default function ImportForm() {
                                                 })}
                                             </td>
 
-                                            <td className="min-w-[140px] p-3">
+                                            <td className="min-w-0 break-words px-1.5 py-2 [overflow-wrap:anywhere]">
                                                 <select
                                                     aria-label={`System: ${row.invoice}`}
                                                     required
@@ -835,7 +869,7 @@ export default function ImportForm() {
                                                     onChange={(event) =>
                                                         edit(row.id, "system", event.target.value)
                                                     }
-                                                    className={inputClass}
+                                                    className={tableInputClass}
                                                 >
                                                     <option value="">Select</option>
                                                     <option value="AX">AX</option>
@@ -844,7 +878,7 @@ export default function ImportForm() {
                                                 </select>
                                             </td>
 
-                                            <td className="min-w-[170px] p-3">
+                                            <td className="min-w-0 break-words px-1.5 py-2 [overflow-wrap:anywhere]">
                                                 {field("date", "Document date", {
                                                     type: "date",
                                                     required: true,
@@ -853,7 +887,7 @@ export default function ImportForm() {
                                                 })}
                                             </td>
 
-                                            <td className="min-w-[150px] p-3">
+                                            <td className="min-w-0 break-words px-1.5 py-2 [overflow-wrap:anywhere]">
                                                 <select
                                                     aria-label={`Shipment: ${row.invoice}`}
                                                     required
@@ -862,7 +896,7 @@ export default function ImportForm() {
                                                     onChange={(event) =>
                                                         edit(row.id, "shipment", event.target.value)
                                                     }
-                                                    className={inputClass}
+                                                    className={tableInputClass}
                                                 >
                                                     <option value="">Select</option>
                                                     <option value="LOCAL">Local</option>
@@ -870,7 +904,20 @@ export default function ImportForm() {
                                                 </select>
                                             </td>
 
-                                            <td className="min-w-[230px] p-3">
+                                            <td className="min-w-0 break-words px-1.5 py-2 [overflow-wrap:anywhere]">
+                                                <textarea
+                                                    aria-label={`Remark: ${row.invoice}`}
+                                                    value={row.remark}
+                                                    rows={2}
+                                                    maxLength={5000}
+                                                    disabled={locked}
+                                                    onChange={(event) => edit(row.id, "remark", event.target.value)}
+                                                    placeholder="Optional note"
+                                                    className={`${tableInputClass} h-auto min-h-9 resize-y py-2`}
+                                                />
+                                            </td>
+
+                                            <td className="min-w-0 break-words px-1.5 py-2 [overflow-wrap:anywhere]">
 
                                                 <p className="font-medium">
                                                     {row.status === "saved"
@@ -887,7 +934,7 @@ export default function ImportForm() {
                                                 </p>
 
                                                 {row.message && (
-                                                    <p className="mt-2 text-xs text-muted-foreground">
+                                                    <p className="mt-2 text-[11px] text-muted-foreground">
                                                         {row.message}
                                                     </p>
                                                 )}
@@ -900,7 +947,7 @@ export default function ImportForm() {
                                                             matching.some(isProtected)
                                                         }
                                                         onClick={() => combine(row)}
-                                                        className={`${secondaryClass} mt-3`}
+                                                        className="mt-2 w-full rounded-md border border-border px-1.5 py-1.5 text-[11px] leading-4 hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                                                     >
                                                         Combine drafts
                                                     </button>
@@ -911,7 +958,7 @@ export default function ImportForm() {
                                                         type="button"
                                                         disabled={locked}
                                                         onClick={() => removeDraft(row)}
-                                                        className="mt-3 block text-xs underline disabled:opacity-50"
+                                                        className="mt-2 block text-[11px] underline disabled:opacity-50"
                                                     >
                                                         Remove draft
                                                     </button>
