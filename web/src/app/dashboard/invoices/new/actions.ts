@@ -37,6 +37,11 @@ export async function saveImportedInvoice(
     const quantityText = text("rollQuantity");
     const vehicleNumber = text("vehicleNumber");
     const receivedDate = text("receivedDate");
+    const remark = text("remark");
+
+    if (remark.length > 5000) {
+        return { error: "Remark must be within 5000 characters." };
+    }
 
     if (!invoice || invoice.length > 100) {
         return {
@@ -109,9 +114,7 @@ export async function saveImportedInvoice(
         };
     }
 
-    const { error } = await supabase.rpc("save_invoice_with_meters", {
-        p_invoice_id: null,
-        p_expected_version: null,
+    const { error } = await supabase.rpc("create_invoice_with_remark", {
         p_invoice_number: invoice,
         p_supplier: supplier,
         p_roll_quantity: quantity,
@@ -120,8 +123,7 @@ export async function saveImportedInvoice(
         p_shipment_type: shipment,
         p_vehicle_number: vehicleNumber || null,
         p_received_date: receivedDate || null,
-        p_expected_received_date: null,
-        p_meter_quantity: null,
+        p_remark: remark || null,
     });
 
     if (error) {

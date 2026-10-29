@@ -111,6 +111,7 @@ export default function InvoiceForm({ today }: { today: string }) {
         shipment: "",
         documentDate: today,
         receivedDate: "",
+        remark: "",
     });
 
     const [quantity, setQuantity] = useState("");
@@ -178,7 +179,8 @@ export default function InvoiceForm({ today }: { today: string }) {
 
                 if (
                     target instanceof HTMLInputElement ||
-                    target instanceof HTMLSelectElement
+                    target instanceof HTMLSelectElement ||
+                    target instanceof HTMLTextAreaElement
                 ) {
                     const key = target.id;
 
@@ -195,7 +197,8 @@ export default function InvoiceForm({ today }: { today: string }) {
 
                 if (
                     target instanceof HTMLInputElement ||
-                    target instanceof HTMLSelectElement
+                    target instanceof HTMLSelectElement ||
+                    target instanceof HTMLTextAreaElement
                 ) {
                     clearError(target.id);
                 }
@@ -438,6 +441,24 @@ export default function InvoiceForm({ today }: { today: string }) {
                         />
 
                         {fieldError("documentDate")}
+                    </div>
+
+                    <div className="min-w-0">
+                        <label htmlFor="remark" className={labelClass}>
+                            Remark <span className="font-normal text-muted-foreground">(optional)</span>
+                        </label>
+                        <textarea
+                            id="remark"
+                            name="remark"
+                            rows={2}
+                            maxLength={5000}
+                            value={fields.remark}
+                            onChange={(event) => updateField("remark", event.target.value)}
+                            placeholder="Add a note if needed"
+                            className={`${inputClass} h-auto min-h-20 resize-y py-2.5`}
+                            {...errorProps("remark")}
+                        />
+                        {fieldError("remark")}
                     </div>
                 </FormSection>
 
