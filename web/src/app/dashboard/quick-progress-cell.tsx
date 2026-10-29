@@ -6,8 +6,8 @@ import { Loader2 } from "lucide-react";
 import { invoiceQuickProgress } from "@/app/dashboard/quick-progress-actions";
 import type { Progress } from "@/app/dashboard/quick-progress-actions";
 
-export default function QuickProgressCell({ invoiceId, invoiceNumber, initial }: {
-    invoiceId: string; invoiceNumber: string; initial: Progress;
+export default function QuickProgressCell({ invoiceId, invoiceNumber, initial, compact = false }: {
+    invoiceId: string; invoiceNumber: string; initial: Progress; compact?: boolean;
 }) {
     const router = useRouter();
     const lock = useRef(false);
@@ -49,17 +49,17 @@ export default function QuickProgressCell({ invoiceId, invoiceNumber, initial }:
     }
 
     return <div role="group" aria-label={`Progress for ${invoiceNumber}`} aria-busy={busy}
-        className="flex min-w-36 flex-col items-start gap-0.5">
+        className={`flex flex-col items-start gap-0.5 ${compact ? "min-w-0 [overflow-wrap:anywhere]" : "min-w-36"}`}>
         {data && <>
-            {data.stages.map(stage => <label key={stage.system_name} className="inline-flex min-h-8 cursor-pointer items-center gap-2 text-sm">
+            {data.stages.map(stage => <label key={stage.system_name} className={`inline-flex cursor-pointer items-center ${compact ? "min-h-7 gap-1.5 text-[11px]" : "min-h-8 gap-2 text-sm"}`}>
                 <input type="checkbox" checked={stage.is_done} disabled={busy || !!error}
                     onChange={event => void update(stage.system_name, event.target.checked)}
-                    className="size-4 accent-blue-700 disabled:cursor-wait" />
+                    className="size-4 shrink-0 accent-blue-700 disabled:cursor-wait" />
                 {stage.system_name} Done
             </label>)}
-            <label className="inline-flex min-h-8 cursor-pointer items-center gap-2 text-sm">
+            <label className={`inline-flex cursor-pointer items-center ${compact ? "min-h-7 gap-1.5 text-[11px]" : "min-h-8 gap-2 text-sm"}`}>
                 <input type="checkbox" checked={data.asn_shared} disabled={busy || !!error}
-                    onChange={event => void update('ASN', event.target.checked)} className="size-4 accent-blue-700 disabled:cursor-wait" />
+                    onChange={event => void update('ASN', event.target.checked)} className="size-4 shrink-0 accent-blue-700 disabled:cursor-wait" />
                 ASN Share
             </label>
         </>}

@@ -47,6 +47,7 @@ type PublicInvoice = {
   meter_quantity: number | null;
   status: InvoiceStatus;
   pending_reason: string | null;
+  remark: string | null;
   started_at: string | null;
   completed_at: string | null;
   asn_share_at: string | null;
@@ -166,20 +167,17 @@ function DateTime({ value }: { value: string | null }) {
     return <span className="text-muted-foreground">—</span>;
   }
 
+  const dateLabel = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Colombo", day: "2-digit", month: "2-digit", year: "numeric",
+  }).format(date);
+  const timeLabel = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Colombo", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+  }).format(date);
   return (
-    <time
-      dateTime={date.toISOString()}
-      className="whitespace-nowrap tabular-nums"
-    >
-      {new Intl.DateTimeFormat("en-GB", {
-        timeZone: "Asia/Colombo",
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hourCycle: "h23",
-      }).format(date)}
+    <time dateTime={date.toISOString()} title={`${dateLabel}, ${timeLabel} — Sri Lanka time`}
+      className="inline-flex flex-col gap-1 whitespace-nowrap tabular-nums">
+      <span>{dateLabel}</span>
+      <span className="text-[10px] text-muted-foreground">{timeLabel} · SLST</span>
     </time>
   );
 }
@@ -188,8 +186,8 @@ function ProcessingDetails({ invoice }: { invoice: PublicInvoice }) {
   const stages = invoice.stages ?? [];
 
   return (
-    <details className="group/details min-w-40">
-      <summary className="cursor-pointer rounded-lg px-2 py-2 text-xs font-medium text-blue-700 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-blue-400">
+    <details className="group/details min-w-0">
+      <summary className="cursor-pointer rounded-lg px-1 py-2 text-[11px] font-medium text-blue-700 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-blue-400">
         <span className="group-open/details:hidden">View progress</span>
         <span className="hidden group-open/details:inline">Hide progress</span>
         <span className="sr-only">
@@ -197,15 +195,15 @@ function ProcessingDetails({ invoice }: { invoice: PublicInvoice }) {
         </span>
       </summary>
 
-      <div className="mt-1 w-64 divide-y divide-border rounded-lg border border-border bg-background text-xs">
+      <div className="mt-1 w-full min-w-0 [overflow-wrap:anywhere] divide-y divide-border rounded-lg border border-border bg-background text-[11px]">
         {stages.length === 0 ? (
-          <p className="p-3 text-muted-foreground">
+          <p className="p-1.5 text-muted-foreground">
             Processing details unavailable.
           </p>
         ) : (
           stages.map((stage) => (
-            <section key={stage.system_name} className="p-3">
-              <div className="flex items-center justify-between gap-2">
+            <section key={stage.system_name} className="p-1.5">
+              <div className="flex flex-col items-start gap-1">
                 <h3 className="font-semibold">
                   {stage.system_name} Pre-GRN
                 </h3>
@@ -218,21 +216,21 @@ function ProcessingDetails({ invoice }: { invoice: PublicInvoice }) {
                 </span>
               </div>
 
-              <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
+              <dl className="mt-2 grid grid-cols-1 gap-y-1">
                 <dt className="text-muted-foreground">Started</dt>
-                <dd className="text-right">
+                <dd className="text-left">
                   <DateTime value={stage.started_at} />
                 </dd>
 
                 <dt className="text-muted-foreground">Ended</dt>
-                <dd className="text-right">
+                <dd className="text-left">
                   <DateTime value={stage.ended_at} />
                 </dd>
 
                 <dt className="text-muted-foreground">
                   {stage.system_name} user
                 </dt>
-                <dd className="min-w-0 text-right font-medium [overflow-wrap:anywhere]">
+                <dd className="min-w-0 text-left font-medium [overflow-wrap:anywhere]">
                   {stage.assigned_user_name?.trim() || "Not assigned"}
                 </dd>
               </dl>
@@ -240,8 +238,8 @@ function ProcessingDetails({ invoice }: { invoice: PublicInvoice }) {
           ))
         )}
 
-        <section className="p-3">
-          <div className="flex items-center justify-between gap-2">
+        <section className="p-1.5">
+          <div className="flex flex-col items-start gap-1">
             <h3 className="font-semibold">ASN update</h3>
             <span className="text-muted-foreground">
               {!invoice.asn
@@ -252,14 +250,14 @@ function ProcessingDetails({ invoice }: { invoice: PublicInvoice }) {
             </span>
           </div>
 
-          <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
+          <dl className="mt-2 grid grid-cols-1 gap-y-1">
             <dt className="text-muted-foreground">Share date</dt>
-            <dd className="text-right tabular-nums">
+            <dd className="text-left tabular-nums">
               {formatDate(invoice.asn?.share_date ?? null)}
             </dd>
 
             <dt className="text-muted-foreground">ASN user</dt>
-            <dd className="min-w-0 text-right font-medium [overflow-wrap:anywhere]">
+            <dd className="min-w-0 text-left font-medium [overflow-wrap:anywhere]">
               {invoice.asn?.assigned_user_name?.trim() || "—"}
             </dd>
           </dl>
@@ -331,7 +329,7 @@ async function PublicOverview({ searchParams }: Props) {
   });
 
   const [overviewResult, summaryResult] = await Promise.all([
-    supabase.rpc("get_public_invoice_overview_v5", {
+    supabase.rpc("get_public_invoice_overview_v6", {
       p_search: q,
       p_status: status,
       p_page: page,
@@ -668,15 +666,28 @@ async function PublicOverview({ searchParams }: Props) {
             <>
               <div
                 role="region"
-                aria-label="Public invoice list — scroll to view more rows and columns"
+                aria-label="Public invoice list — scroll to view more rows"
                 tabIndex={0}
                 className="relative isolate max-h-[65vh] overflow-auto scroll-pt-14 scroll-pl-44 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
               >
-                <table className="w-full min-w-[1450px] border-separate border-spacing-0 text-left text-sm">
+                <table className="w-full min-w-[960px] table-fixed border-separate border-spacing-0 text-left text-[11px] leading-4">
                   <caption className="sr-only">
                     Read-only invoice details, quantities and
                     processing progress in Sri Lanka time.
                   </caption>
+                  <colgroup>
+                    <col style={{ width: "17%" }} />
+                    <col style={{ width: "12%" }} />
+                    <col style={{ width: "7%" }} />
+                    <col style={{ width: "6%" }} />
+                    <col style={{ width: "9%" }} />
+                    <col style={{ width: "6%" }} />
+                    <col style={{ width: "10%" }} />
+                    <col style={{ width: "10%" }} />
+                    <col style={{ width: "11%" }} />
+                    <col style={{ width: "12%" }} />
+                  </colgroup>
+
 
                   <thead>
                     <tr>
@@ -685,9 +696,9 @@ async function PublicOverview({ searchParams }: Props) {
                           key={heading}
                           scope="col"
                           className={[
-                            "sticky top-0 whitespace-nowrap border-y border-border bg-background px-4 py-3 text-xs font-medium text-muted-foreground",
+                            "sticky top-0 whitespace-normal break-words border-y border-border bg-background px-1.5 py-2.5 text-[11px] font-medium text-muted-foreground",
                             index === 0
-                              ? "left-0 z-30 w-44 min-w-44 border-r"
+                              ? "left-0 z-30 min-w-0 border-r"
                               : "z-20",
                           ].join(" ")}
                         >
@@ -697,7 +708,7 @@ async function PublicOverview({ searchParams }: Props) {
                     </tr>
                   </thead>
 
-                  <tbody>
+                  <tbody className="[&>tr>td]:[overflow-wrap:anywhere]">
                     {items.map((invoice) => (
                       <tr
                         key={invoice.id}
@@ -711,7 +722,7 @@ async function PublicOverview({ searchParams }: Props) {
                               ? { boxShadow: "inset 3px 0 0 #f59e0b" }
                               : undefined
                           }
-                          className="sticky left-0 z-10 w-44 min-w-44 max-w-44 border-b border-r border-border bg-card px-4 py-3 align-top font-semibold text-foreground group-hover:bg-muted group-focus-within:bg-muted [overflow-wrap:anywhere]"
+                          className="sticky left-0 z-10 min-w-0 border-b border-r border-border bg-card px-1.5 py-2.5 align-top font-semibold text-foreground group-hover:bg-muted group-focus-within:bg-muted [overflow-wrap:anywhere]"
                         >
                           <div>{invoice.invoice_number}</div>
                           <VehicleLabel
@@ -720,15 +731,15 @@ async function PublicOverview({ searchParams }: Props) {
                           />
                         </th>
 
-                        <td className="min-w-48 max-w-64 break-words px-4 py-3 align-top">
+                        <td className="min-w-0 [overflow-wrap:anywhere] px-1.5 py-2.5 align-top">
                           {invoice.supplier}
                         </td>
 
-                        <td className="whitespace-nowrap px-4 py-3 align-top">
+                        <td className="whitespace-nowrap px-1.5 py-2.5 align-top">
                           {invoice.system_type}
                         </td>
 
-                        <td className="px-4 py-3 align-top">
+                        <td className="px-1.5 py-2.5 align-top">
                           {invoice.shipment_type === "IMPORT"
                             ? "Import"
                             : invoice.shipment_type === "LOCAL"
@@ -737,30 +748,30 @@ async function PublicOverview({ searchParams }: Props) {
                         </td>
 
                         {/* Document date */}
-                        <td className="whitespace-nowrap px-4 py-3 align-top tabular-nums">
+                        <td className="whitespace-nowrap px-1.5 py-2.5 align-top tabular-nums">
                           {formatDate(invoice.document_share_date)}
                         </td>
 
-                        <td className="whitespace-nowrap px-4 py-3 align-top tabular-nums">
+                        <td className="whitespace-normal break-all px-1.5 py-2.5 align-top tabular-nums">
                           {invoice.roll_quantity == null
                             ? "—"
                             : Number(invoice.roll_quantity).toLocaleString("en-GB")}
                         </td>
 
                         {/* Start date */}
-                        <td className="px-4 py-3 align-top text-muted-foreground">
+                        <td className="px-1.5 py-2.5 align-top text-muted-foreground">
                           <DateTime value={invoice.started_at} />
                         </td>
 
                         {/* Completion date */}
-                        <td className="px-4 py-3 align-top text-muted-foreground">
+                        <td className="px-1.5 py-2.5 align-top text-muted-foreground">
                           <DateTime value={invoice.asn_share_at} />
                         </td>
 
-                        <td className="px-4 py-3 align-top">
+                        <td className="px-1.5 py-2.5 align-top">
                           <div className="flex flex-col items-start">
                             <span
-                              className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-0.5 text-xs font-semibold before:size-1.5 before:rounded-full before:bg-current before:content-[''] ${statusStyles[invoice.status]}`}
+                              className={`inline-flex items-center gap-1 whitespace-nowrap rounded-md border px-1.5 py-0.5 text-[11px] font-semibold before:size-1.5 before:rounded-full before:bg-current before:content-[''] ${statusStyles[invoice.status]}`}
                             >
                               {statusLabels[invoice.status]}
                             </span>
@@ -768,15 +779,28 @@ async function PublicOverview({ searchParams }: Props) {
                             {invoice.status === "Pending" &&
                               invoice.pending_reason?.trim() && (
                                 <PendingReasonDialog
+                                  compact
                                   invoiceNumber={invoice.invoice_number}
                                   supplier={invoice.supplier}
                                   reason={invoice.pending_reason.trim()}
                                 />
                               )}
                           </div>
+
+                          {invoice.remark?.trim() && (
+                            <div>
+                              <PendingReasonDialog
+                                compact
+                                kind="remark"
+                                invoiceNumber={invoice.invoice_number}
+                                supplier={invoice.supplier}
+                                reason={invoice.remark.trim()}
+                              />
+                            </div>
+                          )}
                         </td>
 
-                        <td className="px-4 py-3 align-top">
+                        <td className="px-1.5 py-2.5 align-top">
                           <ProcessingDetails invoice={invoice} />
                         </td>
                       </tr>
