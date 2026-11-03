@@ -6,6 +6,7 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { Plus, Search } from "lucide-react";
+import QuickUserMenu from "./quick-user-menu";
 
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/login/actions";
@@ -461,12 +462,19 @@ async function DashboardContent({
                                                     className="sticky left-0 z-10 min-w-0 border-r border-border bg-card px-1.5 py-2.5 font-semibold text-blue-700 group-hover:bg-muted group-focus-within:bg-muted dark:text-blue-400 [overflow-wrap:anywhere]"
                                                 >
                                                     <div className="flex flex-col items-start gap-1">
-                                                        <Link
-                                                            href={`/dashboard/invoices/${invoice.id}`}
-                                                            className="rounded hover:underline focus-visible:outline-2 focus-visible:outline-blue-600"
-                                                        >
-                                                            {invoice.invoice_number}
-                                                        </Link>
+                                                        <div className="flex w-full items-center justify-between gap-2">
+                                                            <Link
+                                                                href={`/dashboard/invoices/${invoice.id}`}
+                                                                className="min-w-0 rounded hover:underline focus-visible:outline-2 focus-visible:outline-blue-600"
+                                                            >
+                                                                {invoice.invoice_number}
+                                                            </Link>
+
+                                                            <QuickUserMenu
+                                                                invoiceId={invoice.id}
+                                                                invoiceNumber={invoice.invoice_number}
+                                                            />
+                                                        </div>
 
                                                         <VehicleLabel
                                                             value={invoice.vehicle_number}
