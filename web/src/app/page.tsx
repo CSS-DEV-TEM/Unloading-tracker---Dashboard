@@ -77,7 +77,7 @@ type PublicSummary = {
   rejected: number;
 };
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 50;
 
 const HEADINGS = [
   "Invoice",
@@ -308,7 +308,7 @@ async function PublicOverview({ searchParams }: Props) {
   const page =
     Number.isSafeInteger(requestedPage) &&
       requestedPage >= 1 &&
-      requestedPage <= 100000
+      requestedPage <= 40000
       ? requestedPage
       : 1;
 
@@ -329,7 +329,7 @@ async function PublicOverview({ searchParams }: Props) {
   });
 
   const [overviewResult, summaryResult] = await Promise.all([
-    supabase.rpc("get_public_invoice_overview_v6", {
+    supabase.rpc("get_public_invoice_overview_50", {
       p_search: q,
       p_status: status,
       p_page: page,
