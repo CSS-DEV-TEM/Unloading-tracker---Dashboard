@@ -2,7 +2,7 @@
 
 import { useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Users, X } from "lucide-react";
+import { ChevronDown, Pencil, Users, X } from "lucide-react";
 
 import {
     invoiceQuickUsers,
@@ -89,9 +89,11 @@ const inputClass =
 export default function QuickUserMenu({
     invoiceId,
     invoiceNumber,
+    mode = "users",
 }: {
     invoiceId: string;
     invoiceNumber: string;
+    mode?: "users" | "quantity";
 }) {
     const router = useRouter();
 
@@ -127,10 +129,13 @@ export default function QuickUserMenu({
     const [saved, setSaved] = useState(false);
 
     function fieldsFor(record: Assignment): QuickField[] {
+        if (mode === "quantity") {
+            return ["ROLL"];
+        }
+
         return [
             ...record.stages.map((stage) => stage.system_name),
             "ASN",
-            "ROLL",
         ];
     }
 
@@ -225,9 +230,14 @@ export default function QuickUserMenu({
             Math.min(box.left, window.innerWidth - 328),
         )}px`;
 
+        const panelHeight = mode === "quantity" ? 280 : 540;
+
         panel.style.top = `${Math.max(
             8,
-            Math.min(box.bottom + 6, window.innerHeight - 540),
+            Math.min(
+                box.bottom + 6,
+                window.innerHeight - panelHeight,
+            ),
         )}px`;
 
         panel.showModal();
@@ -484,17 +494,38 @@ export default function QuickUserMenu({
                 ref={trigger}
                 type="button"
                 onClick={open}
-                title="Edit users and roll quantity"
-                aria-label={`Quick edit ${invoiceNumber}`}
+                title={
+                    mode === "quantity"
+                        ? "Edit roll quantity"
+                        : "Edit users"
+                }
+                aria-label={
+                    mode === "quantity"
+                        ? `Edit roll quantity for ${invoiceNumber}`
+                        : `Edit users for ${invoiceNumber}`
+                }
                 aria-haspopup="dialog"
-                className="inline-flex h-8 shrink-0 items-center gap-0.5
-                    rounded-md border border-border px-1.5
-                    text-muted-foreground hover:bg-muted
-                    hover:text-foreground focus-visible:outline-2
-                    focus-visible:outline-blue-500"
+                className={
+                    mode === "quantity"
+                        ? "inline-flex size-6 shrink-0 items-center justify-center " +
+                        "rounded border border-border text-muted-foreground " +
+                        "hover:bg-muted hover:text-foreground " +
+                        "focus-visible:outline-2 focus-visible:outline-blue-500"
+                        : "inline-flex h-8 shrink-0 items-center gap-0.5 " +
+                        "rounded-md border border-border px-1.5 " +
+                        "text-muted-foreground hover:bg-muted " +
+                        "hover:text-foreground focus-visible:outline-2 " +
+                        "focus-visible:outline-blue-500"
+                }
             >
-                <Users className="size-3.5" aria-hidden="true" />
-                <ChevronDown className="size-3" aria-hidden="true" />
+                {mode === "quantity" ? (
+                    <Pencil className="size-3" aria-hidden="true" />
+                ) : (
+                    <>
+                        <Users className="size-3.5" aria-hidden="true" />
+                        <ChevronDown className="size-3" aria-hidden="true" />
+                    </>
+                )}
             </button>
 
             <dialog
@@ -523,7 +554,7 @@ export default function QuickUserMenu({
                                 id={titleId}
                                 className="text-sm font-semibold"
                             >
-                                Quick edit
+                                {mode === "quantity" ? "Edit roll quantity" : "Quick edit"}
                             </h2>
 
                             <p className="mt-1 break-all text-xs font-normal text-muted-foreground">
@@ -556,14 +587,7 @@ export default function QuickUserMenu({
                             </datalist>
 
                             {fields.map((field) => (
-                                <div
-                                    key={field}
-                                    className={
-                                        field === "ROLL"
-                                            ? "border-t border-border pt-3"
-                                            : ""
-                                    }
-                                >
+                                <div key={field}>
                                     <label className="block text-xs font-medium">
                                         {field === "ROLL"
                                             ? "Roll quantity"
@@ -694,7 +718,9 @@ export default function QuickUserMenu({
                                 ? "Saving… You can keep typing."
                                 : saved
                                     ? "Saved ✓"
-                                    : "Tab / Enter: next field. Enter on quantity: save & close."}
+                                    : mode === "quantity"
+                                        ? "Enter: save & close. Leaving the field also saves."
+                                        : "Tab / Enter: next field. Enter on ASN: save & close."}
                     </p>
 
                     {error && (

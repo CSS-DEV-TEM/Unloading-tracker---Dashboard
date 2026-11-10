@@ -500,7 +500,19 @@ async function DashboardContent({
                                                 </td>
 
                                                 <td className="whitespace-normal break-all px-1.5 py-2.5 align-middle tabular-nums">
-                                                    {invoice.roll_quantity == null ? "—" : Number(invoice.roll_quantity).toLocaleString("en-GB")}
+                                                    <div className="grid w-full grid-cols-[minmax(0,1fr)_24px] items-center gap-1">
+                                                        <span className="min-w-0">
+                                                            {invoice.roll_quantity == null
+                                                                ? "—"
+                                                                : Number(invoice.roll_quantity).toLocaleString("en-GB")}
+                                                        </span>
+
+                                                        <QuickUserMenu
+                                                            invoiceId={invoice.id}
+                                                            invoiceNumber={invoice.invoice_number}
+                                                            mode="quantity"
+                                                        />
+                                                    </div>
                                                 </td>
 
                                                 <td className="px-1.5 py-2.5">
