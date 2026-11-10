@@ -20,6 +20,7 @@ import OverviewRefresh from "@/components/overview-refresh";
 import PendingReasonDialog from "@/components/pending-reason-dialog";
 import VehicleLabel from "@/components/vehicle-label";
 import { createClient as createSessionClient } from "@/lib/supabase/server";
+import OverviewInvoiceRow from "@/components/overview-invoice-row";
 
 type SearchParams = {
   q?: string | string[];
@@ -185,85 +186,109 @@ function DateTime({ value }: { value: string | null }) {
 function ProcessingDetails({ invoice }: { invoice: PublicInvoice }) {
   const stages = invoice.stages ?? [];
 
-  return (
-    <details className="group/details min-w-0">
-      <summary className="cursor-pointer rounded-lg px-1 py-2 text-[11px] font-medium text-blue-700 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-blue-400">
-        <span className="group-open/details:hidden">View progress</span>
-        <span className="hidden group-open/details:inline">Hide progress</span>
-        <span className="sr-only">
-          {" "}for invoice {invoice.invoice_number}
-        </span>
-      </summary>
+  const gridClass =
+    stages.length > 1
+      ? "grid grid-cols-1 gap-3 lg:grid-cols-3"
+      : "grid grid-cols-1 gap-3 md:grid-cols-2";
 
-      <div className="mt-1 w-full min-w-0 [overflow-wrap:anywhere] divide-y divide-border rounded-lg border border-border bg-background text-[11px]">
-        {stages.length === 0 ? (
-          <p className="p-1.5 text-muted-foreground">
+  return (
+    <div className={gridClass}>
+      {stages.length === 0 ? (
+        <div className="rounded-lg border border-border bg-background p-3">
+          <p className="text-muted-foreground">
             Processing details unavailable.
           </p>
-        ) : (
-          stages.map((stage) => (
-            <section key={stage.system_name} className="p-1.5">
-              <div className="flex flex-col items-start gap-1">
-                <h3 className="font-semibold">
-                  {stage.system_name} Pre-GRN
-                </h3>
-                <span className="text-muted-foreground">
-                  {stage.is_done
-                    ? "Done"
-                    : stage.started_at
-                      ? "In progress"
-                      : "Not started"}
-                </span>
-              </div>
+        </div>
+      ) : (
+        stages.map((stage) => (
+          <section
+            key={stage.system_name}
+            className="min-w-0 rounded-lg border
+                            border-border bg-background p-3"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="font-semibold">
+                {stage.system_name} Pre-GRN
+              </h3>
 
-              <dl className="mt-2 grid grid-cols-1 gap-y-1">
-                <dt className="text-muted-foreground">Started</dt>
-                <dd className="text-left">
+              <span className="text-muted-foreground">
+                {stage.is_done
+                  ? "Done"
+                  : stage.started_at
+                    ? "In progress"
+                    : "Not started"}
+              </span>
+            </div>
+
+            <dl className="mt-3 grid grid-cols-3 gap-3">
+              <div className="min-w-0">
+                <dt className="text-muted-foreground">
+                  Started
+                </dt>
+                <dd className="mt-1">
                   <DateTime value={stage.started_at} />
                 </dd>
+              </div>
 
-                <dt className="text-muted-foreground">Ended</dt>
-                <dd className="text-left">
+              <div className="min-w-0">
+                <dt className="text-muted-foreground">
+                  Ended
+                </dt>
+                <dd className="mt-1">
                   <DateTime value={stage.ended_at} />
                 </dd>
+              </div>
 
+              <div className="min-w-0">
                 <dt className="text-muted-foreground">
                   {stage.system_name} user
                 </dt>
-                <dd className="min-w-0 text-left font-medium [overflow-wrap:anywhere]">
-                  {stage.assigned_user_name?.trim() || "Not assigned"}
+                <dd className="mt-1 font-medium [overflow-wrap:anywhere]">
+                  {stage.assigned_user_name?.trim() ||
+                    "Not assigned"}
                 </dd>
-              </dl>
-            </section>
-          ))
-        )}
+              </div>
+            </dl>
+          </section>
+        ))
+      )}
 
-        <section className="p-1.5">
-          <div className="flex flex-col items-start gap-1">
-            <h3 className="font-semibold">ASN update</h3>
-            <span className="text-muted-foreground">
-              {!invoice.asn
-                ? "Unavailable"
-                : invoice.asn.is_shared
-                  ? "Shared"
-                  : "Not shared"}
-            </span>
-          </div>
+      <section className="min-w-0 rounded-lg border border-border bg-background p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="font-semibold">
+            ASN update
+          </h3>
 
-          <dl className="mt-2 grid grid-cols-1 gap-y-1">
-            <dt className="text-muted-foreground">Share date</dt>
-            <dd className="text-left tabular-nums">
+          <span className="text-muted-foreground">
+            {!invoice.asn
+              ? "Unavailable"
+              : invoice.asn.is_shared
+                ? "Shared"
+                : "Not shared"}
+          </span>
+        </div>
+
+        <dl className="mt-3 grid grid-cols-2 gap-3">
+          <div className="min-w-0">
+            <dt className="text-muted-foreground">
+              Share date
+            </dt>
+            <dd className="mt-1 tabular-nums">
               {formatDate(invoice.asn?.share_date ?? null)}
             </dd>
+          </div>
 
-            <dt className="text-muted-foreground">ASN user</dt>
-            <dd className="min-w-0 text-left font-medium [overflow-wrap:anywhere]">
+          <div className="min-w-0">
+            <dt className="text-muted-foreground">
+              ASN user
+            </dt>
+            <dd className="mt-1 font-medium [overflow-wrap:anywhere]">
               {invoice.asn?.assigned_user_name?.trim() || "—"}
             </dd>
-          </dl>
-        </section>
-      </div>
-    </details>
+          </div>
+        </dl>
+      </section>
+    </div>
   );
 }
 
@@ -710,9 +735,13 @@ async function PublicOverview({ searchParams }: Props) {
 
                   <tbody className="[&>tr>td]:[overflow-wrap:anywhere]">
                     {items.map((invoice) => (
-                      <tr
+                      <OverviewInvoiceRow
                         key={invoice.id}
-                        className="group hover:bg-muted focus-within:bg-muted [&>td]:border-b [&>td]:border-border"
+                        invoiceNumber={invoice.invoice_number}
+                        supplier={invoice.supplier}
+                        systemType={invoice.system_type}
+                        columnCount={HEADINGS.length}
+                        details={<ProcessingDetails invoice={invoice} />}
                       >
                         <th
                           scope="row"
@@ -800,10 +829,7 @@ async function PublicOverview({ searchParams }: Props) {
                           )}
                         </td>
 
-                        <td className="px-1.5 py-2.5 align-top">
-                          <ProcessingDetails invoice={invoice} />
-                        </td>
-                      </tr>
+                      </OverviewInvoiceRow>
                     ))}
 
                     {items.length === 0 && (
