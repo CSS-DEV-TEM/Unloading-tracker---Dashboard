@@ -8,6 +8,8 @@ import {
     XCircle,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import SummarySpotlights from "@/components/summary-spotlights";
+import SummaryShareBar from "@/components/summary-share-bar";
 
 function SummarySkeleton() {
     return (
@@ -88,11 +90,12 @@ async function SummaryContent() {
     const pending = results[0].count ?? 0;
     const completed = results[1].count ?? 0;
     const rejected = results[2].count ?? 0;
+    const totalInvoices = pending + completed + rejected;
 
     const cards = [
         {
             label: "Total invoices",
-            value: pending + completed + rejected,
+            value: totalInvoices,
             href: "/dashboard",
             icon: FileText,
             iconClass:
@@ -139,7 +142,7 @@ async function SummaryContent() {
                 </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+            <SummarySpotlights className="grid grid-cols-2 gap-3 xl:grid-cols-4">
                 {cards.map(({ label, value, href, icon: Icon, iconClass, bar }) => (
                     <Link
                         key={label}
@@ -168,9 +171,13 @@ async function SummaryContent() {
                         >
                             <Icon className="size-[18px]" aria-hidden="true" />
                         </span>
+                        <SummaryShareBar
+                            value={value}
+                            total={totalInvoices}
+                        />
                     </Link>
                 ))}
-            </div>
+            </SummarySpotlights>
         </section>
     );
 }

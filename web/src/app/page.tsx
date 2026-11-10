@@ -21,7 +21,8 @@ import PendingReasonDialog from "@/components/pending-reason-dialog";
 import VehicleLabel from "@/components/vehicle-label";
 import { createClient as createSessionClient } from "@/lib/supabase/server";
 import OverviewInvoiceRow from "@/components/overview-invoice-row";
-
+import SummarySpotlights from "@/components/summary-spotlights";
+import SummaryShareBar from "@/components/summary-share-bar";
 type SearchParams = {
   q?: string | string[];
   status?: string | string[];
@@ -507,7 +508,7 @@ async function PublicOverview({ searchParams }: Props) {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <SummarySpotlights className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {summaryCards.map(
               ({ label, value, icon: Icon, filter, iconClass, bar }) => {
                 const active = status === filter;
@@ -551,11 +552,15 @@ async function PublicOverview({ searchParams }: Props) {
                     >
                       <Icon aria-hidden="true" className="size-4" />
                     </div>
+                    <SummaryShareBar
+                      value={summaryFailed ? null : value}
+                      total={summaryFailed ? null : summary?.total}
+                    />
                   </Link>
                 );
               },
             )}
-          </div>
+          </SummarySpotlights>
 
           {summaryFailed && (
             <p role="alert" className="text-sm text-muted-foreground">
