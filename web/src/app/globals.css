@@ -4,17 +4,22 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Theme utilities */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
   --font-sans: var(--font-plex-sans), "Segoe UI", Arial, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
   --font-heading: var(--font-plex-cond), var(--font-plex-sans), "Segoe UI", Arial, sans-serif;
+
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-signal: var(--signal);
+
   --shadow-card: var(--shadow-card-value);
   --shadow-raised: var(--shadow-raised-value);
+
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -23,15 +28,18 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
+
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
+
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -44,6 +52,7 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -53,7 +62,7 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Brand scale: every existing `blue-*` utility now renders in the steel-blue brand colour. */
+/* Steel-blue brand palette */
 @theme {
   --color-blue-50: #eef3fb;
   --color-blue-100: #dde8f7;
@@ -68,14 +77,17 @@
   --color-blue-950: #0e1d3a;
 }
 
+/* Light theme */
 :root {
   color-scheme: light;
+
   --background: #f1f4f8;
   --foreground: #101826;
   --card: #ffffff;
   --card-foreground: #101826;
   --popover: #ffffff;
   --popover-foreground: #101826;
+
   --primary: #1f4688;
   --primary-foreground: #ffffff;
   --secondary: #e6edf8;
@@ -84,19 +96,24 @@
   --muted-foreground: #566377;
   --accent: #e6edf8;
   --accent-foreground: #1b3a70;
+
   --destructive: #c42b3a;
   --border: #d9e0e9;
   --input: #c5cedb;
   --ring: #3f72c4;
+
   --success: #0f7b5a;
   --warning: #b7791f;
   --signal: #f5a524;
+
   --chart-1: #1f4688;
   --chart-2: #3f72c4;
   --chart-3: #f5a524;
   --chart-4: #0f7b5a;
   --chart-5: #c42b3a;
+
   --radius: 0.5rem;
+
   --sidebar: #0f1a2b;
   --sidebar-foreground: #c6d1e2;
   --sidebar-primary: #f5a524;
@@ -105,70 +122,83 @@
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: #22334d;
   --sidebar-ring: #6392d8;
-  --shadow-card-value: 0 1px 0 rgb(16 24 38 / 0.03), 0 1px 3px rgb(16 24 38 / 0.07);
-  --shadow-raised-value: 0 2px 4px rgb(16 24 38 / 0.06), 0 12px 28px -8px rgb(16 24 38 / 0.18);
+
+  --shadow-card-value:
+    0 1px 0 rgb(16 24 38 / 0.03),
+    0 1px 3px rgb(16 24 38 / 0.07);
+
+  --shadow-raised-value:
+    0 2px 4px rgb(16 24 38 / 0.06),
+    0 12px 28px -8px rgb(16 24 38 / 0.18);
 }
 
+/* Midnight — activated by the existing dark-mode toggle */
 .dark {
   color-scheme: dark;
-  --background: #0a1019;
-  --foreground: #e8edf5;
-  --card: #121a26;
-  --card-foreground: #e8edf5;
-  --popover: #121a26;
-  --popover-foreground: #e8edf5;
+
+  --background: #030509;
+  --foreground: #f8fafc;
+  --card: #0a101f;
+  --card-foreground: #f8fafc;
+  --popover: #0d1528;
+  --popover-foreground: #f8fafc;
+
   --primary: #7fa9e6;
-  --primary-foreground: #0a1019;
-  --secondary: #172338;
-  --secondary-foreground: #d6e3f8;
-  --muted: #1a2433;
-  --muted-foreground: #8fa0b8;
-  --accent: #172a47;
-  --accent-foreground: #d6e3f8;
-  --destructive: #f26b77;
-  --border: #223046;
-  --input: #2c3b52;
+  --primary-foreground: #030509;
+  --secondary: #111d33;
+  --secondary-foreground: #dbe7fa;
+  --muted: #142039;
+  --muted-foreground: #94a3b8;
+  --accent: #142744;
+  --accent-foreground: #e2ecfc;
+
+  --destructive: #fb7185;
+  --border: #202c42;
+  --input: #30415c;
   --ring: #7fa9e6;
-  --success: #3ccf9d;
-  --warning: #f0b54a;
+
+  --success: #34d399;
+  --warning: #fbbf24;
   --signal: #f5a524;
+
   --chart-1: #7fa9e6;
   --chart-2: #4f86d6;
   --chart-3: #f5a524;
-  --chart-4: #3ccf9d;
-  --chart-5: #f26b77;
-  --sidebar: #070c14;
-  --sidebar-foreground: #b4c1d6;
+  --chart-4: #34d399;
+  --chart-5: #fb7185;
+
+  --sidebar: #060a14;
+  --sidebar-foreground: #b8c5da;
   --sidebar-primary: #f5a524;
-  --sidebar-primary-foreground: #0a1019;
-  --sidebar-accent: #131d2d;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #182436;
+  --sidebar-primary-foreground: #030509;
+  --sidebar-accent: #111d33;
+  --sidebar-accent-foreground: #f8fafc;
+  --sidebar-border: #1b273c;
   --sidebar-ring: #7fa9e6;
-  --shadow-card-value: 0 1px 0 rgb(0 0 0 / 0.25), 0 1px 3px rgb(0 0 0 / 0.35);
-  --shadow-raised-value: 0 2px 4px rgb(0 0 0 / 0.3), 0 16px 32px -8px rgb(0 0 0 / 0.55);
+
+  --shadow-card-value:
+    0 1px 0 rgb(255 255 255 / 0.025),
+    0 4px 14px rgb(0 0 0 / 0.3);
+
+  --shadow-raised-value:
+    0 2px 6px rgb(0 0 0 / 0.3),
+    0 14px 32px -10px rgb(0 0 0 / 0.65);
 }
 
+/* Base styles */
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
 
-  body {
-    @apply bg-background text-foreground;
-  }
-
   html {
     @apply font-sans;
-  }
-}
-
-@layer base {
-  html {
     scrollbar-gutter: stable;
+    background-color: var(--background);
   }
 
   body {
+    @apply bg-background text-foreground;
     line-height: 1.5;
   }
 
@@ -198,43 +228,19 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* Condensed signage-style headings; body stays in Plex Sans. */
   h1,
   h2 {
     font-family: var(--font-heading);
     letter-spacing: -0.005em;
   }
 
-  /* Invoice, vehicle and ASN references read cleaner in a fixed-width face. */
   .ref {
     font-family: var(--font-mono);
     font-size: 0.8125rem;
     letter-spacing: -0.01em;
   }
-}
 
-/* Hazard stripe used once, on the sign-in brand panel. */
-.dock-stripe {
-  background-image: repeating-linear-gradient(
-    -45deg,
-    var(--signal) 0 14px,
-    #0f1a2b 14px 28px
-  );
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .dock-rise {
-    animation: dock-rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-  }
-  @keyframes dock-rise {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: none; }
-  }
-}
-
-@layer base {
-
-  /* Native date/time/select controls follow the active theme as well. */
+  /* Native controls follow the active theme */
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="submit"]):not([type="button"]),
   select,
   textarea {
@@ -277,11 +283,53 @@
   }
 }
 
-/* Keep our custom password visibility button. */
+/* Midnight atmosphere on existing full-page backgrounds */
+.dark .min-h-screen.bg-background {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(ellipse 65% 420px at 15% 0%,
+      rgb(6 182 212 / 0.07),
+      transparent 75%),
+    radial-gradient(ellipse 75% 480px at 50% 0%,
+      rgb(37 99 235 / 0.12),
+      transparent 75%),
+    radial-gradient(ellipse 55% 420px at 90% 0%,
+      rgb(147 51 234 / 0.08),
+      transparent 75%);
+  background-repeat: no-repeat;
+}
+
+/* Sign-in brand panel */
+.dock-stripe {
+  background-image: repeating-linear-gradient(-45deg,
+      var(--signal) 0 14px,
+      #0f1a2b 14px 28px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dock-rise {
+    animation: dock-rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+
+  @keyframes dock-rise {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+/* Keep the custom password visibility button */
 input#password::-ms-reveal {
   display: none;
 }
 
+/* Invoice form layout */
 .invoice-middle-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -295,5 +343,123 @@ input#password::-ms-reveal {
 @media (min-width: 640px) {
   .invoice-middle-row {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Summary cards — Overview and Dashboard */
+.summary-spotlights>a {
+  --summary-rgb: 99 146 216;
+  --spot-x: 50%;
+  --spot-y: 50%;
+
+  position: relative;
+  isolation: isolate;
+
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
+}
+
+.summary-spotlights>a:nth-child(2) {
+  --summary-rgb: 245 158 11;
+}
+
+.summary-spotlights>a:nth-child(3) {
+  --summary-rgb: 16 185 129;
+}
+
+.summary-spotlights>a:nth-child(4) {
+  --summary-rgb: 244 63 94;
+}
+
+/* Cursor-following highlight */
+.summary-spotlights>a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: 0;
+
+  background: radial-gradient(280px circle at var(--spot-x) var(--spot-y),
+      rgb(var(--summary-rgb) / 0.14),
+      transparent 75%);
+
+  transition: opacity 180ms ease;
+}
+
+.summary-spotlights>a:focus-visible {
+  border-color: rgb(var(--summary-rgb) / 0.7);
+}
+
+.summary-spotlights>a:focus-visible::after {
+  opacity: 1;
+}
+
+/* Percentage track: rendered by SummaryShareBar */
+.summary-spotlights>a>.summary-share-track {
+  position: absolute;
+  left: 20px;
+  right: 16px;
+  bottom: 7px;
+  height: 3px;
+  z-index: 1;
+  overflow: hidden;
+  border-radius: 999px;
+  pointer-events: none;
+  background: rgb(var(--summary-rgb) / 0.12);
+}
+
+.summary-share-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: rgb(var(--summary-rgb) / 0.8);
+  transition: width 250ms ease;
+}
+
+/* Hover effects for mouse/trackpad devices */
+@media (hover: hover) and (pointer: fine) {
+  .summary-spotlights>a:hover {
+    transform: translateY(-2px);
+    border-color: rgb(var(--summary-rgb) / 0.65);
+
+    box-shadow:
+      var(--shadow-raised-value),
+      0 0 20px -10px rgb(var(--summary-rgb) / 0.45);
+  }
+
+  .summary-spotlights>a:hover::after {
+    opacity: 1;
+  }
+
+  .dark .summary-spotlights>a:hover {
+    background-color: #0d1528;
+  }
+
+  /* Glow only the existing left colour strip */
+  .summary-spotlights>a:hover>span[aria-hidden="true"]:not(.summary-share-track) {
+    box-shadow: 0 0 12px rgb(var(--summary-rgb) / 0.55);
+  }
+
+  .summary-spotlights>a:hover .summary-share-fill {
+    background: rgb(var(--summary-rgb));
+  }
+}
+
+/* Respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+
+  .summary-spotlights>a,
+  .summary-spotlights>a::after,
+  .summary-share-fill {
+    transition: none;
+  }
+
+  .summary-spotlights>a:hover {
+    transform: none;
   }
 }
